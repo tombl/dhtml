@@ -25,6 +25,7 @@ function compileTemplate(statics) {
 	function patch(node, idx, fn) {
 		node.dataset.dynPatch ??= ''
 		node.dataset.dynPatch += ' ' + nextPatch
+		if (nextPatch !== idx) console.warn('dynamic value detected in static location')
 		patches[nextPatch++] = (node, dynamics) => fn(node, dynamics[idx])
 	}
 
@@ -104,6 +105,8 @@ function compileTemplate(statics) {
 			for (const name of toRemove) node.removeAttribute(name)
 		}
 	}
+
+	patches.length = nextPatch
 
 	const obj = { content: templateElement.content, patches }
 	templateCache.set(statics, obj)
