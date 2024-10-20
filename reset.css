@@ -1,0 +1,53 @@
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+:root {
+	font-family: system-ui, sans-serif;
+	color-scheme: dark light;
+}
+
+* {
+	margin: 0;
+}
+
+html {
+	height: 100%;
+}
+
+body {
+	line-height: 1.5;
+	-webkit-font-smoothing: antialiased;
+	min-height: 100%; /* maybe dvh? */
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+	text-wrap: balance;
+	overflow-wrap: break-word;
+}
+p {
+	text-wrap: pretty;
+	overflow-wrap: break-word;
+}
+
+input,
+button,
+textarea,
+select {
+	font: inherit;
+}
+
+a {
+	color: inherit;
+}
+
+summary {
+	user-select: none;
+}
