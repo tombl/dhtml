@@ -85,7 +85,11 @@ Component.define(
 		render() {
 			const timeout = setTimeout(this.invalidate, 1000)
 			this.signal.addEventListener('abort', () => clearTimeout(timeout))
-			return html`<h1>Hello, ${this.i++}!</h1>`
+			return html`
+        <h1>Hello, ${this.i++}!</h1>
+        <p>Current time: ${new Date().toLocaleTimeString()}</p>
+        <p>Even or odd? ${this.i % 2 === 0 ? 'Even' : 'Odd'}</p>
+      `
 		}
 	},
 )

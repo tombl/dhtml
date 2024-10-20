@@ -9,17 +9,6 @@ function compileTemplate(statics) {
 	const templateElement = document.createElement('template')
 	templateElement.innerHTML = statics.reduce((a, v, i) => a + v + (i === statics.length - 1 ? '' : `dyn-$${i}`), '')
 
-	// replace all dyn-$N text nodes with equivalent comments
-	let walker = document.createTreeWalker(templateElement.content, NodeFilter.SHOW_TEXT)
-	let node
-	while ((node = walker.nextNode())) {
-		for (const m of [...node.data.matchAll(DYNAMIC_GLOBAL)].reverse()) {
-			node.splitText(m.index + m[0].length) // the regular text
-			const dyn = node.splitText(m.index) // the dyn-$N part
-			dyn.replaceWith(document.createComment(dyn.data))
-		}
-	}
-
 	let nextPatch = 0
 	const patches = Array(statics.length - 1)
 	function patch(node, idx, fn) {
@@ -29,19 +18,28 @@ function compileTemplate(statics) {
 		patches[nextPatch++] = (node, dynamics) => fn(node, dynamics[idx])
 	}
 
-	walker = document.createTreeWalker(templateElement.content, NodeFilter.SHOW_COMMENT | NodeFilter.SHOW_ELEMENT)
-	while ((node = walker.nextNode()) && nextPatch < patches.length) {
-		if (node.nodeType === Node.COMMENT_NODE) {
-			const match = DYNAMIC_WHOLE.exec(node.data)
-			if (match === null) continue
-			const idx = parseInt(match[1])
-			const child = [...node.parentElement.childNodes].indexOf(node)
-			patch(node.parentElement, idx, (node, value) => {
-				node = node.childNodes[child]
-				if (typeof value !== 'object') value = document.createTextNode(value)
-				node.replaceWith(value)
-				return value
-			})
+	for (
+		let node, walker = document.createTreeWalker(templateElement.content, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+		(node = walker.nextNode()) && nextPatch < patches.length;
+	) {
+		if (node.nodeType === Node.TEXT_NODE) {
+			const nodes = []
+			for (const match of [...node.data.matchAll(DYNAMIC_GLOBAL)].reverse()) {
+				const regular = node.splitText(match.index + match[0].length)
+				const dyn = node.splitText(match.index)
+				nodes.push([dyn, match[1]])
+				if (walker.nextSibling() !== dyn || walker.nextSibling() !== regular) throw new Error('oops')
+			}
+
+			let siblings
+			for (const [node, idx] of nodes) {
+				const child = (siblings ??= [...node.parentElement.childNodes]).indexOf(node)
+				patch(node.parentElement, parseInt(idx), (node, value) => {
+					node = node.childNodes[child]
+					if (typeof value !== 'object') value = document.createTextNode(value)
+					node.replaceWith(value)
+				})
+			}
 		} else {
 			const toRemove = []
 			for (let { name, value } of node.attributes) {
@@ -52,8 +50,7 @@ function compileTemplate(statics) {
 						name = name.slice(1)
 						const match = DYNAMIC_WHOLE.exec(value)
 						if (match === null) throw new Error('`@` attributes must be functions')
-						const idx = parseInt(match[1])
-						patch(node, idx, (node, value) => {
+						patch(node, parseInt(match[1]), (node, value) => {
 							if (typeof value === 'function') {
 								node.addEventListener(name, value)
 							} else if (value === null) {
@@ -71,8 +68,7 @@ function compileTemplate(statics) {
 						name = name.slice(1)
 						const match = DYNAMIC_WHOLE.exec(value)
 						if (match === null) throw new Error('`.` attributes must be properties')
-						const idx = parseInt(match[1])
-						patch(node, idx, (node, value) => {
+						patch(node, parseInt(match[1]), (node, value) => {
 							node[name] = value
 						})
 						break
@@ -84,8 +80,7 @@ function compileTemplate(statics) {
 						name = name.slice(1)
 						const match = DYNAMIC_WHOLE.exec(value)
 						if (match === null) throw new Error('`?` attributes must be booleans')
-						const idx = parseInt(match[1])
-						patch(node, idx, (node, value) => {
+						patch(node, parseInt(match[1]), (node, value) => {
 							node.toggleAttribute(name, value)
 						})
 						break
@@ -95,8 +90,7 @@ function compileTemplate(statics) {
 					default: {
 						const match = DYNAMIC_WHOLE.exec(value)
 						if (match === null) continue
-						const idx = parseInt(match[1])
-						patch(node, idx, (node, value) => {
+						patch(node, parseInt(match[1]), (node, value) => {
 							node.setAttribute(name, value)
 						})
 					}
@@ -152,7 +146,7 @@ export class Root {
 	}
 
 	render({ [TAG_TEMPLATE]: template, [TAG_DYNAMICS]: dynamics }) {
-		if (this.#instance?.template === template) {
+		if (this.#instance?.patches === template.patches) {
 			this.#instance.update(dynamics)
 		} else {
 			this.#instance = new TemplateInstance(template, dynamics, this.#range)
