@@ -47,9 +47,7 @@ class BaseElement extends HTMLElement {
 	}
 
 	#invalidate() {
-		this.#root.render(this.#app.render())
-		// TODO: currently all interpolations require a parent element
-		// this.#root.render(html`${this.#app}`)
+		this.#root.render(html`${this.#app}`)
 	}
 }
 
@@ -74,7 +72,7 @@ class App {
 		const time = html`<p>Current time: ${new Date().toLocaleTimeString()}</p>`
 		return html`
 			<h1>Hello, ${this.i++}!</h1>
-			<div>${time}</div>
+			${time}
 			<button @click=${() => {
 				this.#controller.invalidate()
 			}}>Invalidate</button>

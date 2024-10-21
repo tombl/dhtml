@@ -146,8 +146,10 @@ const compileTemplate = memo(statics => {
 
 	let nextPart = 0
 	const parts = Array(statics.length - 1)
+	const rootParts = []
 	function patch(node, idx, part) {
-		if ('dynParts' in node.dataset) node.dataset.dynParts += ' ' + nextPart
+		if (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) rootParts.push(nextPart)
+		else if ('dynParts' in node.dataset) node.dataset.dynParts += ' ' + nextPart
 		else node.dataset.dynParts = nextPart
 		if (nextPart !== idx) console.warn('dynamic value detected in static location')
 		parts[nextPart++] = [idx, part]
@@ -169,8 +171,8 @@ const compileTemplate = memo(statics => {
 
 			let siblings
 			for (const [node, idx] of nodes) {
-				const child = (siblings ??= [...node.parentElement.childNodes]).indexOf(node)
-				patch(node.parentElement, parseInt(idx), () => new ChildPart(child))
+				const child = (siblings ??= [...node.parentNode.childNodes]).indexOf(node)
+				patch(node.parentNode, parseInt(idx), () => new ChildPart(child))
 			}
 		} else {
 			const toRemove = []
@@ -220,7 +222,7 @@ const compileTemplate = memo(statics => {
 
 	parts.length = nextPart
 
-	return { content: templateElement.content, parts }
+	return { content: templateElement.content, parts, rootParts }
 })
 
 export const html = (statics, ...dynamics) => ({
@@ -231,17 +233,18 @@ export const html = (statics, ...dynamics) => ({
 class TemplateInstance {
 	constructor(template, dynamics, range) {
 		const doc = template.content.cloneNode(true)
-		const elementByPart = []
+		const nodeByPart = []
 
-		for (const el of doc.querySelectorAll('[data-dyn-parts]')) {
-			const parts = el.dataset.dynParts
-			delete el.dataset.dynParts
-			for (const part of parts.split(' ')) elementByPart[part] = el
+		for (const part of template.rootParts) nodeByPart[part] = doc
+		for (const node of doc.querySelectorAll('[data-dyn-parts]')) {
+			const parts = node.dataset.dynParts
+			delete node.dataset.dynParts
+			for (const part of parts.split(' ')) nodeByPart[part] = node
 		}
 
 		this.parts = template.parts.map(([dynamicIdx, createPart], elementIdx) => {
 			const part = createPart()
-			part.create(elementByPart[elementIdx], dynamics[dynamicIdx])
+			part.create(nodeByPart[elementIdx], dynamics[dynamicIdx])
 			return part
 		})
 
