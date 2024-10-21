@@ -86,18 +86,22 @@ Component.define(
 			const timeout = setTimeout(this.invalidate, 1000)
 			this.signal.addEventListener('abort', () => clearTimeout(timeout))
 			return html`
-        <h1>Hello, ${this.i++}!</h1>
-        <p>Current time: ${new Date().toLocaleTimeString()}</p>
-        <p>Even or odd? ${this.i % 2 === 0 ? 'Even' : 'Odd'}</p>
-      `
+				<h1>Hello, ${this.i++}!</h1>
+				<p>Current time: ${new Date().toLocaleTimeString()}</p>
+				<p>Even or odd? ${this.i % 2 === 0 ? 'Even' : 'Odd'}</p>
+			`
 		}
 	},
 )
 
-Component.define(
-	'app-button',
-	() =>
-		html`<button @click=${() => {
-			console.log('Clicked!')
-		}}>Click me</button>`,
-)
+Component.define('app-button', () => {
+	return html`
+		<button
+			@click=${() => {
+				console.log('Clicked!')
+			}}
+		>
+			Click me
+		</button>
+	`
+})

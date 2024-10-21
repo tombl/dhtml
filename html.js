@@ -1,11 +1,19 @@
 const TAG_TEMPLATE = Symbol('template')
 const TAG_DYNAMICS = Symbol('dynamics')
 
+function memo(fn) {
+	const cache = new Map()
+	return arg => {
+		if (cache.has(arg)) return cache.get(arg)
+		const value = fn(arg)
+		cache.set(arg, value)
+		return value
+	}
+}
+
 const DYNAMIC_WHOLE = /^dyn-\$(\d+)$/i
 const DYNAMIC_GLOBAL = /dyn-\$(\d+)/gi
-const templateCache = new Map()
-function compileTemplate(statics) {
-	if (templateCache.has(statics)) return templateCache.get(statics)
+const compileTemplate = memo(statics => {
 	const templateElement = document.createElement('template')
 	templateElement.innerHTML = statics.reduce((a, v, i) => a + v + (i === statics.length - 1 ? '' : `dyn-$${i}`), '')
 
@@ -102,10 +110,8 @@ function compileTemplate(statics) {
 
 	patches.length = nextPatch
 
-	const obj = { content: templateElement.content, patches }
-	templateCache.set(statics, obj)
-	return obj
-}
+	return { content: templateElement.content, patches }
+})
 
 export function html(statics, ...dynamics) {
 	return { [TAG_TEMPLATE]: compileTemplate(statics), [TAG_DYNAMICS]: dynamics }
