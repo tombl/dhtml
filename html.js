@@ -23,11 +23,34 @@ class ChildPart {
 		this.update(value)
 	}
 
+	#root = null
 	update(value) {
-		if (typeof value !== 'object') value = document.createTextNode(value)
-		console.assert(value instanceof Node, 'Expected a Node, got', value)
+		let template
+
+		if (typeof value !== 'object') {
+			value = document.createTextNode(value)
+		}
+		if ('render' in value) {
+			value = value.render()
+		}
+		if (TAG_TEMPLATE in value) {
+			template = value
+			value = document.createComment('')
+		}
+		if (!(value instanceof Node)) {
+			console.warn('Expected a Node, got', value)
+		}
+
 		this.#node.replaceWith(value)
 		this.#node = value
+
+		if (template) {
+			this.#root ??= new Root()
+			this.#root.range.selectNode(value)
+			this.#root.render(template)
+		} else {
+			this.#root = null
+		}
 	}
 }
 
@@ -232,20 +255,24 @@ class TemplateInstance {
 }
 
 export class Root {
-	#instance
-	#range = document.createRange()
-
-	constructor(parent) {
-		const comment = document.createComment('')
-		parent.appendChild(comment)
-		this.#range.selectNode(comment)
+	constructor(range = document.createRange()) {
+		this.range = range
 	}
 
+	static appendInto(parent) {
+		const comment = document.createComment('')
+		parent.appendChild(comment)
+		const root = new Root()
+		root.range.selectNode(comment)
+		return root
+	}
+
+	#instance
 	render({ [TAG_TEMPLATE]: template, [TAG_DYNAMICS]: dynamics }) {
 		if (this.#instance?.parts === template.parts) {
 			this.#instance.update(dynamics)
 		} else {
-			this.#instance = new TemplateInstance(template, dynamics, this.#range)
+			this.#instance = new TemplateInstance(template, dynamics, this.range)
 		}
 	}
 }

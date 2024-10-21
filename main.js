@@ -1,7 +1,7 @@
 import { Root, html } from './html.js'
 
 class BaseElement extends HTMLElement {
-	#root = new Root(this.attachShadow({ mode: 'open' }))
+	#root = Root.appendInto(this.attachShadow({ mode: 'open' }))
 	#abortController
 	#controller
 	#App
@@ -48,6 +48,8 @@ class BaseElement extends HTMLElement {
 
 	#invalidate() {
 		this.#root.render(this.#app.render())
+		// TODO: currently all interpolations require a parent element
+		// this.#root.render(html`${this.#app}`)
 	}
 }
 
@@ -69,9 +71,10 @@ class App {
 
 	i = 0
 	render() {
+		const time = html`<p>Current time: ${new Date().toLocaleTimeString()}</p>`
 		return html`
 			<h1>Hello, ${this.i++}!</h1>
-			<p>Current time: ${new Date().toLocaleTimeString()}</p>
+			<div>${time}</div>
 			<button @click=${() => {
 				this.#controller.invalidate()
 			}}>Invalidate</button>
