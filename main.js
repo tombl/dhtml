@@ -1,7 +1,7 @@
 import { Root, html } from './html.js'
 
 class BaseElement extends HTMLElement {
-	#root = Root.appendInto(this.attachShadow({ mode: 'open' }))
+	#root = Root.appendInto(this /* .attachShadow({ mode: 'open' }) */)
 	#abortController
 	#controller
 	#App
@@ -69,14 +69,17 @@ class App {
 
 	i = 0
 	render() {
-		const time = html`<p>Current time: ${new Date().toLocaleTimeString()}</p>`
+		const time = html`<p>${new Date().toLocaleTimeString()}</p>`
 		return html`
-			<h1>Hello, ${this.i++}!</h1>
+			<button
+				@click=${() => {
+					this.#controller.invalidate()
+				}}
+			>
+				Hello, ${this.i++}!
+			</button>
 			${time}
-			<button @click=${() => {
-				this.#controller.invalidate()
-			}}>Invalidate</button>
-			`
+		`
 	}
 }
 

@@ -17,9 +17,15 @@ class ChildPart {
 		this.#childIndex = idx
 	}
 
-	#node
+	#range
 	create(node, value) {
-		this.#node = node.childNodes[this.#childIndex]
+		this.#range = document.createRange()
+		if (node instanceof Range) {
+			this.#range.setStart(node.startContainer, node.startOffset + this.#childIndex)
+			this.#range.setEnd(node.startContainer, node.startOffset + this.#childIndex + 1)
+		} else {
+			this.#range.selectNode(node.childNodes[this.#childIndex])
+		}
 		this.update(value)
 	}
 
@@ -27,29 +33,24 @@ class ChildPart {
 	update(value) {
 		let template
 
-		if (typeof value !== 'object') {
-			value = document.createTextNode(value)
-		}
-		if ('render' in value) {
+		if (typeof value === 'object' && 'render' in value) {
 			value = value.render()
 		}
-		if (TAG_TEMPLATE in value) {
+
+		if (typeof value === 'object' && TAG_TEMPLATE in value) {
 			template = value
 			value = document.createComment('')
+		} else if (!(value instanceof Node)) {
+			value = document.createTextNode(value)
 		}
-		if (!(value instanceof Node)) {
-			console.warn('Expected a Node, got', value)
-		}
-
-		this.#node.replaceWith(value)
-		this.#node = value
 
 		if (template) {
-			this.#root ??= new Root()
-			this.#root.range.selectNode(value)
+			this.#root ??= new Root(this.#range)
 			this.#root.render(template)
 		} else {
 			this.#root = null
+			this.#range.deleteContents()
+			this.#range.insertNode(value)
 		}
 	}
 }
@@ -232,28 +233,32 @@ export const html = (statics, ...dynamics) => ({
 
 class TemplateInstance {
 	constructor(template, dynamics, range) {
+		this.template = template
 		const doc = template.content.cloneNode(true)
 		const nodeByPart = []
 
-		for (const part of template.rootParts) nodeByPart[part] = doc
 		for (const node of doc.querySelectorAll('[data-dyn-parts]')) {
 			const parts = node.dataset.dynParts
 			delete node.dataset.dynParts
 			for (const part of parts.split(' ')) nodeByPart[part] = node
 		}
 
+		// the fragment must be inserted before the parts are constructed,
+		// because they need to know their final location.
+		range.deleteContents()
+		range.insertNode(doc)
+
+		for (const part of template.rootParts) nodeByPart[part] = range
+
 		this.parts = template.parts.map(([dynamicIdx, createPart], elementIdx) => {
 			const part = createPart()
 			part.create(nodeByPart[elementIdx], dynamics[dynamicIdx])
-			return part
+			return [dynamicIdx, part]
 		})
-
-		range.deleteContents()
-		range.insertNode(doc)
 	}
 
 	update(dynamics) {
-		for (const [part, idx] of this.parts) part.update(dynamics[idx])
+		for (const [idx, part] of this.parts) part.update(dynamics[idx])
 	}
 }
 
@@ -272,7 +277,7 @@ export class Root {
 
 	#instance
 	render({ [TAG_TEMPLATE]: template, [TAG_DYNAMICS]: dynamics }) {
-		if (this.#instance?.parts === template.parts) {
+		if (this.#instance?.template === template) {
 			this.#instance.update(dynamics)
 		} else {
 			this.#instance = new TemplateInstance(template, dynamics, this.range)
