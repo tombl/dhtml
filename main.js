@@ -1,56 +1,5 @@
 import { Root, html } from './html.js'
 
-class BaseElement extends HTMLElement {
-	#root = Root.appendInto(this /* .attachShadow({ mode: 'open' }) */)
-	#abortController
-	#controller
-	#App
-	#app
-
-	static define(name, App) {
-		customElements.define(
-			name,
-			class extends BaseElement {
-				constructor() {
-					super(App)
-				}
-			},
-		)
-	}
-
-	constructor(App) {
-		super()
-		this.#App = App
-		const self = this
-		this.#controller = {
-			get signal() {
-				return self.#abortController.signal
-			},
-			invalidate() {
-				self.#invalidate()
-			},
-		}
-	}
-
-	connectedCallback() {
-		this.#abortController = new AbortController()
-		this.#app = new this.#App(this.#controller)
-		this.#invalidate()
-	}
-	disconnectedCallback() {
-		this.#abortController.abort()
-		this.#abortController = null
-		this.#app = null
-	}
-	attributeChangedCallback() {
-		this.#invalidate()
-	}
-
-	#invalidate() {
-		this.#root.render(html`${this.#app}`)
-	}
-}
-
 function ticker(controller, interval) {
 	const id = setInterval(() => {
 		controller.invalidate()
@@ -60,27 +9,41 @@ function ticker(controller, interval) {
 	})
 }
 
-class App {
-	#controller
-	constructor(controller) {
-		this.#controller = controller
-		ticker(controller, 1000)
+const once = fn => {
+	let done = false
+	let result
+	return (...args) => {
+		if (!done) {
+			done = true
+			result = fn(...args)
+		}
+		return result
 	}
+}
 
+class Clock {
+	#start = once(controller => ticker(controller, 1000))
+	render(controller) {
+		this.#start(controller)
+		return html`<p>${new Date().toLocaleTimeString()}</p>`
+	}
+}
+
+class App {
+	#clock = new Clock()
 	i = 0
-	render() {
-		const time = html`<p>${new Date().toLocaleTimeString()}</p>`
+	render(controller) {
 		return html`
 			<button
 				@click=${() => {
-					this.#controller.invalidate()
+					controller.invalidate()
 				}}
 			>
 				Hello, ${this.i++}!
 			</button>
-			${time}
+			${this.#clock}
 		`
 	}
 }
 
-BaseElement.define('my-app', App)
+Root.appendInto(document.body).render(html`${new App()}`)

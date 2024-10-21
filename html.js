@@ -30,11 +30,34 @@ class ChildPart {
 	}
 
 	#root = null
+	#previousRenderable = null
+	#renderController = null
+	#abortController = null
 	update(value) {
 		let template
 
 		if (typeof value === 'object' && 'render' in value) {
-			value = value.render()
+			const renderable = value
+			const self = this
+
+			if (this.#previousRenderable !== renderable) {
+				this.#previousRenderable = renderable
+				this.#renderController = null
+				this.#abortController?.abort()
+				this.#abortController = null
+			}
+
+			this.#renderController ??= {
+				invalidate() {
+					self.update(renderable)
+				},
+				get signal() {
+					self.#abortController ??= new AbortController()
+					return self.#abortController.signal
+				},
+			}
+
+			value = renderable.render(this.#renderController)
 		}
 
 		if (typeof value === 'object' && TAG_TEMPLATE in value) {
