@@ -164,10 +164,13 @@ const compileTemplate = memo(statics => {
 		if (node.nodeType === 3 /* Node.TEXT_NODE */) {
 			const nodes = []
 			for (const match of [...node.data.matchAll(DYNAMIC_GLOBAL)].reverse()) {
-				const regular = node.splitText(match.index + match[0].length)
+				node.splitText(match.index + match[0].length)
 				const dyn = node.splitText(match.index)
 				nodes.push([dyn, match[1]])
-				if (walker.nextSibling() !== dyn || walker.nextSibling() !== regular) throw new Error('oops')
+
+				// skip the two nodes we just created
+				walker.nextNode()
+				walker.nextNode()
 			}
 
 			let siblings
