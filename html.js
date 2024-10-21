@@ -149,7 +149,7 @@ const compileTemplate = memo(statics => {
 	const parts = Array(statics.length - 1)
 	const rootParts = []
 	function patch(node, idx, part) {
-		if (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) rootParts.push(nextPart)
+		if (node.nodeType === 11 /* Node.DOCUMENT_FRAGMENT_NODE */) rootParts.push(nextPart)
 		else if ('dynParts' in node.dataset) node.dataset.dynParts += ' ' + nextPart
 		else node.dataset.dynParts = nextPart
 		if (nextPart !== idx) console.warn('dynamic value detected in static location')
@@ -157,11 +157,11 @@ const compileTemplate = memo(statics => {
 	}
 
 	for (
-		let walker = document.createTreeWalker(templateElement.content, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+		let walker = document.createTreeWalker(templateElement.content, 5 /* NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT */);
 		nextPart < parts.length && walker.nextNode();
 	) {
 		const node = walker.currentNode
-		if (node.nodeType === Node.TEXT_NODE) {
+		if (node.nodeType === 3 /* Node.TEXT_NODE */) {
 			const nodes = []
 			for (const match of [...node.data.matchAll(DYNAMIC_GLOBAL)].reverse()) {
 				const regular = node.splitText(match.index + match[0].length)
