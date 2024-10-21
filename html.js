@@ -49,6 +49,7 @@ class ChildPart {
 
 			this.#renderController ??= {
 				invalidate() {
+					if (self.#previousRenderable !== renderable) throw new Error('Could not invalidate an outdated renderable')
 					self.update(renderable)
 				},
 				get signal() {
