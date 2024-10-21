@@ -1,107 +1,82 @@
 import { Root, html } from './html.js'
 
 class BaseElement extends HTMLElement {
-	#root = new Root(this.attachShadow({ mode: 'open', serializable: true }))
+	#root = new Root(this.attachShadow({ mode: 'open' }))
+	#abortController
 	#controller
-	/** @type {Component} */ #component
+	#App
+	#app
 
-	static create(TheComponent) {
-		if (TheComponent.prototype === undefined || !('render' in TheComponent.prototype)) {
-			const render = TheComponent
-			TheComponent = class extends Component {
-				render = render
-			}
-		}
-
-		class ComponentElement extends this {
-			constructor() {
-				super()
-				const self = this
-				this.#component = new TheComponent({
-					el: self,
-					get signal() {
-						return self.#controller?.signal
-					},
-					invalidate() {
-						self.#invalidate()
-					},
-				})
-			}
-		}
-		Object.defineProperty(ComponentElement, 'name', { value: Component.name })
-		return ComponentElement
+	static define(name, App) {
+		customElements.define(
+			name,
+			class extends BaseElement {
+				constructor() {
+					super(App)
+				}
+			},
+		)
 	}
 
-	#invalidate() {
-		this.#root.render(this.#component.render())
+	constructor(App) {
+		super()
+		this.#App = App
+		const self = this
+		this.#controller = {
+			get signal() {
+				return self.#abortController.signal
+			},
+			invalidate() {
+				self.#invalidate()
+			},
+		}
 	}
 
 	connectedCallback() {
-		this.#controller = new AbortController()
+		this.#abortController = new AbortController()
+		this.#app = new this.#App(this.#controller)
 		this.#invalidate()
 	}
 	disconnectedCallback() {
-		this.#controller.abort()
-		this.#controller = null
+		this.#abortController.abort()
+		this.#abortController = null
+		this.#app = null
 	}
-
 	attributeChangedCallback() {
 		this.#invalidate()
 	}
-}
 
-class Component {
-	static define(name, Component) {
-		customElements.define(name, BaseElement.create(Component))
-	}
-
-	#ext
-
-	constructor(ext) {
-		this.#ext = ext
-	}
-
-	/** @type {BaseElement} */
-	get el() {
-		return this.#ext.el
-	}
-
-	/** @type {AbortSignal} */
-	get signal() {
-		return this.#ext.signal
-	}
-
-	/** @type {() => void} */
-	get invalidate() {
-		return this.#ext.invalidate
+	#invalidate() {
+		this.#root.render(this.#app.render())
 	}
 }
 
-Component.define(
-	'app-main',
-	class extends Component {
-		i = this.el.hasAttribute('initial') ? parseInt(this.el.getAttribute('initial')) : 0
+function ticker(controller, interval) {
+	const id = setInterval(() => {
+		controller.invalidate()
+	}, interval)
+	controller.signal.addEventListener('abort', () => {
+		clearInterval(id)
+	})
+}
 
-		render() {
-			const timeout = setTimeout(this.invalidate, 1000)
-			this.signal.addEventListener('abort', () => clearTimeout(timeout))
-			return html`
-				<h1>Hello, ${this.i++}!</h1>
-				<p>Current time: ${new Date().toLocaleTimeString()}</p>
-				<p>Even or odd? ${this.i % 2 === 0 ? 'Even' : 'Odd'}</p>
+class App {
+	#controller
+	constructor(controller) {
+		this.#controller = controller
+		ticker(controller, 1000)
+	}
+
+	i = 0
+	render() {
+		return html`
+			<h1>Hello, ${this.i++}!</h1>
+			<p>Current time: ${new Date().toLocaleTimeString()}</p>
+			<button @click=${() => {
+				this.#controller.invalidate()
+			}}>Invalidate</button>
 			`
-		}
-	},
-)
+	}
+}
 
-Component.define('app-button', () => {
-	return html`
-		<button
-			@click=${() => {
-				console.log('Clicked!')
-			}}
-		>
-			Click me
-		</button>
-	`
-})
+BaseElement.define('my-app', App)
