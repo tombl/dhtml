@@ -61,7 +61,9 @@ class ChildPart {
 			value = renderable.render(this.#renderController)
 		}
 
-		if (typeof value === 'object' && TAG_TEMPLATE in value) {
+		if (value === null) {
+			// do nothing
+		} else if (typeof value === 'object' && TAG_TEMPLATE in value) {
 			template = value
 			value = document.createComment('')
 		} else if (!(value instanceof Node)) {
@@ -74,7 +76,7 @@ class ChildPart {
 		} else {
 			this.#root = null
 			this.#range.deleteContents()
-			this.#range.insertNode(value)
+			if (value !== null) this.#range.insertNode(value)
 		}
 	}
 }

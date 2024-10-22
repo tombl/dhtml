@@ -33,6 +33,7 @@ class App {
 	#clock = new Clock()
 	i = 0
 	render(controller) {
+		if (this.i === 5) return null
 		return html`
 			<button
 				@click=${() => {
