@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="shortcut icon" href="data:" />
+    <title>Tests</title>
+    <style>
+      :root {
+        color-scheme: dark light;
+        font-family: system-ui, sans-serif;
+      }
+      summary {
+        user-select: none;
+      }
+    </style>
+    <script type="module">
+      let running = 0;
+      let passed = 0;
+      let failed = 0;
+      let total = 0;
+      function updateTitle() {
+        document.title = `${
+          passed + failed
+        }/${total} 🟡${running} ✅${passed} ❌${failed} `;
+      }
+
+      const resolvers = new Map();
+      window.addEventListener("message", ({ data, source }) => {
+        if (resolvers.has(source)) {
+          resolvers.get(source).resolve?.(data);
+        } else {
+          resolvers.set(source, { promise: Promise.resolve(data) });
+        }
+      });
+      function h(tag, props, ...children) {
+        const el = document.createElement(tag);
+        Object.assign(el, props);
+        el.append(...children);
+        return el;
+      }
+      customElements.define(
+        "a-test",
+        class extends HTMLElement {
+          constructor() {
+            super();
+            total++;
+            updateTitle();
+          }
+          get src() {
+            return this.getAttribute("src");
+          }
+          connectedCallback() {
+            this.append(
+              h(
+                "details",
+                {},
+                (this.summary = h(
+                  "summary",
+                  { open: true },
+                  (this.icon = document.createTextNode("🔍")),
+                  document.createTextNode(this.src)
+                )),
+                h(
+                  "p",
+                  {},
+                  h("a", { href: this.src, target: "_blank" }, "🔗 view")
+                ),
+                h(
+                  "p",
+                  {},
+                  (this.status = document.createTextNode("waiting..."))
+                ),
+                (this.iframe = h("div", {}, "not started"))
+              )
+            );
+            requestIdleCallback(() => {
+              running++;
+              this.icon.data = "🟡";
+              this.status.data = "running...";
+              this.summary.style.backgroundColor = "rgba(255, 255, 128, 0.5)";
+              updateTitle();
+
+              const iframe = h("iframe", {
+                src: this.src,
+                onload: this.onIframeLoad,
+              });
+              this.iframe.replaceWith(iframe);
+              this.iframe = iframe;
+            });
+          }
+          onIframeLoad = async () => {
+            const { contentWindow } = this.iframe;
+
+            if (!resolvers.has(contentWindow))
+              resolvers.set(contentWindow, Promise.withResolvers());
+
+            const { status, reason } = await Promise.race([
+              resolvers.get(contentWindow).promise,
+              new Promise((_, reject) =>
+                setTimeout(() => reject(new Error("Timeout")), 3000)
+              ),
+            ]).catch((error) => ({ status: "fail", reason: error.message }));
+
+            running--;
+            if (status === "pass") {
+              passed++;
+              console.log(this.src, "pass!");
+              this.icon.data = "✅";
+              this.status.data = "pass";
+              this.summary.style.backgroundColor = "rgba(128, 255, 128, 0.5)";
+            } else {
+              failed++;
+              console.error(this.src, "fail!", reason);
+              this.icon.data = "❌";
+              this.status.data = `fail: ${reason}`;
+              this.summary.style.backgroundColor = "rgba(255, 128, 128, 0.5)";
+            }
+            updateTitle();
+
+            this.iframe.remove();
+          };
+        }
+      );
+    </script>
+  </head>
+  <body>
+    <a-test src="basic.html"></a-test>
+  </body>
+</html>
