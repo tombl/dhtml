@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<div id="root"></div>
+<script type="module">
+  import { test, assert } from "./lib.js";
+  import { Root, html } from "../html.js";
+
+  test(() => {
+    const r = Root.appendInto(root);
+
+    let aborts = 0;
+    const inner = {
+      render(controller) {
+        controller.signal.addEventListener("abort", () => {
+          aborts++;
+        });
+        return "inner";
+      },
+    };
+    const outer = {
+      show: true,
+      render() {
+        return html`${this.show ? inner : null}`;
+      },
+    };
+
+    outer.show = true;
+    r.render(outer);
+    assert.eq(root.innerHTML, "inner");
+    assert.eq(aborts, 0);
+
+    outer.show = false;
+    r.render(outer);
+    assert.eq(root.innerHTML, "");
+    assert.eq(aborts, 1);
+
+    outer.show = true;
+    r.render(outer);
+    assert.eq(root.innerHTML, "inner");
+    assert.eq(aborts, 1);
+
+    outer.show = false;
+    r.render(outer);
+    assert.eq(root.innerHTML, "");
+    assert.eq(aborts, 2);
+  });
+</script>

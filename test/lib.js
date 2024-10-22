@@ -42,3 +42,15 @@ export function test(fn) {
 export function assert(condition, message = 'Assertion failed') {
 	if (!condition) throw new Error(message)
 }
+
+assert.eq = (actual, expected) => {
+	if (actual !== expected)
+		throw new Error(
+			[
+				'Expected:',
+				...expected.split('\n').map(line => '  ' + line),
+				'Actual:',
+				...actual.split('\n').map(line => '  ' + line),
+			].join('\n'),
+		)
+}

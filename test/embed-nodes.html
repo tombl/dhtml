@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<div id="root"></div>
+<script type="module">
+  import { test, assert } from "./lib.js";
+  import { Root, html } from "../html.js";
+
+  test(() => {
+    const r = Root.appendInto(root);
+
+    let node = document.createElement("span");
+
+    r.render(html`<div>${node}</div>`);
+    assert.eq(root.innerHTML, "<div><span></span></div>");
+    assert.eq(root.children[0].children[0], node);
+
+    node = document.createDocumentFragment();
+    node.append(
+      document.createElement("h1"),
+      document.createElement("h2"),
+      document.createElement("h3")
+    );
+
+    r.render(html`<div>${node}</div>`);
+    assert.eq(root.innerHTML, "<div><h1></h1><h2></h2><h3></h3></div>");
+    assert.eq(node.children.length, 0);
+  });
+</script>
