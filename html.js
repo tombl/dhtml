@@ -8,15 +8,18 @@ function memo(fn) {
 	}
 }
 
+const emptyTemplate = () => html``
+const singlePartTemplate = part => html`${part}`
+const isRenderable = value => typeof value === 'object' && value !== null && 'render' in value
+
 class ChildPart {
 	#childIndex
 	constructor(idx) {
 		this.#childIndex = idx
 	}
 
-	#range
+	#range = document.createRange()
 	create(node, value) {
-		this.#range = document.createRange()
 		if (node instanceof Range) {
 			this.#range.setStart(node.startContainer, node.startOffset + this.#childIndex)
 			this.#range.setEnd(node.startContainer, node.startOffset + this.#childIndex + 1)
@@ -39,7 +42,7 @@ class ChildPart {
 	}
 
 	update(value) {
-		if (typeof value === 'object' && value !== null && 'render' in value) {
+		if (isRenderable(value)) {
 			const renderable = value
 			const self = this
 
@@ -60,6 +63,17 @@ class ChildPart {
 			}
 
 			value = renderable.render(this.#renderController)
+			if (value === renderable) {
+				console.warn(
+					'Renderable %o returned itself, this is a mistake and would result in infinite recursion',
+					renderable,
+				)
+				value = emptyTemplate()
+			}
+
+			// if render returned another renderable, we want to track/cache both renderables individually.
+			// wrap it in a nested ChildPart so that each can be tracked without ChildPart having to handle multiple renderables.
+			if (isRenderable(value)) value = singlePartTemplate(value)
 		} else if (this.#previousRenderable !== null) {
 			this.#revokePreviousRenderable()
 			this.#previousRenderable = null
@@ -75,19 +89,14 @@ class ChildPart {
 		if (value === this.#previousValue) return
 		this.#previousValue = value
 
-		if (value === null) {
-			// do nothing, this is handled below
-		} else if (value instanceof BoundTemplateInstance) {
+		if (value instanceof BoundTemplateInstance) {
 			this.#root ??= new Root(this.#range)
 			this.#root.render(value)
-			return
-		} else if (!(value instanceof Node)) {
-			value = document.createTextNode(value)
+		} else {
+			this.#root = null
+			this.#range.deleteContents()
+			if (value !== null) this.#range.insertNode(value instanceof Node ? value : new Text(value))
 		}
-
-		this.#root = null
-		this.#range.deleteContents()
-		if (value !== null) this.#range.insertNode(value)
 	}
 }
 
@@ -315,7 +324,7 @@ class BoundTemplateInstance {
 		}
 
 		static appendInto(parent) {
-			const comment = document.createComment('')
+			const comment = new Comment()
 			parent.appendChild(comment)
 			const root = new Root()
 			root.range.selectNode(comment)
@@ -324,7 +333,7 @@ class BoundTemplateInstance {
 
 		#instance
 		render(value) {
-			if (!(value instanceof BoundTemplateInstance)) value = html`${value}`
+			if (!(value instanceof BoundTemplateInstance)) value = singlePartTemplate(value)
 			const template = value.#template
 			const dynamics = value.#dynamics
 			if (this.#instance?.template === template) {
