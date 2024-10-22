@@ -30,12 +30,11 @@ class ChildPart {
 	}
 
 	#root = null
+	#previousValue = undefined
 	#previousRenderable = null
 	#renderController = null
 	#abortController = null
 	update(value) {
-		let template
-
 		if (typeof value === 'object' && 'render' in value) {
 			const renderable = value
 			const self = this
@@ -61,23 +60,29 @@ class ChildPart {
 			value = renderable.render(this.#renderController)
 		}
 
+		// if it's undefined, swap the value for null.
+		// this means if the initial value is undefined,
+		// it won't conflict with previousValue's default of undefined,
+		// so it'll still render.
+		if (value === undefined) value = null
+
+		// now early return if the value hasn't changed.
+		if (value === this.#previousValue) return
+		this.#previousValue = value
+
 		if (value === null) {
-			// do nothing
+			// do nothing, this is handled below
 		} else if (typeof value === 'object' && TAG_TEMPLATE in value) {
-			template = value
-			value = document.createComment('')
+			this.#root ??= new Root(this.#range)
+			this.#root.render(value)
+			return
 		} else if (!(value instanceof Node)) {
 			value = document.createTextNode(value)
 		}
 
-		if (template) {
-			this.#root ??= new Root(this.#range)
-			this.#root.render(template)
-		} else {
-			this.#root = null
-			this.#range.deleteContents()
-			if (value !== null) this.#range.insertNode(value)
-		}
+		this.#root = null
+		this.#range.deleteContents()
+		if (value !== null) this.#range.insertNode(value)
 	}
 }
 
