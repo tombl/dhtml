@@ -3,10 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="../reset.css">
+    <link rel="stylesheet" href="../reset.css" />
     <link rel="shortcut icon" href="data:" />
     <title>Tests</title>
-    <script type="module">
+    <script>
       let running = 0;
       let passed = 0;
       let failed = 0;
@@ -59,14 +59,16 @@
                   h("a", { href: this.src, target: "_blank" }, "🔗 view")
                 ),
                 h(
-                  "p",
+                  "pre",
                   {},
                   (this.status = document.createTextNode("waiting..."))
                 ),
                 (this.iframe = h("div", {}, "not started"))
               )
             );
-            requestIdleCallback(() => {
+
+            // requestIdleCallback isn't supported in safari???
+            (globalThis.requestIdleCallback ?? globalThis.setTimeout)(() => {
               running++;
               this.icon.data = "🟡";
               this.status.data = "running...";
@@ -97,15 +99,15 @@
             running--;
             if (status === "pass") {
               passed++;
-              console.log(this.src, "pass!");
+              console.log("✅", this.src);
               this.icon.data = "✅";
-              this.status.data = "pass";
+              this.status.data = "";
               this.summary.style.backgroundColor = "rgba(128, 255, 128, 0.5)";
             } else {
               failed++;
-              console.error(this.src, "fail!", reason);
+              console.error("❌", this.src, reason);
               this.icon.data = "❌";
-              this.status.data = `fail: ${reason}`;
+              this.status.data = `${reason}`;
               this.summary.style.backgroundColor = "rgba(255, 128, 128, 0.5)";
             }
             updateTitle();

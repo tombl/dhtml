@@ -15,7 +15,7 @@ document.head.appendChild(favicon)
 export function pass() {
 	if (parent === window) {
 		favicon.replaceWith(makeFavicon('✅'))
-		console.info('pass!')
+		console.info('✅')
 	} else {
 		parent.postMessage({ status: 'pass' }, '*')
 	}
@@ -24,7 +24,7 @@ export function pass() {
 export function fail(reason) {
 	if (parent === window) {
 		favicon.replaceWith(makeFavicon('❌'))
-		console.error('fail!', reason)
+		console.error('❌', reason)
 	} else {
 		parent.postMessage({ status: 'fail', reason }, '*')
 	}
