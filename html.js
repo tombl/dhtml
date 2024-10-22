@@ -188,7 +188,10 @@ const compileTemplate = memo(statics => {
 	}
 
 	for (
-		let walker = document.createTreeWalker(templateElement.content, 5 /* NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT */);
+		let walker = document.createTreeWalker(
+			templateElement.content,
+			5 /* NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT */,
+		);
 		nextPart < parts.length && walker.nextNode();
 	) {
 		const node = walker.currentNode
