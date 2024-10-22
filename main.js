@@ -5,6 +5,7 @@ function ticker(controller, interval) {
 		controller.invalidate()
 	}, interval)
 	controller.signal.addEventListener('abort', () => {
+		console.log('abort')
 		clearInterval(id)
 	})
 }

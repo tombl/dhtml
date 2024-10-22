@@ -56,3 +56,5 @@ assert.eq = (actual, expected) => {
 		].join('\n'),
 	)
 }
+
+assert.deepEq = (actual, expected) => assert.eq(JSON.stringify(actual, null, 2), JSON.stringify(expected, null, 2))

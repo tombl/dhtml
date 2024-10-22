@@ -30,30 +30,38 @@ class ChildPart {
 	}
 
 	#root = null
-	#previousValue = undefined
-	#previousRenderable = null
+	#value = undefined
+	#renderable = null
 	#renderController = null
 	#abortController = null
 
-	#revokePreviousRenderable() {
-		this.#renderController = null
+	#setRenderable(next) {
+		if (this.#renderable === next) return
+
 		this.#abortController?.abort()
-		this.#abortController = null
+		this.#renderController = this.#abortController = null
+
+		this.#renderable = next
+	}
+
+	#clearChildren() {
+		// scan through all the parts of the previous tree, and clear any renderables.
+		for (const [, part] of this.#root._instance.parts) {
+			if (part instanceof ChildPart) {
+				part.#setRenderable(null)
+				if (part.#value instanceof BoundTemplateInstance) part.#clearChildren()
+			}
+		}
 	}
 
 	update(value) {
 		if (isRenderable(value)) {
-			const renderable = value
+			this.#setRenderable(value)
+
 			const self = this
-
-			if (this.#previousRenderable !== renderable) {
-				this.#revokePreviousRenderable()
-				this.#previousRenderable = renderable
-			}
-
 			this.#renderController ??= {
 				invalidate() {
-					if (self.#previousRenderable !== renderable) throw new Error('Could not invalidate an outdated renderable')
+					if (self.#renderable !== renderable) throw new Error('Could not invalidate an outdated renderable')
 					self.update(renderable)
 				},
 				get signal() {
@@ -62,6 +70,7 @@ class ChildPart {
 				},
 			}
 
+			const renderable = value
 			value = renderable.render(this.#renderController)
 			if (value === renderable) {
 				console.warn(
@@ -74,10 +83,7 @@ class ChildPart {
 			// if render returned another renderable, we want to track/cache both renderables individually.
 			// wrap it in a nested ChildPart so that each can be tracked without ChildPart having to handle multiple renderables.
 			if (isRenderable(value)) value = singlePartTemplate(value)
-		} else if (this.#previousRenderable !== null) {
-			this.#revokePreviousRenderable()
-			this.#previousRenderable = null
-		}
+		} else this.#setRenderable(null)
 
 		// if it's undefined, swap the value for null.
 		// this means if the initial value is undefined,
@@ -86,8 +92,18 @@ class ChildPart {
 		if (value === undefined) value = null
 
 		// now early return if the value hasn't changed.
-		if (value === this.#previousValue) return
-		this.#previousValue = value
+		if (value === this.#value) return
+
+		// if we previously rendered a tree that might contain renderables,
+		// and the template has changed (or we're not even rendering a template anymore),
+		// we need to clear the old renderables.
+		if (
+			this.#value instanceof BoundTemplateInstance &&
+			(!(value instanceof BoundTemplateInstance) || this.#value._template !== value._template)
+		)
+			this.#clearChildren()
+
+		this.#value = value
 
 		if (value instanceof BoundTemplateInstance) {
 			this.#root ??= new Root(this.#range)
@@ -309,41 +325,34 @@ class TemplateInstance {
 }
 
 class BoundTemplateInstance {
-	#template
-	#dynamics
 	constructor(statics, dynamics) {
-		this.#template = compileTemplate(statics)
-		this.#dynamics = dynamics
-	}
-
-	// This is a little odd, but it allows for Root to read the private fields.
-	// Think of it like a friend class.
-	static Root = class Root {
-		constructor(range = document.createRange()) {
-			this.range = range
-		}
-
-		static appendInto(parent) {
-			const comment = new Comment()
-			parent.appendChild(comment)
-			const root = new Root()
-			root.range.selectNode(comment)
-			return root
-		}
-
-		#instance
-		render(value) {
-			if (!(value instanceof BoundTemplateInstance)) value = singlePartTemplate(value)
-			const template = value.#template
-			const dynamics = value.#dynamics
-			if (this.#instance?.template === template) {
-				this.#instance.update(dynamics)
-			} else {
-				this.#instance = new TemplateInstance(template, dynamics, this.range)
-			}
-		}
+		this._template = compileTemplate(statics)
+		this._dynamics = dynamics
 	}
 }
 
 export const html = (statics, ...dynamics) => new BoundTemplateInstance(statics, dynamics)
-export const { Root } = BoundTemplateInstance
+
+export class Root {
+	constructor(range = document.createRange()) {
+		this.range = range
+	}
+
+	static appendInto(parent) {
+		const comment = new Comment()
+		parent.appendChild(comment)
+		const root = new Root()
+		root.range.selectNode(comment)
+		return root
+	}
+
+	render(value) {
+		if (!(value instanceof BoundTemplateInstance)) value = singlePartTemplate(value)
+		const { _template: template, _dynamics: dynamics } = value
+		if (this._instance?.template === template) {
+			this._instance.update(dynamics)
+		} else {
+			this._instance = new TemplateInstance(template, dynamics, this.range)
+		}
+	}
+}

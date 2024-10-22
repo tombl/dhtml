@@ -7,18 +7,25 @@
   test(() => {
     const r = Root.appendInto(root);
 
-    let aborts = 0;
+    const sequence = []
+    
     const inner = {
       render(controller) {
-        controller.signal.addEventListener("abort", () => {
-          aborts++;
-        });
+        sequence.push("inner render");
+        controller.signal.onabort = () => {
+          sequence.push("inner abort");
+        };
         return "inner";
       },
     };
+
     const outer = {
       show: true,
-      render() {
+      render(controller) {
+        sequence.push("outer render");
+        controller.signal.onabort = () => {
+          sequence.push("outer abort");
+        };
         return html`${this.show ? inner : null}`;
       },
     };
@@ -26,21 +33,25 @@
     outer.show = true;
     r.render(outer);
     assert.eq(root.innerHTML, "inner");
-    assert.eq(aborts, 0);
+    assert.deepEq(sequence, ["outer render", "inner render"]);
+    sequence.length = 0;
 
     outer.show = false;
     r.render(outer);
     assert.eq(root.innerHTML, "");
-    assert.eq(aborts, 1);
+    assert.deepEq(sequence, ["outer render", "inner abort"]);
+    sequence.length = 0;
 
     outer.show = true;
     r.render(outer);
     assert.eq(root.innerHTML, "inner");
-    assert.eq(aborts, 1);
+    assert.deepEq(sequence, ["outer render", "inner render"]);
+    sequence.length = 0;
 
     outer.show = false;
     r.render(outer);
     assert.eq(root.innerHTML, "");
-    assert.eq(aborts, 2);
+    assert.deepEq(sequence, ["outer render", "inner abort"]);
+    sequence.length = 0;
   });
 </script>
