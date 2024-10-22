@@ -1,6 +1,3 @@
-const TAG_TEMPLATE = Symbol('template')
-const TAG_DYNAMICS = Symbol('dynamics')
-
 function memo(fn) {
 	const cache = new Map()
 	return arg => {
@@ -34,16 +31,21 @@ class ChildPart {
 	#previousRenderable = null
 	#renderController = null
 	#abortController = null
+
+	#revokePreviousRenderable() {
+		this.#renderController = null
+		this.#abortController?.abort()
+		this.#abortController = null
+	}
+
 	update(value) {
-		if (typeof value === 'object' && 'render' in value) {
+		if (typeof value === 'object' && value !== null && 'render' in value) {
 			const renderable = value
 			const self = this
 
 			if (this.#previousRenderable !== renderable) {
+				this.#revokePreviousRenderable()
 				this.#previousRenderable = renderable
-				this.#renderController = null
-				this.#abortController?.abort()
-				this.#abortController = null
 			}
 
 			this.#renderController ??= {
@@ -58,6 +60,9 @@ class ChildPart {
 			}
 
 			value = renderable.render(this.#renderController)
+		} else if (this.#previousRenderable !== null) {
+			this.#revokePreviousRenderable()
+			this.#previousRenderable = null
 		}
 
 		// if it's undefined, swap the value for null.
@@ -72,7 +77,7 @@ class ChildPart {
 
 		if (value === null) {
 			// do nothing, this is handled below
-		} else if (typeof value === 'object' && TAG_TEMPLATE in value) {
+		} else if (value instanceof BoundTemplateInstance) {
 			this.#root ??= new Root(this.#range)
 			this.#root.render(value)
 			return
@@ -263,11 +268,6 @@ const compileTemplate = memo(statics => {
 	return { content: templateElement.content, parts, rootParts }
 })
 
-export const html = (statics, ...dynamics) => ({
-	[TAG_TEMPLATE]: compileTemplate(statics),
-	[TAG_DYNAMICS]: dynamics,
-})
-
 class TemplateInstance {
 	constructor(template, dynamics, range) {
 		this.template = template
@@ -299,25 +299,42 @@ class TemplateInstance {
 	}
 }
 
-export class Root {
-	constructor(range = document.createRange()) {
-		this.range = range
+class BoundTemplateInstance {
+	#template
+	#dynamics
+	constructor(statics, dynamics) {
+		this.#template = compileTemplate(statics)
+		this.#dynamics = dynamics
 	}
 
-	static appendInto(parent) {
-		const comment = document.createComment('')
-		parent.appendChild(comment)
-		const root = new Root()
-		root.range.selectNode(comment)
-		return root
-	}
+	// This is a little odd, but it allows for Root to read the private fields.
+	// Think of it like a friend class.
+	static Root = class Root {
+		constructor(range = document.createRange()) {
+			this.range = range
+		}
 
-	#instance
-	render({ [TAG_TEMPLATE]: template, [TAG_DYNAMICS]: dynamics }) {
-		if (this.#instance?.template === template) {
-			this.#instance.update(dynamics)
-		} else {
-			this.#instance = new TemplateInstance(template, dynamics, this.range)
+		static appendInto(parent) {
+			const comment = document.createComment('')
+			parent.appendChild(comment)
+			const root = new Root()
+			root.range.selectNode(comment)
+			return root
+		}
+
+		#instance
+		render(value) {
+			if (!(value instanceof BoundTemplateInstance)) value = html`${value}`
+			const template = value.#template
+			const dynamics = value.#dynamics
+			if (this.#instance?.template === template) {
+				this.#instance.update(dynamics)
+			} else {
+				this.#instance = new TemplateInstance(template, dynamics, this.range)
+			}
 		}
 	}
 }
+
+export const html = (statics, ...dynamics) => new BoundTemplateInstance(statics, dynamics)
+export const { Root } = BoundTemplateInstance
