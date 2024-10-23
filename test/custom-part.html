@@ -9,31 +9,31 @@
 
     const sequence = [];
 
-    const part = {
-      create(node) {
-        assert.eq(node.tagName, "DIV");
-        sequence.push("create");
-      },
-      update() {
-        sequence.push("update");
-      },
-      detach() {
-        sequence.push("detach");
-      },
-    };
+    const classes =
+      (...args) =>
+      (node) => {
+        const original = node.className;
+        for (const arg of args) {
+          console.log(arg);
+          if (typeof arg === "string") {
+            node.classList.add(arg);
+          } else {
+            for (const [key, value] of Object.entries(arg)) {
+              node.classList.toggle(key, value);
+            }
+          }
+        }
+        return () => {
+          node.className = original;
+        };
+      };
 
-    const template = html`<div ${part}>Hello, world!</div>`;
+    const template = (part) => html`<div ${part}>Hello, world!</div>`;
 
-    r.render(template);
-    assert.deepEq(sequence, ["create"]);
-    sequence.length = 0;
+    r.render(template(classes("a", "b")));
+    assert.eq(root.firstChild.className, "a b");
 
-    r.render(template);
-    assert.deepEq(sequence, ["update"]);
-    sequence.length = 0;
-
-    r.render(null);
-    assert.deepEq(sequence, ["detach"]);
-    sequence.length = 0;
+    r.render(template(classes({ c: true, d: true })));
+    assert.eq(root.firstChild.className, "c d");
   });
 </script>

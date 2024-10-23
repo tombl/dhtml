@@ -386,21 +386,21 @@ class AttributePart {
 class CustomPart {
 	#node
 	#value
+	#onDetach
 	create(node, value) {
 		this.#node = node
 		this.#value = value
-		value.create?.(node)
+		this.#onDetach = value(node)
 	}
+
 	update(value) {
-		if (this.#value === value) {
-			value.update?.()
-		} else {
-			this.#value?.detach?.()
-			this.#value = value
-			value.create?.(this.#node)
-		}
+		if (this.#value === value) return
+		this.detach()
+		this.create(this.#node, value)
 	}
+
 	detach() {
-		this.#value?.detach?.()
+		this.#onDetach?.()
+		this.#onDetach = null
 	}
 }
