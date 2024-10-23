@@ -236,7 +236,8 @@ const compileTemplate = memo(statics => {
 			const nodes = []
 			for (const match of [...node.data.matchAll(DYNAMIC_GLOBAL)].reverse()) {
 				node.splitText(match.index + match[0].length)
-				const dyn = node.splitText(match.index)
+				const dyn = new Comment()
+				node.splitText(match.index).replaceWith(dyn)
 				nodes.push([dyn, match[1]])
 
 				// skip the two nodes we just created
