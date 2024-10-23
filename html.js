@@ -1,3 +1,82 @@
+export const html = (statics, ...dynamics) => new BoundTemplateInstance(statics, dynamics)
+
+const emptyTemplate = () => html``
+const singlePartTemplate = part => html`${part}`
+const isRenderable = value => typeof value === 'object' && value !== null && 'render' in value
+
+class BoundTemplateInstance {
+	constructor(statics, dynamics) {
+		this._template = compileTemplate(statics)
+		this._dynamics = dynamics
+	}
+}
+
+export class Root {
+	constructor(range = document.createRange()) {
+		this.range = range
+	}
+
+	static appendInto(parent) {
+		const comment = new Comment()
+		parent.appendChild(comment)
+		const root = new Root()
+		root.range.selectNode(comment)
+		return root
+	}
+
+	render(value) {
+		if (!(value instanceof BoundTemplateInstance)) value = singlePartTemplate(value)
+		const { _template: template, _dynamics: dynamics } = value
+		if (this._instance?.template === template) {
+			this._instance.update(dynamics)
+		} else {
+			this.detach()
+			this._instance = new TemplateInstance(template, dynamics, this.range)
+		}
+	}
+
+	detach() {
+		if (this._instance === undefined) return
+
+		// scan through all the parts of the previous tree, and clear any renderables.
+		for (const [, part] of this._instance.parts) part.detach()
+	}
+}
+
+class TemplateInstance {
+	constructor(template, dynamics, range) {
+		this.template = template
+		const doc = template.content.cloneNode(true)
+		const nodeByPart = []
+
+		for (const node of doc.querySelectorAll('[data-dyn-parts]')) {
+			const parts = node.dataset.dynParts
+			delete node.dataset.dynParts
+			for (const part of parts.split(' ')) nodeByPart[part] = node
+		}
+
+		// the fragment must be inserted before the parts are constructed,
+		// because they need to know their final location.
+		range.deleteContents()
+		range.insertNode(doc)
+
+		for (const part of template.rootParts) nodeByPart[part] = range
+
+		this.parts = template.parts.map(([dynamicIdx, createPart], elementIdx) => {
+			const part = createPart()
+			part.create(nodeByPart[elementIdx], dynamics[dynamicIdx])
+			return [dynamicIdx, part]
+		})
+	}
+
+	update(dynamics) {
+		for (const [idx, part] of this.parts) part.update(dynamics[idx])
+	}
+}
+
+const DYNAMIC_WHOLE = /^dyn-\$(\d+)$/i
+const DYNAMIC_GLOBAL = /dyn-\$(\d+)/gi
+
 function memo(fn) {
 	const cache = new Map()
 	return arg => {
@@ -8,9 +87,99 @@ function memo(fn) {
 	}
 }
 
-const emptyTemplate = () => html``
-const singlePartTemplate = part => html`${part}`
-const isRenderable = value => typeof value === 'object' && value !== null && 'render' in value
+const compileTemplate = memo(statics => {
+	const templateElement = document.createElement('template')
+	templateElement.innerHTML = statics.reduce((a, v, i) => a + v + (i === statics.length - 1 ? '' : `dyn-$${i}`), '')
+
+	let nextPart = 0
+	const parts = Array(statics.length - 1)
+	const rootParts = []
+	function patch(node, idx, part) {
+		if (node.nodeType === 11 /* Node.DOCUMENT_FRAGMENT_NODE */) rootParts.push(nextPart)
+		else if ('dynParts' in node.dataset) node.dataset.dynParts += ' ' + nextPart
+		else node.dataset.dynParts = nextPart
+		if (nextPart !== idx) console.warn('dynamic value detected in static location')
+		parts[nextPart++] = [idx, part]
+	}
+
+	for (
+		let walker = document.createTreeWalker(
+			templateElement.content,
+			5 /* NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT */,
+		);
+		nextPart < parts.length && walker.nextNode();
+	) {
+		const node = walker.currentNode
+		if (node.nodeType === 3 /* Node.TEXT_NODE */) {
+			const nodes = []
+			for (const match of [...node.data.matchAll(DYNAMIC_GLOBAL)].reverse()) {
+				node.splitText(match.index + match[0].length)
+				const dyn = new Comment()
+				node.splitText(match.index).replaceWith(dyn)
+				nodes.push([dyn, match[1]])
+
+				// skip the two nodes we just created
+				walker.nextNode()
+				walker.nextNode()
+			}
+
+			let siblings
+			for (const [node, idx] of nodes) {
+				const child = (siblings ??= [...node.parentNode.childNodes]).indexOf(node)
+				patch(node.parentNode, parseInt(idx), () => new ChildPart(child))
+			}
+		} else {
+			const toRemove = []
+			for (let name of node.getAttributeNames()) {
+				const value = node.getAttribute(name)
+				switch (name[0]) {
+					// event:
+					case '@': {
+						toRemove.push(name)
+						name = name.slice(1)
+						const match = DYNAMIC_WHOLE.exec(value)
+						if (match === null) throw new Error('`@` attributes must be functions')
+						patch(node, parseInt(match[1]), () => new EventPart(name))
+						break
+					}
+
+					// property:
+					case '.': {
+						toRemove.push(name)
+						name = name.slice(1)
+						const match = DYNAMIC_WHOLE.exec(value)
+						if (match === null) throw new Error('`.` attributes must be properties')
+						name = name.replace(/-([a-z])/g, (_, c) => c.toUpperCase())
+						patch(node, parseInt(match[1]), () => new PropertyPart(name))
+						break
+					}
+
+					// boolean attribute:
+					case '?': {
+						toRemove.push(name)
+						name = name.slice(1)
+						const match = DYNAMIC_WHOLE.exec(value)
+						if (match === null) throw new Error('`?` attributes must be booleans')
+						patch(node, parseInt(match[1]), () => new BooleanAttributePart(name))
+						break
+					}
+
+					// attribute:
+					default: {
+						const match = DYNAMIC_WHOLE.exec(value)
+						if (match === null) continue
+						patch(node, parseInt(match[1]), () => new AttributePart(name))
+					}
+				}
+			}
+			for (const name of toRemove) node.removeAttribute(name)
+		}
+	}
+
+	parts.length = nextPart
+
+	return { content: templateElement.content, parts, rootParts }
+})
 
 class ChildPart {
 	#childIndex
@@ -204,173 +373,5 @@ class AttributePart {
 
 	detach() {
 		this.#node.removeAttribute(this.#name)
-	}
-}
-
-const DYNAMIC_WHOLE = /^dyn-\$(\d+)$/i
-const DYNAMIC_GLOBAL = /dyn-\$(\d+)/gi
-const compileTemplate = memo(statics => {
-	const templateElement = document.createElement('template')
-	templateElement.innerHTML = statics.reduce((a, v, i) => a + v + (i === statics.length - 1 ? '' : `dyn-$${i}`), '')
-
-	let nextPart = 0
-	const parts = Array(statics.length - 1)
-	const rootParts = []
-	function patch(node, idx, part) {
-		if (node.nodeType === 11 /* Node.DOCUMENT_FRAGMENT_NODE */) rootParts.push(nextPart)
-		else if ('dynParts' in node.dataset) node.dataset.dynParts += ' ' + nextPart
-		else node.dataset.dynParts = nextPart
-		if (nextPart !== idx) console.warn('dynamic value detected in static location')
-		parts[nextPart++] = [idx, part]
-	}
-
-	for (
-		let walker = document.createTreeWalker(
-			templateElement.content,
-			5 /* NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT */,
-		);
-		nextPart < parts.length && walker.nextNode();
-	) {
-		const node = walker.currentNode
-		if (node.nodeType === 3 /* Node.TEXT_NODE */) {
-			const nodes = []
-			for (const match of [...node.data.matchAll(DYNAMIC_GLOBAL)].reverse()) {
-				node.splitText(match.index + match[0].length)
-				const dyn = new Comment()
-				node.splitText(match.index).replaceWith(dyn)
-				nodes.push([dyn, match[1]])
-
-				// skip the two nodes we just created
-				walker.nextNode()
-				walker.nextNode()
-			}
-
-			let siblings
-			for (const [node, idx] of nodes) {
-				const child = (siblings ??= [...node.parentNode.childNodes]).indexOf(node)
-				patch(node.parentNode, parseInt(idx), () => new ChildPart(child))
-			}
-		} else {
-			const toRemove = []
-			for (let name of node.getAttributeNames()) {
-				const value = node.getAttribute(name)
-				switch (name[0]) {
-					// event:
-					case '@': {
-						toRemove.push(name)
-						name = name.slice(1)
-						const match = DYNAMIC_WHOLE.exec(value)
-						if (match === null) throw new Error('`@` attributes must be functions')
-						patch(node, parseInt(match[1]), () => new EventPart(name))
-						break
-					}
-
-					// property:
-					case '.': {
-						toRemove.push(name)
-						name = name.slice(1)
-						const match = DYNAMIC_WHOLE.exec(value)
-						if (match === null) throw new Error('`.` attributes must be properties')
-						name = name.replace(/-([a-z])/g, (_, c) => c.toUpperCase())
-						patch(node, parseInt(match[1]), () => new PropertyPart(name))
-						break
-					}
-
-					// boolean attribute:
-					case '?': {
-						toRemove.push(name)
-						name = name.slice(1)
-						const match = DYNAMIC_WHOLE.exec(value)
-						if (match === null) throw new Error('`?` attributes must be booleans')
-						patch(node, parseInt(match[1]), () => new BooleanAttributePart(name))
-						break
-					}
-
-					// attribute:
-					default: {
-						const match = DYNAMIC_WHOLE.exec(value)
-						if (match === null) continue
-						patch(node, parseInt(match[1]), () => new AttributePart(name))
-					}
-				}
-			}
-			for (const name of toRemove) node.removeAttribute(name)
-		}
-	}
-
-	parts.length = nextPart
-
-	return { content: templateElement.content, parts, rootParts }
-})
-
-class TemplateInstance {
-	constructor(template, dynamics, range) {
-		this.template = template
-		const doc = template.content.cloneNode(true)
-		const nodeByPart = []
-
-		for (const node of doc.querySelectorAll('[data-dyn-parts]')) {
-			const parts = node.dataset.dynParts
-			delete node.dataset.dynParts
-			for (const part of parts.split(' ')) nodeByPart[part] = node
-		}
-
-		// the fragment must be inserted before the parts are constructed,
-		// because they need to know their final location.
-		range.deleteContents()
-		range.insertNode(doc)
-
-		for (const part of template.rootParts) nodeByPart[part] = range
-
-		this.parts = template.parts.map(([dynamicIdx, createPart], elementIdx) => {
-			const part = createPart()
-			part.create(nodeByPart[elementIdx], dynamics[dynamicIdx])
-			return [dynamicIdx, part]
-		})
-	}
-
-	update(dynamics) {
-		for (const [idx, part] of this.parts) part.update(dynamics[idx])
-	}
-}
-
-class BoundTemplateInstance {
-	constructor(statics, dynamics) {
-		this._template = compileTemplate(statics)
-		this._dynamics = dynamics
-	}
-}
-
-export const html = (statics, ...dynamics) => new BoundTemplateInstance(statics, dynamics)
-
-export class Root {
-	constructor(range = document.createRange()) {
-		this.range = range
-	}
-
-	static appendInto(parent) {
-		const comment = new Comment()
-		parent.appendChild(comment)
-		const root = new Root()
-		root.range.selectNode(comment)
-		return root
-	}
-
-	render(value) {
-		if (!(value instanceof BoundTemplateInstance)) value = singlePartTemplate(value)
-		const { _template: template, _dynamics: dynamics } = value
-		if (this._instance?.template === template) {
-			this._instance.update(dynamics)
-		} else {
-			this.detach()
-			this._instance = new TemplateInstance(template, dynamics, this.range)
-		}
-	}
-
-	detach() {
-		if (this._instance === undefined) return
-
-		// scan through all the parts of the previous tree, and clear any renderables.
-		for (const [, part] of this._instance.parts) part.detach()
 	}
 }
