@@ -131,13 +131,20 @@ const compileTemplate = memo(statics => {
 		} else {
 			const toRemove = []
 			for (let name of node.getAttributeNames()) {
+				let match = DYNAMIC_WHOLE.exec(name)
+				if (match !== null) {
+					toRemove.push(name)
+					patch(node, parseInt(match[1]), () => new CustomPart())
+					continue
+				}
+
 				const value = node.getAttribute(name)
 				switch (name[0]) {
 					// event:
 					case '@': {
 						toRemove.push(name)
 						name = name.slice(1)
-						const match = DYNAMIC_WHOLE.exec(value)
+						match = DYNAMIC_WHOLE.exec(value)
 						if (match === null) throw new Error('`@` attributes must be functions')
 						patch(node, parseInt(match[1]), () => new EventPart(name))
 						break
@@ -147,7 +154,7 @@ const compileTemplate = memo(statics => {
 					case '.': {
 						toRemove.push(name)
 						name = name.slice(1)
-						const match = DYNAMIC_WHOLE.exec(value)
+						match = DYNAMIC_WHOLE.exec(value)
 						if (match === null) throw new Error('`.` attributes must be properties')
 						name = name.replace(/-([a-z])/g, (_, c) => c.toUpperCase())
 						patch(node, parseInt(match[1]), () => new PropertyPart(name))
@@ -158,7 +165,7 @@ const compileTemplate = memo(statics => {
 					case '?': {
 						toRemove.push(name)
 						name = name.slice(1)
-						const match = DYNAMIC_WHOLE.exec(value)
+						match = DYNAMIC_WHOLE.exec(value)
 						if (match === null) throw new Error('`?` attributes must be booleans')
 						patch(node, parseInt(match[1]), () => new BooleanAttributePart(name))
 						break
@@ -166,7 +173,7 @@ const compileTemplate = memo(statics => {
 
 					// attribute:
 					default: {
-						const match = DYNAMIC_WHOLE.exec(value)
+						match = DYNAMIC_WHOLE.exec(value)
 						if (match === null) continue
 						patch(node, parseInt(match[1]), () => new AttributePart(name))
 					}
@@ -373,5 +380,27 @@ class AttributePart {
 
 	detach() {
 		this.#node.removeAttribute(this.#name)
+	}
+}
+
+class CustomPart {
+	#node
+	#value
+	create(node, value) {
+		this.#node = node
+		this.#value = value
+		value.create?.(node)
+	}
+	update(value) {
+		if (this.#value === value) {
+			value.update?.()
+		} else {
+			this.#value?.detach?.()
+			this.#value = value
+			value.create?.(this.#node)
+		}
+	}
+	detach() {
+		this.#value?.detach?.()
 	}
 }

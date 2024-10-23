@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<div id="root"></div>
+<script type="module">
+  import { test, assert } from "./lib.js";
+  import { Root, html } from "../html.js";
+
+  test(() => {
+    const r = Root.appendInto(root);
+
+    const sequence = [];
+
+    const part = {
+      create(node) {
+        assert.eq(node.tagName, "DIV");
+        sequence.push("create");
+      },
+      update() {
+        sequence.push("update");
+      },
+      detach() {
+        sequence.push("detach");
+      },
+    };
+
+    const template = html`<div ${part}>Hello, world!</div>`;
+
+    r.render(template);
+    assert.deepEq(sequence, ["create"]);
+    sequence.length = 0;
+
+    r.render(template);
+    assert.deepEq(sequence, ["update"]);
+    sequence.length = 0;
+
+    r.render(null);
+    assert.deepEq(sequence, ["detach"]);
+    sequence.length = 0;
+  });
+</script>
