@@ -129,12 +129,16 @@ class EventPart {
 				this.#attached = true
 			}
 		} else if (value === null) {
-			if (this.#attached) {
-				this.#node.removeEventListener(this.#name, this.#handler)
-				this.#attached = false
-			}
+			this.detach()
 		} else {
 			throw new Error(`Expected a function or null, got ${value}`)
+		}
+	}
+
+	detach() {
+		if (this.#attached) {
+			this.#node.removeEventListener(this.#name, this.#handler)
+			this.#attached = false
 		}
 	}
 }
@@ -154,6 +158,10 @@ class PropertyPart {
 	update(value) {
 		this.#node[this.#name] = value
 	}
+
+	detach() {
+		delete this.#node[this.#name]
+	}
 }
 
 class BooleanAttributePart {
@@ -170,6 +178,10 @@ class BooleanAttributePart {
 
 	update(value) {
 		this.#node.toggleAttribute(this.#name, value)
+	}
+
+	detach() {
+		this.#node.removeAttribute(this.#name)
 	}
 }
 
@@ -188,6 +200,10 @@ class AttributePart {
 	update(value) {
 		if (value === null) this.#node.removeAttribute(this.#name)
 		else this.#node.setAttribute(this.#name, value)
+	}
+
+	detach() {
+		this.#node.removeAttribute(this.#name)
 	}
 }
 
@@ -352,6 +368,6 @@ export class Root {
 		if (this._instance === undefined) return
 
 		// scan through all the parts of the previous tree, and clear any renderables.
-		for (const [, part] of this._instance.parts) part.detach?.()
+		for (const [, part] of this._instance.parts) part.detach()
 	}
 }
