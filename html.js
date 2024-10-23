@@ -252,7 +252,8 @@ const compileTemplate = memo(statics => {
 			}
 		} else {
 			const toRemove = []
-			for (let { name, value } of node.attributes) {
+			for (let name of node.getAttributeNames()) {
+				const value = node.getAttribute(name)
 				switch (name[0]) {
 					// event:
 					case '@': {
@@ -270,6 +271,7 @@ const compileTemplate = memo(statics => {
 						name = name.slice(1)
 						const match = DYNAMIC_WHOLE.exec(value)
 						if (match === null) throw new Error('`.` attributes must be properties')
+						name = name.replace(/-([a-z])/g, (_, c) => c.toUpperCase())
 						patch(node, parseInt(match[1]), () => new PropertyPart(name))
 						break
 					}
