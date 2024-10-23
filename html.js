@@ -44,16 +44,6 @@ class ChildPart {
 		this.#renderable = next
 	}
 
-	#clearChildren() {
-		// scan through all the parts of the previous tree, and clear any renderables.
-		for (const [, part] of this.#root._instance.parts) {
-			if (part instanceof ChildPart) {
-				part.#setRenderable(null)
-				if (part.#value instanceof BoundTemplateInstance) part.#clearChildren()
-			}
-		}
-	}
-
 	update(value) {
 		if (isRenderable(value)) {
 			this.#setRenderable(value)
@@ -93,26 +83,27 @@ class ChildPart {
 
 		// now early return if the value hasn't changed.
 		if (value === this.#value) return
-
-		// if we previously rendered a tree that might contain renderables,
-		// and the template has changed (or we're not even rendering a template anymore),
-		// we need to clear the old renderables.
-		if (
-			this.#value instanceof BoundTemplateInstance &&
-			(!(value instanceof BoundTemplateInstance) || this.#value._template !== value._template)
-		)
-			this.#clearChildren()
-
 		this.#value = value
 
 		if (value instanceof BoundTemplateInstance) {
 			this.#root ??= new Root(this.#range)
-			this.#root.render(value)
+			this.#root.render(value) // root.render will detach the previous tree if the template has changed.
 		} else {
+			// if we previously rendered a tree that might contain renderables,
+			// and the template has changed (or we're not even rendering a template anymore),
+			// we need to clear the old renderables.
+			this.#root?.detach()
 			this.#root = null
+
 			this.#range.deleteContents()
 			if (value !== null) this.#range.insertNode(value instanceof Node ? value : new Text(value))
 		}
+	}
+
+	detach() {
+		this.#setRenderable(null)
+		this.#root?.detach() // root.detach and part.detach are mutually recursive, so this detaches children too.
+		this.#root = null
 	}
 }
 
@@ -352,7 +343,15 @@ export class Root {
 		if (this._instance?.template === template) {
 			this._instance.update(dynamics)
 		} else {
+			this.detach()
 			this._instance = new TemplateInstance(template, dynamics, this.range)
 		}
+	}
+
+	detach() {
+		if (this._instance === undefined) return
+
+		// scan through all the parts of the previous tree, and clear any renderables.
+		for (const [, part] of this._instance.parts) part.detach?.()
 	}
 }
