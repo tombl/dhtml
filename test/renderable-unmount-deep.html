@@ -1,58 +1,58 @@
-<!DOCTYPE html>
+<!doctype html>
 <div id="root"></div>
 <script type="module">
-  import { test, assert } from "./lib.js";
-  import { Root, html } from "../html.js";
+	import { test, assert } from './lib.js'
+	import { Root, html } from '../html.js'
 
-  test(() => {
-    const r = Root.appendInto(root);
+	test(() => {
+		const r = Root.appendInto(root)
 
-    const sequence = []
-    
-    const inner = {
-      render(controller) {
-        sequence.push("inner render");
-        controller.signal.onabort = () => {
-          sequence.push("inner abort");
-        };
-        return "inner";
-      },
-    };
+		const sequence = []
 
-    const outer = {
-      show: true,
-      render(controller) {
-        sequence.push("outer render");
-        controller.signal.onabort = () => {
-          sequence.push("outer abort");
-        };
-        if (!this.show) return null;
-        return inner;
-      },
-    };
+		const inner = {
+			render(controller) {
+				sequence.push('inner render')
+				controller.signal.onabort = () => {
+					sequence.push('inner abort')
+				}
+				return 'inner'
+			},
+		}
 
-    outer.show = true;
-    r.render(outer);
-    assert.eq(root.innerHTML, "inner");
-    assert.deepEq(sequence, ["outer render", "inner render"]);
-    sequence.length = 0;
+		const outer = {
+			show: true,
+			render(controller) {
+				sequence.push('outer render')
+				controller.signal.onabort = () => {
+					sequence.push('outer abort')
+				}
+				if (!this.show) return null
+				return inner
+			},
+		}
 
-    outer.show = false;
-    r.render(outer);
-    assert.eq(root.innerHTML, "");
-    assert.deepEq(sequence, ["outer render", "inner abort"]);
-    sequence.length = 0;
+		outer.show = true
+		r.render(outer)
+		assert.eq(root.innerHTML, 'inner')
+		assert.deepEq(sequence, ['outer render', 'inner render'])
+		sequence.length = 0
 
-    outer.show = true;
-    r.render(outer);
-    assert.eq(root.innerHTML, "inner");
-    assert.deepEq(sequence, ["outer render", "inner render"]);
-    sequence.length = 0;
+		outer.show = false
+		r.render(outer)
+		assert.eq(root.innerHTML, '')
+		assert.deepEq(sequence, ['outer render', 'inner abort'])
+		sequence.length = 0
 
-    outer.show = false;
-    r.render(outer);
-    assert.eq(root.innerHTML, "");
-    assert.deepEq(sequence, ["outer render", "inner abort"]);
-    sequence.length = 0;
-  });
+		outer.show = true
+		r.render(outer)
+		assert.eq(root.innerHTML, 'inner')
+		assert.deepEq(sequence, ['outer render', 'inner render'])
+		sequence.length = 0
+
+		outer.show = false
+		r.render(outer)
+		assert.eq(root.innerHTML, '')
+		assert.deepEq(sequence, ['outer render', 'inner abort'])
+		sequence.length = 0
+	})
 </script>

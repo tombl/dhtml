@@ -1,28 +1,28 @@
-<!DOCTYPE html>
+<!doctype html>
 <div id="root"></div>
 <script type="module">
-  import { test, assert } from "./lib.js";
-  import { Root, html } from "../html.js";
+	import { test, assert } from './lib.js'
+	import { Root, html } from '../html.js'
 
-  test(() => {
-    const r = Root.appendInto(root);
+	test(() => {
+		const r = Root.appendInto(root)
 
-    const oops = new Error("oops");
-    let thrown;
-    try {
-      r.render(
-        html`${{
-          render() {
-            throw oops;
-          },
-        }}`
-      );
-    } catch (error) {
-      thrown = error;
-    }
-    assert.eq(thrown, oops);
+		const oops = new Error('oops')
+		let thrown
+		try {
+			r.render(
+				html`${{
+					render() {
+						throw oops
+					},
+				}}`,
+			)
+		} catch (error) {
+			thrown = error
+		}
+		assert.eq(thrown, oops)
 
-    // on an error, don't leave any visible artifacts
-    assert.eq(root.innerHTML, "<!---->");
-  });
+		// on an error, don't leave any visible artifacts
+		assert.eq(root.innerHTML, '<!---->')
+	})
 </script>

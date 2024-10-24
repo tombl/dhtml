@@ -104,13 +104,11 @@ const compileTemplate = memo(statics => {
 		parts[nextPart++] = [idx, part]
 	}
 
-	for (
-		const walker = document.createTreeWalker(
-			templateElement.content,
-			5 /* NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT */,
-		);
-		nextPart < parts.length && walker.nextNode();
-	) {
+	const walker = document.createTreeWalker(
+		templateElement.content,
+		5 /* NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT */,
+	)
+	while (nextPart < parts.length && walker.nextNode()) {
 		const node = walker.currentNode
 		if (node.nodeType === 3 /* Node.TEXT_NODE */) {
 			const nodes = []
