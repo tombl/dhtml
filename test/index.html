@@ -8,6 +8,7 @@
 		<title>Tests</title>
 		<script type="module">
 			import { h } from './_lib.js'
+			const filter = new URLSearchParams(location.search).get('filter')
 
 			let running = 0
 			let passed = 0
@@ -29,6 +30,11 @@
 						return this.getAttribute('src')
 					}
 					connectedCallback() {
+						if (filter && !this.src.includes(filter)) {
+							this.remove()
+							return
+						}
+
 						this.append(
 							h(
 								'details',
@@ -86,6 +92,10 @@
 		</script>
 	</head>
 	<body>
+		<form>
+			<input type="text" name="filter" />
+			<button type="submit">🔍</button>
+		</form>
 		<a-test src="./attributes.js"></a-test>
 		<a-test src="./basic.js"></a-test>
 		<a-test src="./basic-child.js"></a-test>
