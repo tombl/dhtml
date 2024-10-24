@@ -6,29 +6,17 @@
 		<link rel="stylesheet" href="../reset.css" />
 		<link rel="shortcut icon" href="data:" />
 		<title>Tests</title>
-		<script>
+		<script type="module">
+			import { h } from './_lib.js'
+
 			let running = 0
 			let passed = 0
 			let failed = 0
 			let total = 0
 			function updateTitle() {
-				document.title = `${passed + failed}/${total} 🟡${running} ✅${passed} ❌${failed} `
+				document.title = `${passed + failed}/${total} 🟡${running} ✅${passed} ❌${failed}`
 			}
 
-			const resolvers = new Map()
-			window.addEventListener('message', ({ data, source }) => {
-				if (resolvers.has(source)) {
-					resolvers.get(source).resolve?.(data)
-				} else {
-					resolvers.set(source, { promise: Promise.resolve(data) })
-				}
-			})
-			function h(tag, props, ...children) {
-				const el = document.createElement(tag)
-				Object.assign(el, props)
-				el.append(...children)
-				return el
-			}
 			customElements.define(
 				'a-test',
 				class extends HTMLElement {
@@ -51,72 +39,64 @@
 									(this.icon = document.createTextNode('🔍')),
 									document.createTextNode(this.src),
 								)),
-								h('p', {}, h('a', { href: this.src, target: '_blank' }, '🔗 view')),
+								h('p', {}, h('a', { href: this.src, target: '_blank' }, '🔗 source')),
 								h('pre', {}, (this.status = document.createTextNode('waiting...'))),
-								(this.iframe = h('div', {}, 'not started')),
+								(this.container = h('div', {}, '')),
 							),
 						)
 
 						// requestIdleCallback isn't supported in safari???
-						;(globalThis.requestIdleCallback ?? globalThis.setTimeout)(() => {
+						;(globalThis.requestIdleCallback ?? globalThis.setTimeout)(async () => {
 							running++
 							this.icon.data = '🟡'
 							this.status.data = 'running...'
 							this.summary.style.backgroundColor = 'rgba(255, 255, 128, 0.5)'
 							updateTitle()
 
-							const iframe = h('iframe', {
-								src: this.src,
-								onload: this.onIframeLoad,
-							})
-							this.iframe.replaceWith(iframe)
-							this.iframe = iframe
+							const root = this.container.attachShadow({ mode: 'open' })
+							try {
+								const module = await import(this.src)
+								module.default(root)
+								this.pass()
+							} catch (error) {
+								this.fail(error)
+							} finally {
+								running--
+								updateTitle()
+							}
 						})
 					}
-					onIframeLoad = async () => {
-						const { contentWindow } = this.iframe
 
-						if (!resolvers.has(contentWindow)) resolvers.set(contentWindow, Promise.withResolvers())
-
-						const { status, reason } = await Promise.race([
-							resolvers.get(contentWindow).promise,
-							new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3000)),
-						]).catch(error => ({ status: 'fail', reason: error.message }))
-
-						running--
-						if (status === 'pass') {
-							passed++
-							console.log('✅', this.src)
-							this.icon.data = '✅'
-							this.status.data = ''
-							this.summary.style.backgroundColor = 'rgba(128, 255, 128, 0.5)'
-						} else {
-							failed++
-							console.error('❌', this.src, reason)
-							this.icon.data = '❌'
-							this.status.data = `${reason}`
-							this.summary.style.backgroundColor = 'rgba(255, 128, 128, 0.5)'
-						}
-						updateTitle()
-
-						this.iframe.remove()
+					pass() {
+						passed++
+						console.log('✅', this.src)
+						this.icon.data = '✅'
+						this.status.data = ''
+						this.summary.style.backgroundColor = 'rgba(128, 255, 128, 0.5)'
+					}
+					fail(error) {
+						failed++
+						console.error('❌', this.src, error)
+						this.icon.data = '❌'
+						this.status.data = `${error}`
+						this.summary.style.backgroundColor = 'rgba(255, 128, 128, 0.5)'
 					}
 				},
 			)
 		</script>
 	</head>
 	<body>
-		<a-test src="attributes.html"></a-test>
-		<a-test src="basic.html"></a-test>
-		<a-test src="basic-child.html"></a-test>
-		<a-test src="custom-part.html"></a-test>
-		<a-test src="custom-part-with-value.html"></a-test>
-		<a-test src="embed-nodes.html"></a-test>
-		<a-test src="no-clobber.html"></a-test>
-		<a-test src="renderable.html"></a-test>
-		<a-test src="renderable-throws.html"></a-test>
-		<a-test src="renderable-unmount-deep.html"></a-test>
-		<a-test src="renderable-unmount-shallow.html"></a-test>
-		<a-test src="update-identity.html"></a-test>
+		<a-test src="./attributes.js"></a-test>
+		<a-test src="./basic.js"></a-test>
+		<a-test src="./basic-child.js"></a-test>
+		<a-test src="./custom-part.js"></a-test>
+		<a-test src="./custom-part-with-value.js"></a-test>
+		<a-test src="./embed-nodes.js"></a-test>
+		<a-test src="./no-clobber.js"></a-test>
+		<a-test src="./renderable.js"></a-test>
+		<a-test src="./renderable-throws.js"></a-test>
+		<a-test src="./renderable-unmount-deep.js"></a-test>
+		<a-test src="./renderable-unmount-shallow.js"></a-test>
+		<a-test src="./update-identity.js"></a-test>
 	</body>
 </html>
