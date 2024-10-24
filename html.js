@@ -105,7 +105,7 @@ const compileTemplate = memo(statics => {
 	}
 
 	for (
-		let walker = document.createTreeWalker(
+		const walker = document.createTreeWalker(
 			templateElement.content,
 			5 /* NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT */,
 		);
@@ -114,16 +114,18 @@ const compileTemplate = memo(statics => {
 		const node = walker.currentNode
 		if (node.nodeType === 3 /* Node.TEXT_NODE */) {
 			const nodes = []
+			// reverse the order of the matches so we don't need any extra bookkeeping.
+			// by splitting the text starting from the end, we only have to split the original node.
 			for (const match of [...node.data.matchAll(DYNAMIC_GLOBAL)].reverse()) {
 				node.splitText(match.index + match[0].length)
 				const dyn = new Comment()
 				node.splitText(match.index).replaceWith(dyn)
 				nodes.push([dyn, match[1]])
-
-				// skip the two nodes we just created
-				walker.nextNode()
-				walker.nextNode()
 			}
+
+			// put them back in order, inverting the effect of the reverse above.
+			// not relevant for behavior, but it satisfies the warning when parts are used out of order.
+			nodes.reverse()
 
 			let siblings
 			for (const [node, idx] of nodes) {
