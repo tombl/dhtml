@@ -39,7 +39,7 @@ export class Root {
 		if (this._instance === undefined) return
 
 		// scan through all the parts of the previous tree, and clear any renderables.
-		for (const [, part] of this._instance.parts) part.detach()
+		for (const { part } of this._instance.parts) part.detach()
 	}
 }
 
@@ -62,15 +62,17 @@ class TemplateInstance {
 
 		for (const part of template.rootParts) nodeByPart[part] = range
 
-		this.parts = template.parts.map(([dynamicIdx, createPart], elementIdx) => {
-			const part = createPart()
+		this.parts = Array(template.parts.length)
+		for (let elementIdx = 0; elementIdx < template.parts.length; elementIdx++) {
+			const [dynamicIdx, createPart] = template.parts[elementIdx]
+			const part = createPart(this.parts, elementIdx)
 			part.create(nodeByPart[elementIdx], dynamics[dynamicIdx])
-			return [dynamicIdx, part]
-		})
+			this.parts[elementIdx] = { idx: dynamicIdx, part }
+		}
 	}
 
 	update(dynamics) {
-		for (const [idx, part] of this.parts) part.update(dynamics[idx])
+		for (const { idx, part } of this.parts) part.update(dynamics[idx])
 	}
 }
 
@@ -131,14 +133,26 @@ const compileTemplate = memo(statics => {
 		} else {
 			const toRemove = []
 			for (let name of node.getAttributeNames()) {
+				const value = node.getAttribute(name)
+
 				let match = DYNAMIC_WHOLE.exec(name)
 				if (match !== null) {
 					toRemove.push(name)
-					patch(node, parseInt(match[1]), () => new CustomPart())
+					const idx = parseInt(match[1])
+
+					match = DYNAMIC_WHOLE.exec(value)
+					const valueIdx = match === null ? null : parseInt(match[1])
+
+					if (match === null) {
+						if (DYNAMIC_GLOBAL.test(value)) throw new Error('Dynamic values for custom parts must be whole')
+						patch(node, idx, () => new CustomPartStandalone(value))
+					} else {
+						patch(node, idx, () => new CustomPartName())
+						patch(node, valueIdx, (parts, i) => new CustomPartValue(parts[i - 1].part))
+					}
 					continue
 				}
 
-				const value = node.getAttribute(name)
 				switch (name[0]) {
 					// event:
 					case '@': {
@@ -383,24 +397,81 @@ class AttributePart {
 	}
 }
 
-class CustomPart {
+class CustomPartBase {
 	#node
-	#value
-	#onDetach
-	create(node, value) {
-		this.#node = node
-		this.#value = value
-		this.#onDetach = value(node)
+	#instance
+	#prevClass
+	// abstract _value
+	// abstract _class
+
+	#instantiate() {
+		this.#prevClass = this._class
+		this.#instance = this._class == null ? null : new this._class(this.#node, this._value)
 	}
 
-	update(value) {
-		if (this.#value === value) return
-		this.detach()
-		this.create(this.#node, value)
+	create(node) {
+		this.#node = node
+		this.#instantiate()
+	}
+
+	update() {
+		if (this._class === this.#prevClass) {
+			this.#instance?.update?.(this._value)
+		} else {
+			this.#instance?.detach?.()
+			this.#instantiate()
+		}
 	}
 
 	detach() {
-		this.#onDetach?.()
-		this.#onDetach = null
+		this.#instance?.detach?.()
+		this.#instance = this.#prevClass = this._value = this._class = null
+	}
+}
+
+class CustomPartStandalone extends CustomPartBase {
+	constructor(value) {
+		super()
+		this._value = value
+	}
+	create(node, Class) {
+		this._class = Class
+		super.create(node)
+	}
+	update(Class) {
+		this._class = Class
+		super.update()
+	}
+}
+
+class CustomPartName {
+	create(_node, Class) {
+		this._class = Class
+	}
+	update(Class) {
+		this._class = Class
+	}
+}
+
+class CustomPartValue extends CustomPartBase {
+	#namePart
+	constructor(namePart) {
+		super()
+		this.#namePart = namePart
+	}
+	get _class() {
+		return this.#namePart._class
+	}
+	set _class(Class) {
+		this.#namePart._class = Class
+	}
+
+	create(node, value) {
+		this._value = value
+		super.create(node)
+	}
+	update(value) {
+		this._value = value
+		super.update()
 	}
 }
