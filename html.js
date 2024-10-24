@@ -17,10 +17,9 @@ export class Root {
 	}
 
 	static appendInto(parent) {
-		const comment = new Comment()
-		parent.appendChild(comment)
 		const root = new Root()
-		root.range.selectNode(comment)
+		root.range.setStart(parent, parent.childNodes.length)
+		root.range.setEnd(parent, parent.childNodes.length)
 		return root
 	}
 
