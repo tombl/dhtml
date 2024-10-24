@@ -451,6 +451,7 @@ class CustomPartName {
 	update(Class) {
 		this._class = Class
 	}
+	detach() {}
 }
 
 class CustomPartValue extends CustomPartBase {

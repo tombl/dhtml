@@ -1,5 +1,5 @@
+import { Root } from '../html.js'
 import { assert } from './_lib.js'
-import { Root, html } from '../html.js'
 
 export default root => {
 	const r = Root.appendInto(root)

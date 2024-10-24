@@ -4,8 +4,8 @@ import { Root, html } from '../html.js'
 export default root => {
 	const r = Root.appendInto(root)
 
-	const sequence = []
 	let init = 0
+	let detached = false
 
 	class Classes {
 		#node
@@ -29,10 +29,8 @@ export default root => {
 		}
 
 		detach() {
-			throw new Error('should never get here')
-
-			// if this were a more general purpose class, we would do:
-			// this.update([]);
+			this.update([])
+			detached = true
 		}
 	}
 
@@ -45,4 +43,8 @@ export default root => {
 	assert.eq(root.firstChild.className, 'c d')
 
 	assert.eq(init, 1) // should only be constructed once
+
+	assert(!detached)
+	r.render(null)
+	assert(detached)
 }

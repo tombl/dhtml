@@ -1,4 +1,4 @@
-import { assert } from './_lib.js'
+import { assert, mock } from './_lib.js'
 import { Root, html } from '../html.js'
 
 export default root => {
@@ -24,4 +24,21 @@ export default root => {
 	assert.eq(clicked, false)
 	root.querySelector('button').click()
 	assert.eq(clicked, true)
+
+	const template = handler => html`<input @blur=${handler}>Click me</input>`
+
+	const handler = mock(_event => {})
+	r.render(template(handler))
+	assert.eq(handler.calls.length, 0)
+
+	const event = new Event('blur')
+	root.querySelector('input').dispatchEvent(event)
+	assert.eq(handler.calls.length, 1)
+	assert.eq(handler.calls[0].args[0], event)
+
+	r.render(template(null))
+	root.querySelector('input').dispatchEvent(new Event('blur'))
+	assert.eq(handler.calls.length, 1)
+
+	r.render(null)
 }

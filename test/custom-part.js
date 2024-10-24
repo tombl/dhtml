@@ -4,8 +4,6 @@ import { Root, html } from '../html.js'
 export default root => {
 	const r = Root.appendInto(root)
 
-	const sequence = []
-
 	class Redifier {
 		#node
 		constructor(node) {
@@ -43,4 +41,6 @@ export default root => {
 
 	r.render(template(null))
 	assert.eq(root.firstChild.style.cssText, '')
+
+	r.render(null)
 }
