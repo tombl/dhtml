@@ -176,16 +176,6 @@ const compileTemplate = memo(statics => {
 						break
 					}
 
-					// boolean attribute:
-					case '?': {
-						toRemove.push(name)
-						name = name.slice(1)
-						match = DYNAMIC_WHOLE.exec(value)
-						if (match === null) throw new Error('`?` attributes must be booleans')
-						patch(node, parseInt(match[1]), () => new BooleanAttributePart(name))
-						break
-					}
-
 					// attribute:
 					default: {
 						match = DYNAMIC_WHOLE.exec(value)
@@ -361,27 +351,6 @@ class PropertyPart {
 	}
 }
 
-class BooleanAttributePart {
-	#name
-	constructor(name) {
-		this.#name = name
-	}
-
-	#node
-	create(node, value) {
-		this.#node = node
-		this.update(value)
-	}
-
-	update(value) {
-		this.#node.toggleAttribute(this.#name, value)
-	}
-
-	detach() {
-		this.#node.removeAttribute(this.#name)
-	}
-}
-
 class AttributePart {
 	#name
 	constructor(name) {
@@ -395,7 +364,8 @@ class AttributePart {
 	}
 
 	update(value) {
-		if (value === null) this.#node.removeAttribute(this.#name)
+		if (typeof value === 'boolean') this.#node.toggleAttribute(this.#name, value)
+		else if (value === null) this.#node.removeAttribute(this.#name)
 		else this.#node.setAttribute(this.#name, value)
 	}
 

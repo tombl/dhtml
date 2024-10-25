@@ -8,7 +8,7 @@ export default root => {
 	r.render(html`
 		<h1 style=${'color: red'}>Hello, world!</h1>
 		<h2 .class-name=${'foo'}>Hello, world!</h2>
-		<details ?open=${true}></details>
+		<details open=${true}></details>
 		<button
 			@click=${() => {
 				clicked = true
