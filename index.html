@@ -6,7 +6,8 @@
 		<link rel="stylesheet" href="reset.css" />
 		<title>dhtml</title>
 		<script type="module">
-			import { Root, html } from './html.js'
+			globalThis.DHTML_PROD = !new URLSearchParams(location.search).has('dev')
+			const { Root, html } = await import('./html.js')
 			const r = Root.appendInto(document.body)
 			Object.assign(globalThis, { Root, html, r })
 			r.render({

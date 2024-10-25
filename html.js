@@ -1,15 +1,29 @@
+const DEV = typeof DHTML_PROD === 'undefined' || !DHTML_PROD
+
 export const html = (statics, ...dynamics) => new BoundTemplateInstance(statics, dynamics)
 
 const emptyTemplate = () => html``
 const singlePartTemplate = part => html`${part}`
 const isRenderable = value => typeof value === 'object' && value !== null && 'render' in value
 
-class BoundTemplateInstance {
-	constructor(statics, dynamics) {
-		this._template = compileTemplate(statics)
-		this._dynamics = dynamics
-	}
-}
+const BoundTemplateInstance = DEV
+	? class BoundTemplateInstanceDev {
+			constructor(statics, dynamics) {
+				this._template = compileTemplate(statics)
+				this._dynamics = dynamics
+			}
+	  }
+	: class BoundTemplateInstanceProd {
+			#template
+			#statics
+			get _template() {
+				return (this.#template ??= compileTemplate(this.#statics))
+			}
+			constructor(statics, dynamics) {
+				this.#statics = statics
+				this._dynamics = dynamics
+			}
+	  }
 
 export class Root {
 	constructor(range = document.createRange()) {
@@ -114,7 +128,7 @@ const compileTemplate = memo(statics => {
 		if (node.nodeType === 11 /* Node.DOCUMENT_FRAGMENT_NODE */) rootParts.push(nextPart)
 		else if ('dynParts' in node.dataset) node.dataset.dynParts += ' ' + nextPart
 		else node.dataset.dynParts = nextPart
-		if (nextPart !== idx) console.warn('dynamic value detected in static location')
+		if (DEV && nextPart !== idx) console.warn('dynamic value detected in static location')
 		parts[nextPart++] = [idx, part]
 	}
 	function staticPatch(node, value, part) {
@@ -163,7 +177,8 @@ const compileTemplate = memo(statics => {
 					const valueIdx = match === null ? null : parseInt(match[1])
 
 					if (match === null) {
-						if (DYNAMIC_GLOBAL.test(value)) throw new Error('Dynamic values for custom parts must be whole')
+						if (DEV && DYNAMIC_GLOBAL.test(value))
+							throw new Error(`expected a whole dynamic value for ${name}, got a partial one`)
 						patch(node, idx, () => new CustomPartStandalone(value))
 					} else {
 						patch(node, idx, () => new CustomPartName())
@@ -178,7 +193,7 @@ const compileTemplate = memo(statics => {
 						toRemove.push(name)
 						name = name.slice(1)
 						match = DYNAMIC_WHOLE.exec(value)
-						if (match === null) throw new Error('`@` attributes must be functions')
+						if (DEV && match === null) throw new Error(`expected a whole dynamic value for ${name}, got a partial one`)
 						patch(node, parseInt(match[1]), () => new EventPart(name))
 						break
 					}
@@ -189,7 +204,8 @@ const compileTemplate = memo(statics => {
 						name = name.slice(1).replace(/-([a-z])/g, (_, c) => c.toUpperCase())
 						match = DYNAMIC_WHOLE.exec(value)
 						if (match === null) {
-							if (DYNAMIC_GLOBAL.test(value)) throw new Error('Dynamic values for properties must be whole')
+							if (DEV && DYNAMIC_GLOBAL.test(value))
+								throw new Error(`expected a whole dynamic value for ${name}, got a partial one`)
 							staticPatch(node, value, () => new PropertyPart(name))
 						} else {
 							patch(node, parseInt(match[1]), () => new PropertyPart(name))
@@ -200,7 +216,11 @@ const compileTemplate = memo(statics => {
 					// attribute:
 					default: {
 						match = DYNAMIC_WHOLE.exec(value)
-						if (match === null) continue
+						if (match === null) {
+							if (DEV && DYNAMIC_GLOBAL.test(value))
+								throw new Error(`expected a whole dynamic value for ${name}, got a partial one`)
+							continue
+						}
 						patch(node, parseInt(match[1]), () => new AttributePart(name))
 					}
 				}
@@ -253,7 +273,10 @@ class ChildPart {
 			const self = this
 			this.#renderController ??= {
 				invalidate() {
-					if (self.#renderable !== renderable) throw new Error('Could not invalidate an outdated renderable')
+					if (self.#renderable !== renderable) {
+						if (DEV) throw new Error('could not invalidate an outdated renderable')
+						else return
+					}
 					self.update(renderable)
 				},
 				get signal() {
@@ -264,9 +287,9 @@ class ChildPart {
 
 			const renderable = value
 			value = renderable.render(this.#renderController)
-			if (value === renderable) {
-				console.warn(
-					'Renderable %o returned itself, this is a mistake and would result in infinite recursion',
+			if (DEV && value === renderable) {
+				console.error(
+					'%o returned itself in render(), this is a mistake and would result in infinite recursion',
 					renderable,
 				)
 				value = emptyTemplate()
@@ -338,7 +361,7 @@ class EventPart {
 			}
 		} else if (value === null) {
 			this.detach()
-		} else {
+		} else if (DEV) {
 			throw new Error(`Expected a function or null, got ${value}`)
 		}
 	}

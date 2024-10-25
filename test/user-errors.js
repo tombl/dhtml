@@ -5,7 +5,7 @@ export default root => {
 	const r = Root.appendInto(root)
 
 	{
-		const warn = mockMember(console, 'warn', () => {})
+		const warn = mockMember(console, 'error', () => {})
 
 		const recursive = {
 			render() {
