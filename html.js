@@ -5,6 +5,7 @@ export const html = (statics, ...dynamics) => new BoundTemplateInstance(statics,
 const emptyTemplate = () => html``
 const singlePartTemplate = part => html`${part}`
 const isRenderable = value => typeof value === 'object' && value !== null && 'render' in value
+const isIterable = value => typeof value === 'object' && value !== null && Symbol.iterator in value
 
 const BoundTemplateInstance = DEV
 	? class BoundTemplateInstanceDev {
@@ -248,14 +249,25 @@ class ChildPart {
 		} else {
 			this.#range.selectNode(node.childNodes[this.#childIndex])
 		}
+		this.#childIndex = undefined // we only need this once.
+
 		this.update(value)
 	}
 
-	#root = null
-	#value = undefined
+	// for when we're rendering a renderable:
 	#renderable = null
 	#renderController = null
 	#abortController = null
+
+	// for when we're rendering a template:
+	#root = null
+
+	// for when we're rendering multiple values:
+	#roots
+
+	// for when we're rendering a string/single dom node:
+	/** undefined means no previous value, because a user-specified undefined is remapped to null */
+	#value
 
 	#setRenderable(next) {
 		if (this.#renderable === next) return
@@ -264,6 +276,12 @@ class ChildPart {
 		this.#renderController = this.#abortController = null
 
 		this.#renderable = next
+	}
+
+	#disconnectRoot() {
+		// root.detach and part.detach are mutually recursive, so this detaches children too.
+		this.#root?.detach()
+		this.#root = null
 	}
 
 	update(value) {
@@ -302,9 +320,52 @@ class ChildPart {
 
 		// if it's undefined, swap the value for null.
 		// this means if the initial value is undefined,
-		// it won't conflict with previousValue's default of undefined,
+		// it won't conflict with this.#value's default of undefined,
 		// so it'll still render.
 		if (value === undefined) value = null
+
+		// NOTE: we're explicitly not caching/diffing the value when it's an iterable,
+		// given it can yield different values but have the same identity. (e.g. arrays)
+		if (isIterable(value)) {
+			if (!this.#roots) {
+				// we previously rendered a single value, so we need to clear it.
+				this.#disconnectRoot()
+				this.#range.deleteContents()
+
+				this.#roots = []
+			}
+
+			let i = 0
+			let offset = this.#range.startOffset
+			for (const item of value) {
+				let root = this.#roots[i++]
+
+				// this is either the initial creation, or the iterable has grown.
+				if (root === undefined) {
+					root = new Root()
+					root.range.setStart(this.#range.startContainer, offset)
+					root.range.setEnd(this.#range.startContainer, offset)
+					this.#roots.push(root)
+				}
+
+				root.render(item)
+				offset = root.range.endOffset
+			}
+
+			// and now we need to remove anything if the iterable has shrunk.
+			while (this.#roots.length > i) {
+				const root = this.#roots.pop()
+				root.detach()
+				root.range.deleteContents()
+			}
+
+			this.#range.setEnd(this.#range.startContainer, this.#roots[this.#roots.length - 1].range.endOffset)
+
+			return
+		} else if (this.#roots) {
+			for (const root of this.#roots) root.detach()
+			this.#roots = null
+		}
 
 		// now early return if the value hasn't changed.
 		if (value === this.#value) return
@@ -316,8 +377,7 @@ class ChildPart {
 			// if we previously rendered a tree that might contain renderables,
 			// and the template has changed (or we're not even rendering a template anymore),
 			// we need to clear the old renderables.
-			this.#root?.detach()
-			this.#root = null
+			this.#disconnectRoot()
 
 			if (this.#value != null && value !== null && !(this.#value instanceof Node) && !(value instanceof Node)) {
 				// we previously rendered a string, and we're rendering a string again.
@@ -333,8 +393,7 @@ class ChildPart {
 
 	detach() {
 		this.#setRenderable(null)
-		this.#root?.detach() // root.detach and part.detach are mutually recursive, so this detaches children too.
-		this.#root = null
+		this.#disconnectRoot()
 	}
 }
 
