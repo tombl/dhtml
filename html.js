@@ -46,12 +46,19 @@ class TemplateInstance {
 	constructor(template, dynamics, range) {
 		this.template = template
 		const doc = template.content.cloneNode(true)
-		const nodeByPart = []
 
+		const nodeByPart = []
 		for (const node of doc.querySelectorAll('[data-dyn-parts]')) {
 			const parts = node.dataset.dynParts
 			delete node.dataset.dynParts
 			for (const part of parts.split(' ')) nodeByPart[part] = node
+		}
+
+		const nodeByStaticPart = []
+		for (const node of doc.querySelectorAll('[data-dyn-static-parts]')) {
+			const parts = node.dataset.dynStaticParts
+			delete node.dataset.dynStaticParts
+			for (const part of parts.split(' ')) nodeByStaticPart[part] = node
 		}
 
 		// the fragment must be inserted before the parts are constructed,
@@ -60,6 +67,11 @@ class TemplateInstance {
 		// to them, like setting properties or attributes.
 		range.deleteContents()
 		range.insertNode(doc)
+
+		for (let elementIdx = 0; elementIdx < template.staticParts.length; elementIdx++) {
+			const [value, createPart] = template.staticParts[elementIdx]
+			createPart().create(nodeByStaticPart[elementIdx], value)
+		}
 
 		for (const part of template.rootParts) nodeByPart[part] = range
 
@@ -96,6 +108,7 @@ const compileTemplate = memo(statics => {
 
 	let nextPart = 0
 	const parts = Array(statics.length - 1)
+	const staticParts = []
 	const rootParts = []
 	function patch(node, idx, part) {
 		if (node.nodeType === 11 /* Node.DOCUMENT_FRAGMENT_NODE */) rootParts.push(nextPart)
@@ -103,6 +116,11 @@ const compileTemplate = memo(statics => {
 		else node.dataset.dynParts = nextPart
 		if (nextPart !== idx) console.warn('dynamic value detected in static location')
 		parts[nextPart++] = [idx, part]
+	}
+	function staticPatch(node, value, part) {
+		const nextStaticPart = staticParts.push([value, part]) - 1
+		if ('dynStaticParts' in node.dataset) node.dataset.dynStaticParts += ' ' + nextStaticPart
+		else node.dataset.dynStaticParts = nextStaticPart
 	}
 
 	const walker = document.createTreeWalker(
@@ -168,11 +186,14 @@ const compileTemplate = memo(statics => {
 					// property:
 					case '.': {
 						toRemove.push(name)
-						name = name.slice(1)
+						name = name.slice(1).replace(/-([a-z])/g, (_, c) => c.toUpperCase())
 						match = DYNAMIC_WHOLE.exec(value)
-						if (match === null) throw new Error('`.` attributes must be properties')
-						name = name.replace(/-([a-z])/g, (_, c) => c.toUpperCase())
-						patch(node, parseInt(match[1]), () => new PropertyPart(name))
+						if (match === null) {
+							if (DYNAMIC_GLOBAL.test(value)) throw new Error('Dynamic values for properties must be whole')
+							staticPatch(node, value, () => new PropertyPart(name))
+						} else {
+							patch(node, parseInt(match[1]), () => new PropertyPart(name))
+						}
 						break
 					}
 
@@ -190,7 +211,7 @@ const compileTemplate = memo(statics => {
 
 	parts.length = nextPart
 
-	return { content: templateElement.content, parts, rootParts }
+	return { content: templateElement.content, parts, staticParts, rootParts }
 })
 
 class ChildPart {

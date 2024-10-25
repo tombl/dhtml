@@ -8,6 +8,7 @@ export default root => {
 	r.render(html`
 		<h1 style=${'color: red'}>Hello, world!</h1>
 		<h2 .class-name=${'foo'}>Hello, world!</h2>
+		<h3 .class-name="bar">Hello, world!</h3>
 		<details open=${true}></details>
 		<button
 			@click=${() => {
@@ -19,6 +20,7 @@ export default root => {
 	`)
 	assert.eq(root.querySelector('h1').style.color, 'red')
 	assert.eq(root.querySelector('h2').className, 'foo')
+	assert.eq(root.querySelector('h3').className, 'bar')
 	assert.eq(root.querySelector('details').open, true)
 
 	assert.eq(clicked, false)
