@@ -274,7 +274,6 @@ class ChildPart {
 
 		// now early return if the value hasn't changed.
 		if (value === this.#value) return
-		this.#value = value
 
 		if (value instanceof BoundTemplateInstance) {
 			this.#root ??= new Root(this.#range)
@@ -286,9 +285,16 @@ class ChildPart {
 			this.#root?.detach()
 			this.#root = null
 
-			this.#range.deleteContents()
-			if (value !== null) this.#range.insertNode(value instanceof Node ? value : new Text(value))
+			if (this.#value != null && value !== null && !(this.#value instanceof Node) && !(value instanceof Node)) {
+				// we previously rendered a string, and we're rendering a string again.
+				this.#range.startContainer.childNodes[this.#range.startOffset].data = value
+			} else {
+				this.#range.deleteContents()
+				if (value !== null) this.#range.insertNode(value instanceof Node ? value : new Text(value))
+			}
 		}
+
+		this.#value = value
 	}
 
 	detach() {

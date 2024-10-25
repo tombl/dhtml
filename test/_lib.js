@@ -11,14 +11,12 @@ export function assert(condition, message = 'Assertion failed') {
 
 assert.eq = (actual, expected) => {
 	if (actual === expected) return
-	if (typeof actual !== 'string') actual = JSON.stringify(actual, null, 2)
-	if (typeof expected !== 'string') expected = JSON.stringify(expected, null, 2)
 	throw new Error(
 		[
 			'Expected:',
-			...expected.split('\n').map(line => '  ' + line),
+			...`${expected}`.split('\n').map(line => '  ' + line),
 			'Actual:',
-			...actual.split('\n').map(line => '  ' + line),
+			...`${actual}`.split('\n').map(line => '  ' + line),
 		].join('\n'),
 	)
 }
