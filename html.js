@@ -56,6 +56,8 @@ class TemplateInstance {
 
 		// the fragment must be inserted before the parts are constructed,
 		// because they need to know their final location.
+		// this also ensures that custom elements are upgraded before we do things
+		// to them, like setting properties or attributes.
 		range.deleteContents()
 		range.insertNode(doc)
 
