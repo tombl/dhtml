@@ -10,6 +10,7 @@
 			import { h } from './_lib.js'
 			const search = new URLSearchParams(location.search)
 			const filter = search.get('filter')
+			if (filter) document.querySelector('input[name=filter]').value = filter
 			globalThis.DHTML_PROD = search.has('prod')
 
 			let running = 0
@@ -40,10 +41,10 @@
 						this.append(
 							h(
 								'details',
-								{},
+								{ open: filter !== null },
 								(this.summary = h(
 									'summary',
-									{ open: true },
+									{},
 									(this.icon = document.createTextNode('🔍')),
 									document.createTextNode(this.src),
 								)),
@@ -92,8 +93,18 @@
 				},
 			)
 		</script>
+		<style>
+			form {
+				display: flex;
+				input {
+					flex: 1;
+				}
+			}
+			summary {
+				padding: 0.2rem;
+			}
+		</style>
 	</head>
-	<body>
 		<form>
 			<input type="text" name="filter" />
 			<button type="submit">🔍</button>
