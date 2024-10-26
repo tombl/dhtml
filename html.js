@@ -1,5 +1,10 @@
 const DEV = typeof DHTML_PROD === 'undefined' || !DHTML_PROD
 
+/** @type {typeof Node.TEXT_NODE} */ const NODE_TYPE_TEXT = 3
+/** @type {typeof Node.DOCUMENT_FRAGMENT_NODE} */ const NODE_TYPE_DOCUMENT_FRAGMENT = 11
+/** @type {typeof NodeFilter.SHOW_ELEMENT} */ const NODE_FILTER_ELEMENT = 1
+/** @type {typeof NodeFilter.SHOW_TEXT} */ const NODE_FILTER_TEXT = 4
+
 export const html = (statics, ...dynamics) => new BoundTemplateInstance(statics, dynamics)
 
 const emptyTemplate = () => html``
@@ -126,7 +131,7 @@ const compileTemplate = memo(statics => {
 	const staticParts = []
 	const rootParts = []
 	function patch(node, idx, part) {
-		if (node.nodeType === 11 /* Node.DOCUMENT_FRAGMENT_NODE */) rootParts.push(nextPart)
+		if (node.nodeType === NODE_TYPE_DOCUMENT_FRAGMENT) rootParts.push(nextPart)
 		else if ('dynParts' in node.dataset) node.dataset.dynParts += ' ' + nextPart
 		else node.dataset.dynParts = nextPart
 		if (DEV && nextPart !== idx) console.warn('dynamic value detected in static location')
@@ -138,13 +143,10 @@ const compileTemplate = memo(statics => {
 		else node.dataset.dynStaticParts = nextStaticPart
 	}
 
-	const walker = document.createTreeWalker(
-		templateElement.content,
-		5 /* NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT */,
-	)
+	const walker = document.createTreeWalker(templateElement.content, NODE_FILTER_TEXT | NODE_FILTER_ELEMENT)
 	while (nextPart < parts.length && walker.nextNode()) {
 		const node = walker.currentNode
-		if (node.nodeType === 3 /* Node.TEXT_NODE */) {
+		if (node.nodeType === NODE_TYPE_TEXT) {
 			const nodes = []
 			// reverse the order of the matches so we don't need any extra bookkeeping.
 			// by splitting the text starting from the end, we only have to split the original node.
