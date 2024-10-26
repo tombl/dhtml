@@ -488,7 +488,12 @@ class CustomPartBase {
 
 	#instantiate() {
 		this.#prevClass = this._class
-		this.#instance = this._class == null ? null : new this._class(this.#node, this._value)
+		this.#instance =
+			this._class == null
+				? null
+				: 'prototype' in this._class
+				? new this._class(this.#node, this._value)
+				: this._class(this.#node, this._value)
 	}
 
 	create(node) {
