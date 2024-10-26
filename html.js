@@ -236,6 +236,16 @@ const compileTemplate = memo(statics => {
 	return { content: templateElement.content, parts, staticParts, rootParts }
 })
 
+const controllers = new WeakMap()
+export function invalidate(renderable) {
+	controllers.get(renderable)?.invalidate()
+}
+export function onUnmount(renderable, callback) {
+	const controller = controllers.get(renderable)
+	if (!controller) return // TODO: throw here?
+	;(controller.unmountCallbacks ??= new Set()).add(callback)
+}
+
 class ChildPart {
 	#childIndex
 	constructor(idx) {
@@ -257,8 +267,6 @@ class ChildPart {
 
 	// for when we're rendering a renderable:
 	#renderable = null
-	#renderController = null
-	#abortController = null
 
 	// for when we're rendering a template:
 	#root = null
@@ -270,12 +278,13 @@ class ChildPart {
 	/** undefined means no previous value, because a user-specified undefined is remapped to null */
 	#value
 
-	#setRenderable(next) {
+	#switchRenderable(next) {
 		if (this.#renderable === next) return
-
-		this.#abortController?.abort()
-		this.#renderController = this.#abortController = null
-
+		if (this.#renderable) {
+			const controller = controllers.get(this.#renderable)
+			if (controller?.unmountCallbacks) for (const callback of controller.unmountCallbacks) callback()
+			controllers.delete(this.#renderable)
+		}
 		this.#renderable = next
 	}
 
@@ -287,30 +296,28 @@ class ChildPart {
 
 	update(value) {
 		if (isRenderable(value)) {
-			this.#setRenderable(value)
-
-			const self = this
-			this.#renderController ??= {
-				invalidate() {
-					if (self.#renderable !== renderable) {
-						if (DEV) throw new Error('could not invalidate an outdated renderable')
-						else return
-					}
-					self.update(renderable)
-				},
-				get signal() {
-					self.#abortController ??= new AbortController()
-					return self.#abortController.signal
-				},
-			}
+			this.#switchRenderable(value)
 
 			const renderable = value
-			value = renderable.render(this.#renderController)
+
+			if (!controllers.has(renderable))
+				controllers.set(renderable, {
+					invalidate: () => {
+						if (this.#renderable !== renderable) {
+							if (DEV) throw new Error('could not invalidate an outdated renderable')
+							else return
+						}
+						this.update(renderable)
+					},
+					unmountCallbacks: null, // will be upgraded to a Set if needed.
+				})
+
+			value = renderable.render()
 
 			// if render returned another renderable, we want to track/cache both renderables individually.
 			// wrap it in a nested ChildPart so that each can be tracked without ChildPart having to handle multiple renderables.
 			if (isRenderable(value)) value = singlePartTemplate(value)
-		} else this.#setRenderable(null)
+		} else this.#switchRenderable(null)
 
 		// if it's undefined, swap the value for null.
 		// this means if the initial value is undefined,
@@ -386,7 +393,7 @@ class ChildPart {
 	}
 
 	detach() {
-		this.#setRenderable(null)
+		this.#switchRenderable(null)
 		this.#disconnectRoot()
 	}
 }
