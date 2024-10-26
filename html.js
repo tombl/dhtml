@@ -238,7 +238,13 @@ const compileTemplate = memo(statics => {
 
 const controllers = new WeakMap()
 export function invalidate(renderable) {
-	controllers.get(renderable)?.invalidate()
+	const controller = controllers.get(renderable)
+	if (!controller || controller.invalidateQueued) return
+	controller.invalidateQueued = true
+	return Promise.resolve().then(() => {
+		controller.invalidateQueued = false
+		controller.invalidate()
+	})
 }
 export function onUnmount(renderable, callback) {
 	const controller = controllers.get(renderable)
@@ -302,6 +308,7 @@ class ChildPart {
 
 			if (!controllers.has(renderable))
 				controllers.set(renderable, {
+					invalidateQueued: false,
 					invalidate: () => {
 						if (this.#renderable !== renderable) {
 							if (DEV) throw new Error('could not invalidate an outdated renderable')

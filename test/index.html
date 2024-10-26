@@ -65,7 +65,7 @@
 							const root = this.container.attachShadow({ mode: 'open' })
 							try {
 								const module = await import(this.src)
-								module.default(root)
+								await module.default(root)
 								this.pass()
 							} catch (error) {
 								this.fail(error)

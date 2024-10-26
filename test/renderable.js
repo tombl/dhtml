@@ -1,7 +1,7 @@
 import { assert } from './_lib.js'
 import { Root, html, invalidate } from '../html.js'
 
-export default root => {
+export default async root => {
 	const r = Root.appendInto(root)
 
 	r.render(
@@ -23,8 +23,8 @@ export default root => {
 	assert.eq(root.innerHTML, 'Count: 0')
 	r.render(app)
 	assert.eq(root.innerHTML, 'Count: 1')
-	invalidate(app)
+	await invalidate(app)
 	assert.eq(root.innerHTML, 'Count: 2')
-	invalidate(app)
+	await invalidate(app)
 	assert.eq(root.innerHTML, 'Count: 3')
 }
