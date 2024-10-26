@@ -369,7 +369,7 @@ class ChildPart {
 		}
 
 		// now early return if the value hasn't changed.
-		if (value === this.#value) return
+		if (Object.is(value, this.#value)) return
 
 		if (value instanceof BoundTemplateInstance) {
 			this.#root ??= new Root(this.#range)

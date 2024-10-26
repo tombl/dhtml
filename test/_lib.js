@@ -10,7 +10,7 @@ export function assert(condition, message = 'Assertion failed') {
 }
 
 assert.eq = (actual, expected) => {
-	if (actual === expected) return
+	if (Object.is(actual, expected)) return
 	throw new Error(
 		[
 			'Expected:',
