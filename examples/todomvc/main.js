@@ -103,6 +103,9 @@ class App {
 	}
 
 	render() {
+		const completedCount = this.todos.filter(todo => todo.completed).length
+		const activeCount = this.todos.length - completedCount
+
 		return html`
 			<header class="header">
 				<h1>todos</h1>
@@ -132,6 +135,15 @@ class App {
 								${this.todos}
 							</ul>
 						</main>
+						<footer class="footer">
+							<span class="todo-count">${activeCount} ${activeCount === 1 ? 'item' : 'items'} left</span>
+							<ul class="filters">
+								<li><a href="#" class="selected">All</a></li>
+								<li><a href="#">Active</a></li>
+								<li><a href="#">Completed</a></li>
+							</ul>
+							${completedCount > 0 ? html`<button class="clear-completed">Clear completed</button>` : null}
+						</footer>
 				  `
 				: null}
 		`
