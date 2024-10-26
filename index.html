@@ -13,8 +13,9 @@
 			r.render({
 				i: 0,
 				render() {
-					const code = `\
-import { Root, html, invalidate } from "https://tombl.github.io/dhtml/html.js"
+					const codePre = `import { Root, html, invalidate } from '`
+					const url = 'https://tombl.github.io/dhtml/html.js'
+					const codePost = `'
 
 const app = {
   i: 0,
@@ -39,9 +40,9 @@ Root.appendInto(document.body).render(app)`
 							<header>
 								<h1><code>dhtml</code></h1>
 								<p>a post-component library for building user interfaces on the web.</p>
-								<p><a href="https://github.com/tombl/dhtml">see the source</a> | <a href="test/">run the tests</a></p>
+								<p><a href="https://github.com/tombl/dhtml">github</a> | <a href="test/">tests</a></p>
 							</header>
-							<pre>${code}</pre>
+							<pre>${codePre}<a href=${url}>${url}</a>${codePost}</pre>
 							<button
 								@click=${() => {
 									this.i++
