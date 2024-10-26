@@ -7,7 +7,6 @@ const DEV = typeof DHTML_PROD === 'undefined' || !DHTML_PROD
 
 export const html = (statics, ...dynamics) => new BoundTemplateInstance(statics, dynamics)
 
-const emptyTemplate = () => html``
 const singlePartTemplate = part => html`${part}`
 const isRenderable = value => typeof value === 'object' && value !== null && 'render' in value
 const isIterable = value => typeof value === 'object' && value !== null && Symbol.iterator in value
@@ -307,13 +306,6 @@ class ChildPart {
 
 			const renderable = value
 			value = renderable.render(this.#renderController)
-			if (DEV && value === renderable) {
-				console.error(
-					'%o returned itself in render(), this is a mistake and would result in infinite recursion',
-					renderable,
-				)
-				value = emptyTemplate()
-			}
 
 			// if render returned another renderable, we want to track/cache both renderables individually.
 			// wrap it in a nested ChildPart so that each can be tracked without ChildPart having to handle multiple renderables.
