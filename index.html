@@ -7,23 +7,23 @@
 		<title>dhtml</title>
 		<script type="module">
 			globalThis.DHTML_PROD = !new URLSearchParams(location.search).has('dev')
-			const { Root, html } = await import('./html.js')
+			const { Root, html, invalidate } = await import('./html.js')
 			const r = Root.appendInto(document.body)
 			Object.assign(globalThis, { Root, html, r })
 			r.render({
 				i: 0,
-				render(controller) {
+				render() {
 					const code = `\
-import { Root, html } from "https://tombl.github.io/dhtml/html.js"
+import { Root, html, invalidate } from "https://tombl.github.io/dhtml/html.js"
 
 const app = {
   i: 0,
-  render(controller) {
+  render() {
     return html\`
       <button
         @click=\${() => {
           this.i++
-          controller.invalidate()
+          invalidate(this)
         }}
       >
         Count: \${this.i}
@@ -45,7 +45,7 @@ Root.appendInto(document.body).render(app)`
 							<button
 								@click=${() => {
 									this.i++
-									controller.invalidate()
+									invalidate(this)
 								}}
 							>
 								Count: ${this.i}

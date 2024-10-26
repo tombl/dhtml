@@ -1,4 +1,4 @@
-import { Root, html } from '../../html.js'
+import { Root, html, invalidate } from '../../html.js'
 
 function classes(node, value) {
 	let prev
@@ -29,7 +29,7 @@ class TodoItem {
 		this.title = title
 	}
 
-	render(controller) {
+	render() {
 		return html`
 			<li ${classes}=${[this.completed && 'completed', this.editing && 'editing']}>
 				<div class="view">
@@ -40,13 +40,13 @@ class TodoItem {
 						@change=${e => {
 							e.preventDefault()
 							this.completed = e.target.checked
-							controller.invalidate()
+							invalidate(this)
 						}}
 					/>
 					<label
 						@dblclick=${() => {
 							this.editing = true
-							controller.invalidate()
+							invalidate(this)
 						}}
 						>${this.title}</label
 					>
@@ -54,7 +54,7 @@ class TodoItem {
 						class="destroy"
 						@click=${() => {
 							this.app.remove(this.id)
-							this.app.controller.invalidate()
+							invalidate(this.app)
 						}}
 					></button>
 				</div>
@@ -71,7 +71,7 @@ class TodoItem {
 										if (value) {
 											this.title = value
 											this.editing = false
-											controller.invalidate()
+											invalidate(this)
 										}
 									}}
 									@keydown=${e => {
@@ -80,7 +80,7 @@ class TodoItem {
 											if (value) {
 												this.title = value
 												this.editing = false
-												controller.invalidate()
+												invalidate(this)
 											}
 										}
 									}}
@@ -102,9 +102,7 @@ class App {
 		this.todos = this.todos.filter(todo => todo.id !== id)
 	}
 
-	render(controller) {
-		this.controller = controller
-
+	render() {
 		return html`
 			<header class="header">
 				<h1>todos</h1>
@@ -118,7 +116,7 @@ class App {
 							if (value) {
 								this.todos.push(new TodoItem(this, value))
 								event.target.value = ''
-								controller.invalidate()
+								invalidate(this)
 							}
 						}
 					}}
@@ -143,7 +141,7 @@ class App {
 const app = new App()
 globalThis.app = app
 document.body.addEventListener('keypress', e => {
-	if (e.ctrlKey && e.key === 'i') app.controller?.invalidate()
+	if (e.ctrlKey && e.key === 'i') invalidate(app)
 })
 
 app.todos.push(new TodoItem(app, 'hello'))

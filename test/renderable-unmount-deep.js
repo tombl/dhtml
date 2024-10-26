@@ -1,4 +1,4 @@
-import { Root } from '../html.js'
+import { Root, onUnmount } from '../html.js'
 import { assert } from './_lib.js'
 
 export default root => {
@@ -7,21 +7,31 @@ export default root => {
 	const sequence = []
 
 	const inner = {
-		render(controller) {
+		attached: false,
+		render() {
 			sequence.push('inner render')
-			controller.signal.onabort = () => {
-				sequence.push('inner abort')
+			if (!this.attached) {
+				this.attached = true
+				onUnmount(this, () => {
+					this.attached = false
+					sequence.push('inner abort')
+				})
 			}
 			return 'inner'
 		},
 	}
 
 	const outer = {
+		attached: false,
 		show: true,
-		render(controller) {
+		render() {
 			sequence.push('outer render')
-			controller.signal.onabort = () => {
-				sequence.push('outer abort')
+			if (!this.attached) {
+				this.attached = true
+				onUnmount(this, () => {
+					this.attached = false
+					sequence.push('outer abort')
+				})
 			}
 			if (!this.show) return null
 			return inner
