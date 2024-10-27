@@ -12,6 +12,8 @@
 			const filter = search.get('filter')
 			if (filter) document.querySelector('input[name=filter]').value = filter
 			globalThis.DHTML_PROD = search.has('prod')
+			const serial = search.has('serial')
+			const warmup = search.has('warmup')
 
 			let running = 0
 			let passed = 0
@@ -41,7 +43,7 @@
 						this.append(
 							h(
 								'details',
-								{ open: filter !== null },
+								{ open: !!filter },
 								(this.summary = h(
 									'summary',
 									{},
@@ -55,32 +57,45 @@
 						)
 
 						// requestIdleCallback isn't supported in safari???
-						;(globalThis.requestIdleCallback ?? globalThis.setTimeout)(async () => {
-							running++
-							this.icon.data = '🟡'
-							this.status.data = 'running...'
-							this.summary.style.backgroundColor = 'rgba(255, 255, 128, 0.5)'
-							updateTitle()
-
-							const root = this.container.attachShadow({ mode: 'open' })
-							try {
-								const module = await import(this.src)
-								await module.default(root)
-								this.pass()
-							} catch (error) {
-								this.fail(error)
-							} finally {
-								running--
+						;(globalThis.requestIdleCallback ?? globalThis.setTimeout)(() => {
+							const doTest = async () => {
+								running++
+								this.icon.data = '🟡'
+								this.status.data = 'running...'
+								this.summary.style.backgroundColor = 'rgba(255, 255, 128, 0.5)'
 								updateTitle()
+
+								const root = this.container.attachShadow({ mode: 'open' })
+								try {
+									const module = await import(this.src)
+
+									if (warmup) {
+										void (await module.default(root))
+										root.innerHTML = ''
+									}
+
+									const start = performance.now()
+									await module.default(root)
+									const end = performance.now()
+									this.pass(end - start)
+								} catch (error) {
+									this.fail(error)
+								} finally {
+									running--
+									updateTitle()
+								}
 							}
+
+							if (serial) navigator.locks.request('test', doTest)
+							else doTest()
 						})
 					}
 
-					pass() {
+					pass(duration) {
 						passed++
 						console.log('✅', this.src)
 						this.icon.data = '✅'
-						this.status.data = ''
+						this.status.data = `passed in ${duration.toFixed(2)}ms`
 						this.summary.style.backgroundColor = 'rgba(128, 255, 128, 0.5)'
 					}
 					fail(error) {
@@ -105,6 +120,7 @@
 			}
 		</style>
 	</head>
+	<body>
 		<form>
 			<input type="text" name="filter" />
 			<button type="submit">🔍</button>
