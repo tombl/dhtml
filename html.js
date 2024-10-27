@@ -253,17 +253,24 @@ const compileTemplate = memo(statics => {
 const controllers = new WeakMap()
 export function invalidate(renderable) {
 	const controller = controllers.get(renderable)
-	if (!controller || controller.invalidateQueued) return
-	controller.invalidateQueued = true
-	return Promise.resolve().then(() => {
-		controller.invalidateQueued = false
-		controller.invalidate()
-	})
+	if (controller) {
+		// TODO: cancel this invalidation of a higher up one comes along
+		return (controller.invalidateQueued ??= Promise.resolve().then(() => {
+			controller.invalidateQueued = null
+			controller.invalidate()
+		}))
+	} else {
+		// TODO: check again in a microtask?
+		// just in case the renderable was created between invalidation and rerendering
+	}
 }
 export function onUnmount(renderable, callback) {
 	const controller = controllers.get(renderable)
-	if (!controller) return // TODO: throw here?
-	;(controller.unmountCallbacks ??= new Set()).add(callback)
+	if (controller) {
+		;(controller.unmountCallbacks ??= new Set()).add(callback)
+	} else {
+		// TODO: throw here?
+	}
 }
 
 class ChildPart {
@@ -322,7 +329,7 @@ class ChildPart {
 
 			if (!controllers.has(renderable))
 				controllers.set(renderable, {
-					invalidateQueued: false,
+					invalidateQueued: null,
 					invalidate: () => {
 						if (this.#renderable !== renderable) {
 							if (DEV) throw new Error('could not invalidate an outdated renderable')
@@ -403,7 +410,9 @@ class ChildPart {
 			}
 		}
 
+		// if we've grown past the end of our parent, update their end.
 		if (this.#span.parentNode === this.#parentSpan.parentNode && this.#span.end > this.#parentSpan.start) {
+			// TODO: does this need to also apply for shrinkage?
 			this.#parentSpan.end = this.#span.end
 		}
 
