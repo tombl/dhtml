@@ -11,6 +11,46 @@ const singlePartTemplate = part => html`${part}`
 const isRenderable = value => typeof value === 'object' && value !== null && 'render' in value
 const isIterable = value => typeof value === 'object' && value !== null && Symbol.iterator in value
 
+class LightRange {
+	constructor(parentNode = document, startOffset = 0, endOffset = 0) {
+		this.parentNode = parentNode
+		this.startOffset = startOffset
+		this.endOffset = endOffset
+	}
+	get startContainer() {
+		return this.parentNode
+	}
+	get endContainer() {
+		return this.parentNode
+	}
+	deleteContents() {
+		for (let offset = this.endOffset - 1; offset >= this.startOffset; offset--) {
+			const node = this.parentNode.childNodes[offset]
+			if (!node) console.log(this.parentNode, this.startOffset, this.endOffset, offset)
+			this.parentNode.removeChild(node)
+		}
+		this.endOffset = this.startOffset
+	}
+	insertNode(node) {
+		this.endOffset += node.nodeType === NODE_TYPE_DOCUMENT_FRAGMENT ? node.childNodes.length : 1
+		this.parentNode.insertBefore(node, this.parentNode.childNodes[this.startOffset] ?? null)
+	}
+	selectNode(node) {
+		this.parentNode = node.parentNode
+		this.startOffset = [...node.parentNode.childNodes].indexOf(node)
+		this.endOffset = this.startOffset + 1
+	}
+	setStart(node, offset) {
+		this.parentNode = node
+		this.startOffset = offset
+		if (this.startOffset > this.endOffset) this.endOffset = this.startOffset
+	}
+	setEnd(node, offset) {
+		if (node !== this.parentNode) throw new Error('not supported')
+		this.endOffset = offset
+	}
+}
+
 const BoundTemplateInstance = DEV
 	? class BoundTemplateInstanceDev {
 			constructor(statics, dynamics) {
@@ -31,15 +71,12 @@ const BoundTemplateInstance = DEV
 	  }
 
 export class Root {
-	constructor(range = document.createRange()) {
+	constructor(range = new LightRange()) {
 		this.range = range
 	}
 
 	static appendInto(parent) {
-		const root = new Root()
-		root.range.setStart(parent, parent.childNodes.length)
-		root.range.setEnd(parent, parent.childNodes.length)
-		return root
+		return new Root(new LightRange(parent, parent.childNodes.length, parent.childNodes.length))
 	}
 
 	render(value) {
@@ -58,6 +95,8 @@ export class Root {
 
 		// scan through all the parts of the previous tree, and clear any renderables.
 		for (const { part } of this._instance.parts) part.detach()
+
+		this._instance = undefined
 	}
 }
 
@@ -97,7 +136,7 @@ class TemplateInstance {
 		this.parts = Array(template.parts.length)
 		for (let elementIdx = 0; elementIdx < template.parts.length; elementIdx++) {
 			const [dynamicIdx, createPart] = template.parts[elementIdx]
-			const part = createPart(this.parts, elementIdx)
+			const part = createPart(this.parts, elementIdx, range)
 			part.create(nodeByPart[elementIdx], dynamics[dynamicIdx])
 			this.parts[elementIdx] = { idx: dynamicIdx, part }
 		}
@@ -163,7 +202,7 @@ const compileTemplate = memo(statics => {
 			let siblings
 			for (const [node, idx] of nodes) {
 				const child = (siblings ??= [...node.parentNode.childNodes]).indexOf(node)
-				patch(node.parentNode, parseInt(idx), () => new ChildPart(child))
+				patch(node.parentNode, parseInt(idx), (_parts, _i, range) => new ChildPart(child, range))
 			}
 		} else {
 			const toRemove = []
@@ -254,13 +293,15 @@ export function onUnmount(renderable, callback) {
 
 class ChildPart {
 	#childIndex
-	constructor(idx) {
+	#parentRange
+	constructor(idx, range) {
 		this.#childIndex = idx
+		this.#parentRange = range
 	}
 
-	#range = document.createRange()
+	#range = new LightRange()
 	create(node, value) {
-		if (node instanceof Range) {
+		if (node instanceof LightRange) {
 			this.#range.setStart(node.startContainer, node.startOffset + this.#childIndex)
 			this.#range.setEnd(node.startContainer, node.startOffset + this.#childIndex + 1)
 		} else {
@@ -394,6 +435,13 @@ class ChildPart {
 				this.#range.deleteContents()
 				if (value !== null) this.#range.insertNode(value instanceof Node ? value : new Text(value))
 			}
+		}
+
+		if (
+			this.#range.startContainer === this.#parentRange.startContainer &&
+			this.#range.endOffset > this.#parentRange.startOffset
+		) {
+			this.#parentRange.setEnd(this.#range.endContainer, this.#range.endOffset)
 		}
 
 		this.#value = value
