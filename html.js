@@ -27,7 +27,14 @@ const flash =
 		  }
 		: undefined
 
+const keys = new WeakMap()
 export function keyed(value, key) {
+	if (key === undefined) {
+		if (DEV) throw new Error('keyed must be called with a key')
+		else return value
+	}
+	if (!(value instanceof BoundTemplateInstance)) value = singlePartTemplate(value)
+	keys.set(value, key)
 	return value
 }
 
@@ -64,12 +71,27 @@ class Span {
 		}
 	}
 	insertNode(node) {
-		this.end += node.nodeType === NODE_TYPE_DOCUMENT_FRAGMENT ? node.childNodes.length : 1
-		this.parentNode.insertBefore(node, this.parentNode.childNodes[this.start] ?? null)
+		const length = node.nodeType === NODE_TYPE_DOCUMENT_FRAGMENT ? node.childNodes.length : 1
+		this.parentNode.insertBefore(node, this.parentNode.childNodes[this.end] ?? null)
+		this.end += length
 		if (flash) for (const node of this) flash(node, 0, 255, 0)
 	}
 	*[Symbol.iterator]() {
 		for (let i = this.start; i < this.end; i++) yield this.parentNode.childNodes[i]
+	}
+	extractContents() {
+		const fragment = document.createDocumentFragment()
+		while (this.end > this.start) fragment.prepend(this.parentNode.childNodes[--this.end])
+		return fragment
+	}
+	toString() {
+		if (!DEV) return '[object Span]'
+		let result = ''
+		for (const node of this) result += node.innerHTML
+		return result
+	}
+	get length() {
+		return this.end - this.start
 	}
 }
 
@@ -416,17 +438,45 @@ class ChildPart {
 				this.#roots = []
 			}
 
+			// create or update a root for every item.
 			let i = 0
-			let offset = this.#span.start
+			let offset = this.#span.end
 			for (const item of value) {
-				let root = this.#roots[i++]
-				// this is either the initial creation, or the iterable has grown.
-				root ??= this.#roots[i - 1] = new Root(new Span(this.#span.parentNode, offset, offset))
+				const key = keys.get(item) ?? item
+
+				if (key !== undefined) {
+					const here = this.#roots[i]
+					if (here?._key !== key) {
+						const j = this.#roots.findIndex(root => root?._key === key)
+						if (j !== -1) {
+							const there = this.#roots[j]
+
+							if (here.span.length !== there.span.length)
+								throw new Error('cannot swap roots with different lengths yet')
+
+							if (there.span.start < here.span.start) throw new Error('cannot swap roots backwards yet')
+
+							const thereContents = there.span.extractContents()
+							const hereContents = here.span.extractContents()
+							here.span.insertNode(thereContents)
+							there.span.insertNode(hereContents)
+							;[here.span, there.span] = [there.span, here.span]
+
+							this.#roots[i] = there
+							this.#roots[j] = here
+						}
+					}
+				}
+
+				const root = (this.#roots[i++] ??= new Root(new Span(this.#span.parentNode, offset, offset)))
 				root.render(item)
 				offset = root.span.end
+
+				// TODO: make this a weak relationship, because if key is collected, the comparison will always be false.
+				if (key !== undefined) root._key = key
 			}
 
-			// and now we need to remove anything if the iterable has shrunk.
+			// and now remove excess roots if the iterable has shrunk.
 			while (this.#roots.length > i) {
 				const root = this.#roots.pop()
 				root.detach()
