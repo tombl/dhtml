@@ -11,43 +11,18 @@ const singlePartTemplate = part => html`${part}`
 const isRenderable = value => typeof value === 'object' && value !== null && 'render' in value
 const isIterable = value => typeof value === 'object' && value !== null && Symbol.iterator in value
 
-class LightRange {
-	constructor(parentNode = document, startOffset = 0, endOffset = 0) {
+class Span {
+	constructor(parentNode, start, end) {
 		this.parentNode = parentNode
-		this.startOffset = startOffset
-		this.endOffset = endOffset
-	}
-	get startContainer() {
-		return this.parentNode
-	}
-	get endContainer() {
-		return this.parentNode
+		this.start = start
+		this.end = end
 	}
 	deleteContents() {
-		for (let offset = this.endOffset - 1; offset >= this.startOffset; offset--) {
-			const node = this.parentNode.childNodes[offset]
-			if (!node) console.log(this.parentNode, this.startOffset, this.endOffset, offset)
-			this.parentNode.removeChild(node)
-		}
-		this.endOffset = this.startOffset
+		while (this.end > this.start) this.parentNode.childNodes[--this.end].remove()
 	}
 	insertNode(node) {
-		this.endOffset += node.nodeType === NODE_TYPE_DOCUMENT_FRAGMENT ? node.childNodes.length : 1
-		this.parentNode.insertBefore(node, this.parentNode.childNodes[this.startOffset] ?? null)
-	}
-	selectNode(node) {
-		this.parentNode = node.parentNode
-		this.startOffset = [...node.parentNode.childNodes].indexOf(node)
-		this.endOffset = this.startOffset + 1
-	}
-	setStart(node, offset) {
-		this.parentNode = node
-		this.startOffset = offset
-		if (this.startOffset > this.endOffset) this.endOffset = this.startOffset
-	}
-	setEnd(node, offset) {
-		if (node !== this.parentNode) throw new Error('not supported')
-		this.endOffset = offset
+		this.end += node.nodeType === NODE_TYPE_DOCUMENT_FRAGMENT ? node.childNodes.length : 1
+		this.parentNode.insertBefore(node, this.parentNode.childNodes[this.start] ?? null)
 	}
 }
 
@@ -71,12 +46,12 @@ const BoundTemplateInstance = DEV
 	  }
 
 export class Root {
-	constructor(range = new LightRange()) {
-		this.range = range
+	constructor(span) {
+		this.span = span
 	}
 
 	static appendInto(parent) {
-		return new Root(new LightRange(parent, parent.childNodes.length, parent.childNodes.length))
+		return new Root(new Span(parent, parent.childNodes.length, parent.childNodes.length))
 	}
 
 	render(value) {
@@ -86,7 +61,7 @@ export class Root {
 			this._instance.update(dynamics)
 		} else {
 			this.detach()
-			this._instance = new TemplateInstance(template, dynamics, this.range)
+			this._instance = new TemplateInstance(template, dynamics, this.span)
 		}
 	}
 
@@ -101,7 +76,7 @@ export class Root {
 }
 
 class TemplateInstance {
-	constructor(template, dynamics, range) {
+	constructor(template, dynamics, span) {
 		this.template = template
 		const doc = template.content.cloneNode(true)
 
@@ -123,20 +98,20 @@ class TemplateInstance {
 		// because they need to know their final location.
 		// this also ensures that custom elements are upgraded before we do things
 		// to them, like setting properties or attributes.
-		range.deleteContents()
-		range.insertNode(doc)
+		span.deleteContents()
+		span.insertNode(doc)
 
 		for (let elementIdx = 0; elementIdx < template.staticParts.length; elementIdx++) {
 			const [value, createPart] = template.staticParts[elementIdx]
 			createPart().create(nodeByStaticPart[elementIdx], value)
 		}
 
-		for (const part of template.rootParts) nodeByPart[part] = range
+		for (const part of template.rootParts) nodeByPart[part] = span
 
 		this.parts = Array(template.parts.length)
 		for (let elementIdx = 0; elementIdx < template.parts.length; elementIdx++) {
 			const [dynamicIdx, createPart] = template.parts[elementIdx]
-			const part = createPart(this.parts, elementIdx, range)
+			const part = createPart(this.parts, elementIdx, span)
 			part.create(nodeByPart[elementIdx], dynamics[dynamicIdx])
 			this.parts[elementIdx] = { idx: dynamicIdx, part }
 		}
@@ -202,7 +177,7 @@ const compileTemplate = memo(statics => {
 			let siblings
 			for (const [node, idx] of nodes) {
 				const child = (siblings ??= [...node.parentNode.childNodes]).indexOf(node)
-				patch(node.parentNode, parseInt(idx), (_parts, _i, range) => new ChildPart(child, range))
+				patch(node.parentNode, parseInt(idx), (_parts, _i, span) => new ChildPart(child, span))
 			}
 		} else {
 			const toRemove = []
@@ -293,19 +268,18 @@ export function onUnmount(renderable, callback) {
 
 class ChildPart {
 	#childIndex
-	#parentRange
-	constructor(idx, range) {
+	#parentSpan
+	constructor(idx, span) {
 		this.#childIndex = idx
-		this.#parentRange = range
+		this.#parentSpan = span
 	}
 
-	#range = new LightRange()
+	#span
 	create(node, value) {
-		if (node instanceof LightRange) {
-			this.#range.setStart(node.startContainer, node.startOffset + this.#childIndex)
-			this.#range.setEnd(node.startContainer, node.startOffset + this.#childIndex + 1)
+		if (node instanceof Span) {
+			this.#span = new Span(node.parentNode, node.start + this.#childIndex, node.start + this.#childIndex + 1)
 		} else {
-			this.#range.selectNode(node.childNodes[this.#childIndex])
+			this.#span = new Span(node, this.#childIndex, this.#childIndex + 1)
 		}
 		this.#childIndex = undefined // we only need this once.
 
@@ -379,36 +353,29 @@ class ChildPart {
 			if (!this.#roots) {
 				// we previously rendered a single value, so we need to clear it.
 				this.#disconnectRoot()
-				this.#range.deleteContents()
+				this.#span.deleteContents()
 
 				this.#roots = []
 			}
 
 			let i = 0
-			let offset = this.#range.startOffset
+			let offset = this.#span.start
 			for (const item of value) {
 				let root = this.#roots[i++]
-
 				// this is either the initial creation, or the iterable has grown.
-				if (root === undefined) {
-					root = new Root()
-					root.range.setStart(this.#range.startContainer, offset)
-					root.range.setEnd(this.#range.startContainer, offset)
-					this.#roots.push(root)
-				}
-
+				root ??= this.#roots[i - 1] = new Root(new Span(this.#span.parentNode, offset, offset))
 				root.render(item)
-				offset = root.range.endOffset
+				offset = root.span.end
 			}
 
 			// and now we need to remove anything if the iterable has shrunk.
 			while (this.#roots.length > i) {
 				const root = this.#roots.pop()
 				root.detach()
-				root.range.deleteContents()
+				root.span.deleteContents()
 			}
 
-			this.#range.setEnd(this.#range.startContainer, this.#roots[this.#roots.length - 1].range.endOffset)
+			this.#span.end = this.#roots[this.#roots.length - 1].span.end
 
 			return
 		} else if (this.#roots) {
@@ -420,7 +387,7 @@ class ChildPart {
 		if (Object.is(value, this.#value)) return
 
 		if (value instanceof BoundTemplateInstance) {
-			this.#root ??= new Root(this.#range)
+			this.#root ??= new Root(this.#span)
 			this.#root.render(value) // root.render will detach the previous tree if the template has changed.
 		} else {
 			// if we previously rendered a tree that might contain renderables,
@@ -430,18 +397,15 @@ class ChildPart {
 
 			if (this.#value != null && value !== null && !(this.#value instanceof Node) && !(value instanceof Node)) {
 				// we previously rendered a string, and we're rendering a string again.
-				this.#range.startContainer.childNodes[this.#range.startOffset].data = value
+				this.#span.parentNode.childNodes[this.#span.start].data = value
 			} else {
-				this.#range.deleteContents()
-				if (value !== null) this.#range.insertNode(value instanceof Node ? value : new Text(value))
+				this.#span.deleteContents()
+				if (value !== null) this.#span.insertNode(value instanceof Node ? value : new Text(value))
 			}
 		}
 
-		if (
-			this.#range.startContainer === this.#parentRange.startContainer &&
-			this.#range.endOffset > this.#parentRange.startOffset
-		) {
-			this.#parentRange.setEnd(this.#range.endContainer, this.#range.endOffset)
+		if (this.#span.parentNode === this.#parentSpan.parentNode && this.#span.end > this.#parentSpan.start) {
+			this.#parentSpan.end = this.#span.end
 		}
 
 		this.#value = value
