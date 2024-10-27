@@ -11,6 +11,10 @@ const singlePartTemplate = part => html`${part}`
 const isRenderable = value => typeof value === 'object' && value !== null && 'render' in value
 const isIterable = value => typeof value === 'object' && value !== null && Symbol.iterator in value
 
+export function keyed(value, key) {
+	return value
+}
+
 class Span {
 	constructor(parentNode, start, end) {
 		this.parentNode = parentNode
