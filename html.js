@@ -11,6 +11,22 @@ const singlePartTemplate = part => html`${part}`
 const isRenderable = value => typeof value === 'object' && value !== null && 'render' in value
 const isIterable = value => typeof value === 'object' && value !== null && Symbol.iterator in value
 
+const flash =
+	DEV && new URLSearchParams(location.search).has('flash')
+		? (node, r, g, b) => {
+				if (node.nodeType === Node.ELEMENT_NODE)
+					return node.animate(
+						[
+							{ boxShadow: `0 0 0 1px rgba(${r}, ${g}, ${b}, 1)` },
+							{ boxShadow: `0 0 0 1px rgba(${r}, ${g}, ${b}, 0)` },
+						],
+						{
+							duration: 200,
+						},
+					).finished
+		  }
+		: undefined
+
 export function keyed(value, key) {
 	return value
 }
@@ -29,11 +45,31 @@ class Span {
 			this.end = 0
 			return
 		}
-		while (this.end > this.start) this.parentNode.childNodes[--this.end].remove()
+		while (this.end > this.start) {
+			const node = this.parentNode.childNodes[--this.end]
+			const box = DEV && node.getBoundingClientRect?.()
+			node.remove()
+			if (flash && box) {
+				Object.assign(node.style, {
+					position: 'absolute',
+					top: box.top + 'px',
+					left: box.left + 'px',
+					width: box.width + 'px',
+					height: box.height + 'px',
+					pointerEvents: 'none',
+				})
+				document.body.appendChild(node)
+				Promise.resolve(flash(node, 255, 0, 0)).then(() => node.remove())
+			}
+		}
 	}
 	insertNode(node) {
 		this.end += node.nodeType === NODE_TYPE_DOCUMENT_FRAGMENT ? node.childNodes.length : 1
 		this.parentNode.insertBefore(node, this.parentNode.childNodes[this.start] ?? null)
+		if (flash) for (const node of this) flash(node, 0, 255, 0)
+	}
+	*[Symbol.iterator]() {
+		for (let i = this.start; i < this.end; i++) yield this.parentNode.childNodes[i]
 	}
 }
 
