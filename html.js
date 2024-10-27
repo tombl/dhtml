@@ -300,8 +300,7 @@ class ChildPart {
 	#value
 
 	#switchRenderable(next) {
-		if (this.#renderable === next) return
-		if (this.#renderable) {
+		if (this.#renderable !== next && this.#renderable !== null) {
 			const controller = controllers.get(this.#renderable)
 			if (controller?.unmountCallbacks) for (const callback of controller.unmountCallbacks) callback()
 			controllers.delete(this.#renderable)
