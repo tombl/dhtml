@@ -18,6 +18,13 @@ class Span {
 		this.end = end
 	}
 	deleteContents() {
+		// optimization for clearing when we own the entire parent.
+		if (this.start === 0 && this.end >= this.parentNode.childNodes.length) {
+			if (DEV && this.end !== this.parentNode.childNodes.length) console.warn('end is past the end of the parent')
+			this.parentNode.textContent = ''
+			this.end = 0
+			return
+		}
 		while (this.end > this.start) this.parentNode.childNodes[--this.end].remove()
 	}
 	insertNode(node) {
