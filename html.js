@@ -445,25 +445,33 @@ class ChildPart {
 				const key = keys.get(item) ?? item
 
 				if (key !== undefined) {
-					const here = this.#roots[i]
-					if (here?._key !== key) {
-						const j = this.#roots.findIndex(root => root?._key === key)
-						if (j !== -1) {
-							const there = this.#roots[j]
+					let first = this.#roots[i]
+					let i1 = i
+					if (first?._key !== key) {
+						let i2 = this.#roots.findIndex(root => root?._key === key)
+						if (i2 !== -1) {
+							let second = this.#roots[i2]
 
-							if (here.span.length !== there.span.length)
-								throw new Error('cannot swap roots with different lengths yet')
+							if (second.span.start < first.span.start) {
+								// first must refer to the lower index.
+								;[first, second] = [second, first]
+								;[i1, i2] = [i2, i1]
+							}
 
-							if (there.span.start < here.span.start) throw new Error('cannot swap roots backwards yet')
+							const content1 = second.span.extractContents()
+							const content2 = first.span.extractContents()
+							second.span.insertNode(content2)
+							first.span.insertNode(content1)
+							;[first.span, second.span] = [second.span, first.span]
 
-							const thereContents = there.span.extractContents()
-							const hereContents = here.span.extractContents()
-							here.span.insertNode(thereContents)
-							there.span.insertNode(hereContents)
-							;[here.span, there.span] = [there.span, here.span]
+							this.#roots[i1] = second
+							this.#roots[i2] = first
 
-							this.#roots[i] = there
-							this.#roots[j] = here
+							const difference = second.span.length - first.span.length
+							for (let j = i1 + 1; j <= i2; j++) {
+								this.#roots[j].span.start += difference
+								this.#roots[j].span.end += difference
+							}
 						}
 					}
 				}
@@ -477,8 +485,16 @@ class ChildPart {
 			}
 
 			// and now remove excess roots if the iterable has shrunk.
+			console.log([...this.#roots])
 			while (this.#roots.length > i) {
 				const root = this.#roots.pop()
+				console.log(
+					'detach',
+					[...root.span.parentNode.childNodes],
+					root.span.start,
+					root.span.end,
+					root._instance.template.content.textContent,
+				)
 				root.detach()
 				root.span.deleteContents()
 			}
