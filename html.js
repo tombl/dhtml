@@ -61,6 +61,11 @@ export class Root {
 		return new Root(new Span(parent, parent.childNodes.length, parent.childNodes.length))
 	}
 
+	static replace(node) {
+		const index = [...node.parentNode.childNodes].indexOf(node)
+		return new Root(new Span(node.parentNode, index, index + 1))
+	}
+
 	render(value) {
 		if (!(value instanceof BoundTemplateInstance)) value = singlePartTemplate(value)
 		const { _template: template, _dynamics: dynamics } = value
@@ -290,11 +295,11 @@ class ChildPart {
 
 	#span
 	create(node, value) {
-		if (node instanceof Span) {
-			this.#span = new Span(node.parentNode, node.start + this.#childIndex, node.start + this.#childIndex + 1)
-		} else {
-			this.#span = new Span(node, this.#childIndex, this.#childIndex + 1)
-		}
+		this.#span =
+			node instanceof Span
+				? new Span(node.parentNode, node.start + this.#childIndex, node.start + this.#childIndex + 1)
+				: new Span(node, this.#childIndex, this.#childIndex + 1)
+
 		this.#childIndex = undefined // we only need this once.
 
 		this.update(value)
