@@ -9,20 +9,20 @@ export default root => {
 
 	r.render(wrapped)
 	assert.eq(root.innerHTML, '[<p>Item 1</p><p>Item 2</p><p>Item 3</p>]')
-	const [, item2, item3] = root.children
+	const [item1, item2] = root.children
 
-	items.shift()
+	items.pop()
 	r.render(wrapped)
-	assert.eq(root.innerHTML, '[<p>Item 2</p><p>Item 3</p>]')
-	assert.eq(root.children[0], item2)
-	assert.eq(root.children[1], item3)
+	assert.eq(root.innerHTML, '[<p>Item 1</p><p>Item 2</p>]')
+	assert.eq(root.children[0], item1)
+	assert.eq(root.children[1], item2)
 
-	items.shift()
+	items.pop()
 	r.render(wrapped)
-	assert.eq(root.innerHTML, '[<p>Item 3</p>]')
-	assert.eq(root.children[0], item3)
+	assert.eq(root.innerHTML, '[<p>Item 1</p>]')
+	assert.eq(root.children[0], item1)
 
-	items.shift()
+	items.pop()
 	r.render(wrapped)
 	assert.eq(root.innerHTML, '[]')
 }

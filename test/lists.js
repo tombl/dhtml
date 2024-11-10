@@ -15,6 +15,8 @@ export default root => {
 		`
 
 	r.render(listOfItems())
+	assert.eq(root.innerHTML.replace(/\s+/g, ' '), ' <ul> <li>Before</li> <li>After</li> </ul> ')
+
 	items = [html`<li>Item 1</li>`, html`<li>Item 2</li>`, html`<li>Item 3</li>`]
 
 	r.render(listOfItems())

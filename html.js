@@ -328,7 +328,7 @@ const controllers = new WeakMap()
 export function invalidate(renderable) {
 	const controller = controllers.get(renderable)
 	if (controller) {
-		// TODO: cancel this invalidation of a higher up one comes along
+		// TODO: cancel this invalidation if a higher up one comes along
 		return (controller.invalidateQueued ??= Promise.resolve().then(() => {
 			controller.invalidateQueued = null
 			controller.invalidate()
@@ -458,12 +458,16 @@ class ChildPart {
 								;[i1, i2] = [i2, i1]
 							}
 
+							// swap the contents of the spans
 							const content1 = second.span.extractContents()
 							const content2 = first.span.extractContents()
 							second.span.insertNode(content2)
 							first.span.insertNode(content1)
+
+							// swap the spans back
 							;[first.span, second.span] = [second.span, first.span]
 
+							// swap the roots
 							this.#roots[i1] = second
 							this.#roots[i2] = first
 
@@ -478,6 +482,7 @@ class ChildPart {
 
 				const root = (this.#roots[i++] ??= new Root(new Span(this.#span.parentNode, offset, offset)))
 				root.render(item)
+				console.log(offset, root.span.end)
 				offset = root.span.end
 
 				// TODO: make this a weak relationship, because if key is collected, the comparison will always be false.
@@ -486,20 +491,25 @@ class ChildPart {
 
 			// and now remove excess roots if the iterable has shrunk.
 			console.log([...this.#roots])
-			while (this.#roots.length > i) {
-				const root = this.#roots.pop()
+			const extra = this.#roots.splice(i)
+			this.#roots.length = i
+			// extra.sort((a, b) => b.span.start - a.span.start)
+			extra.reverse()
+			for (const root of extra) {
 				console.log(
 					'detach',
 					[...root.span.parentNode.childNodes],
 					root.span.start,
 					root.span.end,
 					root._instance.template.content.textContent,
+					[...root.span],
 				)
 				root.detach()
 				root.span.deleteContents()
+				console.log('after detach', [...root.span.parentNode.childNodes], root.span.start, root.span.end)
 			}
 
-			this.#span.end = this.#roots[this.#roots.length - 1].span.end
+			this.#span.end = this.#roots[this.#roots.length - 1]?.span.end ?? this.#span.start
 
 			return
 		} else if (this.#roots) {
