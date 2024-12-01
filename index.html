@@ -14,7 +14,7 @@
 				i: 0,
 				render() {
 					const codePre = `import { Root, html, invalidate } from '`
-					const url = 'https://tombl.github.io/dhtml/html.js'
+					const url = new URL('html.js', location.href).toString()
 					const codePost = `'
 
 const app = {
