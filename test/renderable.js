@@ -1,5 +1,5 @@
 import { assert } from './_lib.js'
-import { Root, html, invalidate } from '../html.js'
+import { Root, html, invalidate } from 'dhtml'
 
 export default async root => {
 	const r = Root.appendInto(root)

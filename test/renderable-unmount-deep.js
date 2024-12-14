@@ -1,4 +1,4 @@
-import { Root, onUnmount } from '../html.js'
+import { Root, onUnmount } from 'dhtml'
 import { assert } from './_lib.js'
 
 export default root => {

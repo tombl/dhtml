@@ -1,4 +1,4 @@
-import { Root, html, invalidate } from '../../html.js'
+import { Root, html, invalidate } from 'dhtml'
 
 function classes(node, value) {
 	let prev
@@ -86,7 +86,7 @@ class TodoItem {
 									}}
 								/>
 							</div>
-					  `
+						`
 					: null}
 			</li>
 		`
@@ -144,7 +144,7 @@ class App {
 							</ul>
 							${completedCount > 0 ? html`<button class="clear-completed">Clear completed</button>` : null}
 						</footer>
-				  `
+					`
 				: null}
 		`
 	}
@@ -159,4 +159,6 @@ document.body.addEventListener('keypress', e => {
 app.todos.push(new TodoItem(app, 'hello'))
 app.todos.push(new TodoItem(app, 'world'))
 
-Root.appendInto(document.getElementById('root')).render(app)
+const rootEl = document.getElementById('root')
+if (!rootEl) throw new Error('Root element not found')
+Root.appendInto(rootEl).render(app)

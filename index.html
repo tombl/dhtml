@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 	<head>
 		<meta charset="UTF-8" />
@@ -7,14 +7,14 @@
 		<title>dhtml</title>
 		<script type="module">
 			globalThis.DHTML_PROD = !new URLSearchParams(location.search).has('dev')
-			const { Root, html, invalidate } = await import('./html.js')
+			const { Root, html, invalidate } = await import('./src/html.js')
 			const r = Root.appendInto(document.body)
 			Object.assign(globalThis, { Root, html, r })
 			r.render({
 				i: 0,
 				render() {
 					const codePre = `import { Root, html, invalidate } from '`
-					const url = new URL('html.js', location.href).toString()
+					const url = new URL('src/html.js', location.href).toString()
 					const codePost = `'
 
 const app = {

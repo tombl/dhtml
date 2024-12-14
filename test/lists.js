@@ -1,20 +1,21 @@
-import { Root, html } from '../html.js'
+import { Root, html } from 'dhtml'
 import { assert } from './_lib.js'
 
 export default root => {
 	const r = Root.appendInto(root)
 
 	let items = null
-	const listOfItems = () =>
-		html`
-			<ul>
-				<li>Before</li>
-				${items}
-				<li>After</li>
-			</ul>
-		`
+	const listOfItems = () => html`
+		<ul>
+			<li>Before</li>
+			${items}
+			<li>After</li>
+		</ul>
+	`
 
 	r.render(listOfItems())
+	assert.eq(root.innerHTML.replace(/\s+/g, ' '), ' <ul> <li>Before</li> <li>After</li> </ul> ')
+
 	items = [html`<li>Item 1</li>`, html`<li>Item 2</li>`, html`<li>Item 3</li>`]
 
 	r.render(listOfItems())

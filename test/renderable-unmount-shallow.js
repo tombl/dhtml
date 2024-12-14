@@ -1,5 +1,5 @@
 import { assert } from './_lib.js'
-import { html, Root, onUnmount } from '../html.js'
+import { html, Root, onUnmount } from 'dhtml'
 
 export default root => {
 	const r = Root.appendInto(root)
