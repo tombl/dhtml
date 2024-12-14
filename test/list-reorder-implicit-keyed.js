@@ -1,4 +1,4 @@
-import { Root, html } from '../html.js'
+import { Root, html } from 'dhtml'
 import { assert } from './_lib.js'
 
 export default root => {

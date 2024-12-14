@@ -1,0 +1,25 @@
+{
+	"name": "dhtml",
+	"type": "module",
+	"main": "src/html.js",
+	"scripts": {
+		"build": "./build.sh",
+		"format": "prettier --write .",
+		"check": "tsc"
+	},
+	"devDependencies": {
+		"dhtml": ".",
+		"esbuild": "^0.24.0",
+		"prettier": "^3.4.2",
+		"terser": "^5.37.0",
+		"typescript": "^5.7.2"
+	},
+	"prettier": {
+		"arrowParens": "avoid",
+		"printWidth": 120,
+		"semi": false,
+		"singleQuote": true,
+		"trailingComma": "all",
+		"useTabs": true
+	}
+}

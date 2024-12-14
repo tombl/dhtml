@@ -1,20 +1,46 @@
+/**
+ * @typedef {import('./types.ts').Part} Part
+ * @typedef {import('./types.ts').Displayable} Displayable
+ * @typedef {import('./types.ts').Renderable} Renderable
+ * @typedef {import('./types.ts').CompiledTemplate} CompiledTemplate
+ * @typedef {import('./types.ts').Key} Key
+ */
+
+// @ts-expect-error -- undefined global
 const DEV = typeof DHTML_PROD === 'undefined' || !DHTML_PROD
 
-/** @type {typeof Node.TEXT_NODE} */ const NODE_TYPE_TEXT = 3
-/** @type {typeof Node.DOCUMENT_FRAGMENT_NODE} */ const NODE_TYPE_DOCUMENT_FRAGMENT = 11
 /** @type {typeof NodeFilter.SHOW_ELEMENT} */ const NODE_FILTER_ELEMENT = 1
 /** @type {typeof NodeFilter.SHOW_TEXT} */ const NODE_FILTER_TEXT = 4
+
+/** @return {node is Element} */
+const isElement = node => node.nodeType === /** @satisfies {typeof Node.ELEMENT_NODE} */ (1)
+
+/** @return {node is Text} */
+const isTextNode = node => node.nodeType === /** @satisfies {typeof Node.TEXT_NODE} */ (3)
+
+/** @return {node is DocumentFragment} */
+const isDocumentFragment = node => node.nodeType === /** @satisfies {typeof Node.DOCUMENT_FRAGMENT_NODE} */ (11)
 
 export const html = (statics, ...dynamics) => new BoundTemplateInstance(statics, dynamics)
 
 const singlePartTemplate = part => html`${part}`
+
+/** @return {value is Renderable} */
 const isRenderable = value => typeof value === 'object' && value !== null && 'render' in value
+
+/** @return {value is Iterable<unknown>} */
 const isIterable = value => typeof value === 'object' && value !== null && Symbol.iterator in value
+
+/** @return {asserts value} */
+const assert = (value, message = 'assertion failed') => {
+	if (!DEV) return
+	if (!value) throw new Error(message)
+}
 
 const flash =
 	DEV && new URLSearchParams(location.search).has('flash')
 		? (node, r, g, b) => {
-				if (node.nodeType === Node.ELEMENT_NODE)
+				if (isElement(node))
 					return node.animate(
 						[
 							{ boxShadow: `0 0 0 1px rgba(${r}, ${g}, ${b}, 1)` },
@@ -24,7 +50,7 @@ const flash =
 							duration: 200,
 						},
 					).finished
-		  }
+			}
 		: undefined
 
 const keys = new WeakMap()
@@ -54,10 +80,11 @@ class Span {
 		}
 		while (this.end > this.start) {
 			const node = this.parentNode.childNodes[--this.end]
-			const box = DEV && node.getBoundingClientRect?.()
-			node.remove()
-			if (flash && box) {
-				Object.assign(node.style, {
+			if (flash && node.getBoundingClientRect) {
+				const box = node.getBoundingClientRect()
+				const cloned = node.cloneNode(true)
+				node.remove()
+				Object.assign(cloned.style, {
 					position: 'absolute',
 					top: box.top + 'px',
 					left: box.left + 'px',
@@ -65,56 +92,61 @@ class Span {
 					height: box.height + 'px',
 					pointerEvents: 'none',
 				})
-				document.body.appendChild(node)
-				Promise.resolve(flash(node, 255, 0, 0)).then(() => node.remove())
+				document.body.appendChild(cloned)
+				Promise.resolve(flash(cloned, 255, 0, 0)).then(() => cloned.remove())
+			} else {
+				node.remove()
 			}
 		}
 	}
 	insertNode(node) {
-		const length = node.nodeType === NODE_TYPE_DOCUMENT_FRAGMENT ? node.childNodes.length : 1
+		const length = isDocumentFragment(node) ? node.childNodes.length : 1
 		this.parentNode.insertBefore(node, this.parentNode.childNodes[this.end] ?? null)
 		this.end += length
 		if (flash) for (const node of this) flash(node, 0, 255, 0)
 	}
 	*[Symbol.iterator]() {
-		for (let i = this.start; i < this.end; i++) yield this.parentNode.childNodes[i]
+		for (let i = this.start; i < this.end; i++)
+			yield (console.log(this.parentNode.childNodes[i]), this.parentNode.childNodes[i])
 	}
 	extractContents() {
 		const fragment = document.createDocumentFragment()
 		while (this.end > this.start) fragment.prepend(this.parentNode.childNodes[--this.end])
 		return fragment
 	}
-	toString() {
-		if (!DEV) return '[object Span]'
-		let result = ''
-		for (const node of this) result += node.innerHTML
-		return result
-	}
 	get length() {
 		return this.end - this.start
 	}
 }
 
-const BoundTemplateInstance = DEV
-	? class BoundTemplateInstanceDev {
-			constructor(statics, dynamics) {
-				this._template = compileTemplate(statics)
-				this._dynamics = dynamics
-			}
-	  }
-	: class BoundTemplateInstanceProd {
-			#template
-			#statics
-			get _template() {
-				return (this.#template ??= compileTemplate(this.#statics))
-			}
-			constructor(statics, dynamics) {
-				this.#statics = statics
-				this._dynamics = dynamics
-			}
-	  }
+if (DEV) {
+	Span.prototype.toString = function () {
+		let result = ''
+		for (const node of this) result += node.outerHTML
+		return result
+	}
+}
+
+class BoundTemplateInstance {
+	/** @type {CompiledTemplate | undefined} */ #template
+	/** @type {TemplateStringsArray} */ #statics
+
+	get _template() {
+		return (this.#template ??= compileTemplate(this.#statics))
+	}
+
+	constructor(statics, dynamics) {
+		this.#statics = statics
+		this._dynamics = dynamics
+
+		// just to check for errors
+		if (DEV) compileTemplate(statics)
+	}
+}
 
 export class Root {
+	/** @type {Key | undefined} */ _key
+
 	constructor(span) {
 		this.span = span
 	}
@@ -129,13 +161,13 @@ export class Root {
 	}
 
 	render(value) {
-		if (!(value instanceof BoundTemplateInstance)) value = singlePartTemplate(value)
-		const { _template: template, _dynamics: dynamics } = value
-		if (this._instance?.template === template) {
-			this._instance.update(dynamics)
+		const t = value instanceof BoundTemplateInstance ? value : singlePartTemplate(value)
+
+		if (this._instance?.template === t._template) {
+			this._instance.update(t._dynamics)
 		} else {
 			this.detach()
-			this._instance = new TemplateInstance(template, dynamics, this.span)
+			this._instance = new TemplateInstance(t._template, t._dynamics, this.span)
 		}
 	}
 
@@ -143,30 +175,39 @@ export class Root {
 		if (this._instance === undefined) return
 
 		// scan through all the parts of the previous tree, and clear any renderables.
-		for (const { part } of this._instance.parts) part.detach()
+		for (const [_idx, part] of this._instance.parts) part.detach()
 
 		this._instance = undefined
 	}
 }
 
 class TemplateInstance {
+	/**
+	 * @param {CompiledTemplate} template
+	 * @param {Displayable[]} dynamics
+	 * @param {Span} span
+	 */
 	constructor(template, dynamics, span) {
 		this.template = template
-		const doc = template.content.cloneNode(true)
+		const doc = /** @type {DocumentFragment} */ (template._content.cloneNode(true))
 
 		const nodeByPart = []
 		for (const node of doc.querySelectorAll('[data-dyn-parts]')) {
-			const parts = node.dataset.dynParts
-			delete node.dataset.dynParts
+			const parts = node.getAttribute('data-dyn-parts')
+			assert(parts)
+			node.removeAttribute('data-dyn-parts')
 			for (const part of parts.split(' ')) nodeByPart[part] = node
 		}
 
 		const nodeByStaticPart = []
 		for (const node of doc.querySelectorAll('[data-dyn-static-parts]')) {
-			const parts = node.dataset.dynStaticParts
-			delete node.dataset.dynStaticParts
+			const parts = node.getAttribute('data-dyn-static-parts')
+			assert(parts)
+			node.removeAttribute('data-dyn-static-parts')
 			for (const part of parts.split(' ')) nodeByStaticPart[part] = node
 		}
+
+		for (const part of template._rootParts) nodeByPart[part] = span
 
 		// the fragment must be inserted before the parts are constructed,
 		// because they need to know their final location.
@@ -175,73 +216,73 @@ class TemplateInstance {
 		span.deleteContents()
 		span.insertNode(doc)
 
-		for (let elementIdx = 0; elementIdx < template.staticParts.length; elementIdx++) {
-			const [value, createPart] = template.staticParts[elementIdx]
-			createPart().create(nodeByStaticPart[elementIdx], value)
-		}
+		template._staticParts.map(([value, createPart], elementIdx) =>
+			createPart().create(nodeByStaticPart[elementIdx], value),
+		)
 
-		for (const part of template.rootParts) nodeByPart[part] = span
-
-		this.parts = Array(template.parts.length)
-		for (let elementIdx = 0; elementIdx < template.parts.length; elementIdx++) {
-			const [dynamicIdx, createPart] = template.parts[elementIdx]
-			const part = createPart(this.parts, elementIdx, span)
+		let prev
+		this.parts = template._parts.map(([dynamicIdx, createPart], elementIdx) => {
+			const part = createPart(prev, span)
 			part.create(nodeByPart[elementIdx], dynamics[dynamicIdx])
-			this.parts[elementIdx] = { idx: dynamicIdx, part }
-		}
+			prev = part
+			return /** @type {const} */ ([dynamicIdx, part])
+		})
 	}
 
 	update(dynamics) {
-		for (const { idx, part } of this.parts) part.update(dynamics[idx])
+		for (const [idx, part] of this.parts) part.update(dynamics[idx])
 	}
 }
 
 const DYNAMIC_WHOLE = /^dyn-\$(\d+)$/i
 const DYNAMIC_GLOBAL = /dyn-\$(\d+)/gi
 
-function memo(fn) {
-	const cache = new Map()
-	return arg => {
-		if (cache.has(arg)) return cache.get(arg)
-		const value = fn(arg)
-		cache.set(arg, value)
-		return value
-	}
-}
+/** @type {Map<TemplateStringsArray, CompiledTemplate>} */
+const templates = new Map()
+/** @param {TemplateStringsArray} statics */
+function compileTemplate(statics) {
+	const cached = templates.get(statics)
+	if (cached) return cached
 
-const compileTemplate = memo(statics => {
 	const templateElement = document.createElement('template')
 	templateElement.innerHTML = statics.reduce((a, v, i) => a + v + (i === statics.length - 1 ? '' : `dyn-$${i}`), '')
 
 	let nextPart = 0
-	const parts = Array(statics.length - 1)
-	const staticParts = []
-	const rootParts = []
-	function patch(node, idx, part) {
-		if (node.nodeType === NODE_TYPE_DOCUMENT_FRAGMENT) rootParts.push(nextPart)
+	/** @type {CompiledTemplate} */
+	const compiled = {
+		_content: templateElement.content,
+		_parts: Array(statics.length - 1),
+		_staticParts: [],
+		_rootParts: [],
+	}
+
+	function patch(node, idx, createPart) {
+		if (isDocumentFragment(node)) compiled._rootParts.push(nextPart)
 		else if ('dynParts' in node.dataset) node.dataset.dynParts += ' ' + nextPart
 		else node.dataset.dynParts = nextPart
 		if (DEV && nextPart !== idx) console.warn('dynamic value detected in static location')
-		parts[nextPart++] = [idx, part]
+		compiled._parts[nextPart++] = [idx, createPart]
 	}
-	function staticPatch(node, value, part) {
-		const nextStaticPart = staticParts.push([value, part]) - 1
+	function staticPatch(node, value, createPart) {
+		const nextStaticPart = compiled._staticParts.push([value, createPart]) - 1
 		if ('dynStaticParts' in node.dataset) node.dataset.dynStaticParts += ' ' + nextStaticPart
 		else node.dataset.dynStaticParts = nextStaticPart
 	}
 
 	const walker = document.createTreeWalker(templateElement.content, NODE_FILTER_TEXT | NODE_FILTER_ELEMENT)
-	while (nextPart < parts.length && walker.nextNode()) {
-		const node = walker.currentNode
-		if (node.nodeType === NODE_TYPE_TEXT) {
+	while (nextPart < compiled._parts.length && walker.nextNode()) {
+		const node = /** @type {Text | Element} */ (walker.currentNode)
+		if (isTextNode(node)) {
+			/** @type {[Comment, idx: number][]} */
 			const nodes = []
+
 			// reverse the order of the matches so we don't need any extra bookkeeping.
 			// by splitting the text starting from the end, we only have to split the original node.
 			for (const match of [...node.data.matchAll(DYNAMIC_GLOBAL)].reverse()) {
 				node.splitText(match.index + match[0].length)
 				const dyn = new Comment()
 				node.splitText(match.index).replaceWith(dyn)
-				nodes.push([dyn, match[1]])
+				nodes.push([dyn, parseInt(match[1])])
 			}
 
 			// put them back in order, inverting the effect of the reverse above.
@@ -250,13 +291,15 @@ const compileTemplate = memo(statics => {
 
 			let siblings
 			for (const [node, idx] of nodes) {
+				assert(node.parentNode)
 				const child = (siblings ??= [...node.parentNode.childNodes]).indexOf(node)
-				patch(node.parentNode, parseInt(idx), (_parts, _i, span) => new ChildPart(child, span))
+				patch(node.parentNode, idx, (_prev, span) => new ChildPart(child, span))
 			}
 		} else {
 			const toRemove = []
 			for (let name of node.getAttributeNames()) {
 				const value = node.getAttribute(name)
+				assert(value !== null)
 
 				let match = DYNAMIC_WHOLE.exec(name)
 				if (match !== null) {
@@ -272,7 +315,7 @@ const compileTemplate = memo(statics => {
 						patch(node, idx, () => new CustomPartStandalone(value))
 					} else {
 						patch(node, idx, () => new CustomPartName())
-						patch(node, valueIdx, (parts, i) => new CustomPartValue(parts[i - 1].part))
+						patch(node, valueIdx, prev => new CustomPartValue(prev))
 					}
 					continue
 				}
@@ -283,7 +326,7 @@ const compileTemplate = memo(statics => {
 						toRemove.push(name)
 						name = name.slice(1)
 						match = DYNAMIC_WHOLE.exec(value)
-						if (DEV && match === null) throw new Error(`expected a whole dynamic value for ${name}, got a partial one`)
+						assert(match, `expected a whole dynamic value for ${name}, got a partial one`)
 						patch(node, parseInt(match[1]), () => new EventPart(name))
 						break
 					}
@@ -294,8 +337,7 @@ const compileTemplate = memo(statics => {
 						name = name.slice(1).replace(/-([a-z])/g, (_, c) => c.toUpperCase())
 						match = DYNAMIC_WHOLE.exec(value)
 						if (match === null) {
-							if (DEV && DYNAMIC_GLOBAL.test(value))
-								throw new Error(`expected a whole dynamic value for ${name}, got a partial one`)
+							assert(!DYNAMIC_GLOBAL.test(value), `expected a whole dynamic value for ${name}, got a partial one`)
 							staticPatch(node, value, () => new PropertyPart(name))
 						} else {
 							patch(node, parseInt(match[1]), () => new PropertyPart(name))
@@ -307,8 +349,7 @@ const compileTemplate = memo(statics => {
 					default: {
 						match = DYNAMIC_WHOLE.exec(value)
 						if (match === null) {
-							if (DEV && DYNAMIC_GLOBAL.test(value))
-								throw new Error(`expected a whole dynamic value for ${name}, got a partial one`)
+							assert(!DYNAMIC_GLOBAL.test(value), `expected a whole dynamic value for ${name}, got a partial one`)
 							continue
 						}
 						patch(node, parseInt(match[1]), () => new AttributePart(name))
@@ -319,21 +360,23 @@ const compileTemplate = memo(statics => {
 		}
 	}
 
-	parts.length = nextPart
+	compiled._parts.length = nextPart
 
-	return { content: templateElement.content, parts, staticParts, rootParts }
-})
+	templates.set(statics, compiled)
+	return compiled
+}
 
 const controllers = new WeakMap()
 export function invalidate(renderable) {
 	const controller = controllers.get(renderable)
 	if (controller) {
 		// TODO: cancel this invalidation if a higher up one comes along
-		return (controller.invalidateQueued ??= Promise.resolve().then(() => {
-			controller.invalidateQueued = null
-			controller.invalidate()
+		return (controller._invalidateQueued ??= Promise.resolve().then(() => {
+			controller._invalidateQueued = null
+			controller._invalidate()
 		}))
 	} else {
+		throw new Error('could not invalidate a non-rendered renderable')
 		// TODO: check again in a microtask?
 		// just in case the renderable was created between invalidation and rerendering
 	}
@@ -341,12 +384,13 @@ export function invalidate(renderable) {
 export function onUnmount(renderable, callback) {
 	const controller = controllers.get(renderable)
 	if (controller) {
-		;(controller.unmountCallbacks ??= new Set()).add(callback)
+		;(controller._unmountCallbacks ??= new Set()).add(callback)
 	} else {
 		// TODO: throw here?
 	}
 }
 
+/** @implements {Part} */
 class ChildPart {
 	#childIndex
 	#parentSpan
@@ -368,22 +412,23 @@ class ChildPart {
 	}
 
 	// for when we're rendering a renderable:
-	#renderable = null
+	/** @type {Renderable | null} */ #renderable = null
 
 	// for when we're rendering a template:
-	#root = null
+	/** @type {Root | undefined} */ #root
 
 	// for when we're rendering multiple values:
-	#roots
+	/** @type {Root[] | undefined} */ #roots
 
 	// for when we're rendering a string/single dom node:
 	/** undefined means no previous value, because a user-specified undefined is remapped to null */
 	#value
 
+	/** @param {Renderable | null} next */
 	#switchRenderable(next) {
 		if (this.#renderable !== next && this.#renderable !== null) {
 			const controller = controllers.get(this.#renderable)
-			if (controller?.unmountCallbacks) for (const callback of controller.unmountCallbacks) callback()
+			if (controller?._unmountCallbacks) for (const callback of controller._unmountCallbacks) callback()
 			controllers.delete(this.#renderable)
 		}
 		this.#renderable = next
@@ -392,9 +437,10 @@ class ChildPart {
 	#disconnectRoot() {
 		// root.detach and part.detach are mutually recursive, so this detaches children too.
 		this.#root?.detach()
-		this.#root = null
+		this.#root = undefined
 	}
 
+	/** @param {Displayable} value */
 	update(value) {
 		if (isRenderable(value)) {
 			this.#switchRenderable(value)
@@ -403,15 +449,12 @@ class ChildPart {
 
 			if (!controllers.has(renderable))
 				controllers.set(renderable, {
-					invalidateQueued: null,
-					invalidate: () => {
-						if (this.#renderable !== renderable) {
-							if (DEV) throw new Error('could not invalidate an outdated renderable')
-							else return
-						}
+					_invalidateQueued: null,
+					_invalidate: () => {
+						assert(this.#renderable === renderable, 'could not invalidate an outdated renderable')
 						this.update(renderable)
 					},
-					unmountCallbacks: null, // will be upgraded to a Set if needed.
+					_unmountCallbacks: null, // will be upgraded to a Set if needed.
 				})
 
 			value = renderable.render()
@@ -442,6 +485,7 @@ class ChildPart {
 			let i = 0
 			let offset = this.#span.end
 			for (const item of value) {
+				// @ts-expect-error -- WeakMap lookups of non-objects always return undefined, which is fine
 				const key = keys.get(item) ?? item
 
 				if (key !== undefined) {
@@ -501,7 +545,7 @@ class ChildPart {
 					[...root.span.parentNode.childNodes],
 					root.span.start,
 					root.span.end,
-					root._instance.template.content.textContent,
+					root._instance?.template._content.textContent,
 					[...root.span],
 				)
 				root.detach()
@@ -514,7 +558,7 @@ class ChildPart {
 			return
 		} else if (this.#roots) {
 			for (const root of this.#roots) root.detach()
-			this.#roots = null
+			this.#roots = undefined
 		}
 
 		// now early return if the value hasn't changed.
@@ -534,7 +578,7 @@ class ChildPart {
 				this.#span.parentNode.childNodes[this.#span.start].data = value
 			} else {
 				this.#span.deleteContents()
-				if (value !== null) this.#span.insertNode(value instanceof Node ? value : new Text(value))
+				if (value !== null) this.#span.insertNode(value instanceof Node ? value : new Text(value.toString()))
 			}
 		}
 
@@ -553,6 +597,7 @@ class ChildPart {
 	}
 }
 
+/** @implements {Part} */
 class EventPart {
 	#name
 	constructor(name) {
@@ -589,6 +634,7 @@ class EventPart {
 	}
 }
 
+/** @implements {Part} */
 class PropertyPart {
 	#name
 	constructor(name) {
@@ -610,6 +656,7 @@ class PropertyPart {
 	}
 }
 
+/** @implements {Part} */
 class AttributePart {
 	#name
 	constructor(name) {
@@ -633,6 +680,7 @@ class AttributePart {
 	}
 }
 
+/** @implements {Part} */
 class CustomPartBase {
 	#node
 	#instance
@@ -646,8 +694,8 @@ class CustomPartBase {
 			this._class == null
 				? null
 				: 'prototype' in this._class
-				? new this._class(this.#node, this._value)
-				: this._class(this.#node, this._value)
+					? new this._class(this.#node, this._value)
+					: this._class(this.#node, this._value)
 	}
 
 	create(node) {
@@ -685,6 +733,7 @@ class CustomPartStandalone extends CustomPartBase {
 	}
 }
 
+/** @implements {Part} */
 class CustomPartName {
 	create(_node, Class) {
 		this._class = Class
@@ -701,6 +750,8 @@ class CustomPartValue extends CustomPartBase {
 		super()
 		this.#namePart = namePart
 	}
+
+	// @ts-expect-error -- property in parent, accessor in subclass
 	get _class() {
 		return this.#namePart._class
 	}

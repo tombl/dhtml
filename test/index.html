@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 	<head>
 		<meta charset="UTF-8" />
@@ -6,6 +6,13 @@
 		<link rel="stylesheet" href="../reset.css" />
 		<link rel="shortcut icon" href="data:" />
 		<title>Tests</title>
+		<script type="importmap">
+			{
+				"imports": {
+					"dhtml": "../src/html.js"
+				}
+			}
+		</script>
 		<script type="module">
 			import { h } from './_lib.js'
 			const search = new URLSearchParams(location.search)
