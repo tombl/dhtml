@@ -1,5 +1,5 @@
 import { assert, mock } from './_lib.js'
-import { Root, html } from '../html.js'
+import { Root, html } from 'dhtml'
 
 export default root => {
 	const r = Root.appendInto(root)
