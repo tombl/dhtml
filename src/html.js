@@ -3,7 +3,7 @@
  * @typedef {import('./types.ts').Displayable} Displayable
  * @typedef {import('./types.ts').Renderable} Renderable
  * @typedef {import('./types.ts').CompiledTemplate} CompiledTemplate
- * @typedef {import('./types.ts').Key} Key
+ * @_typedef {import('./types.ts').Key} Key
  */
 
 // @ts-expect-error -- undefined global
@@ -52,17 +52,6 @@ const flash =
 					).finished
 			}
 		: undefined
-
-const keys = new WeakMap()
-export function keyed(value, key) {
-	if (key === undefined) {
-		if (DEV) throw new Error('keyed must be called with a key')
-		else return value
-	}
-	if (!(value instanceof BoundTemplateInstance)) value = singlePartTemplate(value)
-	keys.set(value, key)
-	return value
-}
 
 class Span {
 	constructor(parentNode, start, end) {
@@ -145,7 +134,7 @@ class BoundTemplateInstance {
 }
 
 export class Root {
-	/** @type {Key | undefined} */ _key
+	// /** @type {Key | undefined} */ _key
 
 	constructor(span) {
 		this.span = span
@@ -485,72 +474,84 @@ class ChildPart {
 			let i = 0
 			let offset = this.#span.end
 			for (const item of value) {
-				// @ts-expect-error -- WeakMap lookups of non-objects always return undefined, which is fine
-				const key = keys.get(item) ?? item
-
-				if (key !== undefined) {
-					let first = this.#roots[i]
-					let i1 = i
-					if (first?._key !== key) {
-						let i2 = this.#roots.findIndex(root => root?._key === key)
-						if (i2 !== -1) {
-							let second = this.#roots[i2]
-
-							if (second.span.start < first.span.start) {
-								// first must refer to the lower index.
-								;[first, second] = [second, first]
-								;[i1, i2] = [i2, i1]
-							}
-
-							// swap the contents of the spans
-							const content1 = second.span.extractContents()
-							const content2 = first.span.extractContents()
-							second.span.insertNode(content2)
-							first.span.insertNode(content1)
-
-							// swap the spans back
-							;[first.span, second.span] = [second.span, first.span]
-
-							// swap the roots
-							this.#roots[i1] = second
-							this.#roots[i2] = first
-
-							const difference = second.span.length - first.span.length
-							for (let j = i1 + 1; j <= i2; j++) {
-								this.#roots[j].span.start += difference
-								this.#roots[j].span.end += difference
-							}
-						}
-					}
-				}
-
-				const root = (this.#roots[i++] ??= new Root(new Span(this.#span.parentNode, offset, offset)))
+				const root = (this.#roots[i] ??= new Root(new Span(this.#span.parentNode, offset, offset)))
 				root.render(item)
-				console.log(offset, root.span.end)
 				offset = root.span.end
+				i++
 
-				// TODO: make this a weak relationship, because if key is collected, the comparison will always be false.
-				if (key !== undefined) root._key = key
+				// @_ts-expect-error -- WeakMap lookups of non-objects always return undefined, which is fine
+				// const key = keys.get(item) ?? item
+
+				// 	if (key !== undefined) {
+				// 		let first = this.#roots[i]
+				// 		let i1 = i
+				// 		if (first?._key !== key) {
+				// 			let i2 = this.#roots.findIndex(root => root?._key === key)
+				// 			if (i2 !== -1) {
+				// 				let second = this.#roots[i2]
+
+				// 				if (second.span.start < first.span.start) {
+				// 					// first must refer to the lower index.
+				// 					;[first, second] = [second, first]
+				// 					;[i1, i2] = [i2, i1]
+				// 				}
+
+				// 				// swap the contents of the spans
+				// 				const content1 = second.span.extractContents()
+				// 				const content2 = first.span.extractContents()
+				// 				second.span.insertNode(content2)
+				// 				first.span.insertNode(content1)
+
+				// 				// swap the spans back
+				// 				;[first.span, second.span] = [second.span, first.span]
+
+				// 				// swap the roots
+				// 				this.#roots[i1] = second
+				// 				this.#roots[i2] = first
+
+				// 				const difference = second.span.length - first.span.length
+				// 				for (let j = i1 + 1; j <= i2; j++) {
+				// 					this.#roots[j].span.start += difference
+				// 					this.#roots[j].span.end += difference
+				// 				}
+				// 			}
+				// 		}
+				// 	}
+
+				// 	const root = (this.#roots[i++] ??= new Root(new Span(this.#span.parentNode, offset, offset)))
+				// 	root.render(item)
+				// 	console.log(offset, root.span.end)
+				// 	offset = root.span.end
+
+				// 	// TODO: make this a weak relationship, because if key is collected, the comparison will always be false.
+				// 	if (key !== undefined) root._key = key
+				// }
+
+				// // and now remove excess roots if the iterable has shrunk.
+				// console.log([...this.#roots])
+				// const extra = this.#roots.splice(i)
+				// this.#roots.length = i
+				// // extra.sort((a, b) => b.span.start - a.span.start)
+				// extra.reverse()
+				// for (const root of extra) {
+				// 	console.log(
+				// 		'detach',
+				// 		[...root.span.parentNode.childNodes],
+				// 		root.span.start,
+				// 		root.span.end,
+				// 		root._instance?.template._content.textContent,
+				// 		[...root.span],
+				// 	)
+				// 	root.detach()
+				// 	root.span.deleteContents()
+				// 	console.log('after detach', [...root.span.parentNode.childNodes], root.span.start, root.span.end)
 			}
 
 			// and now remove excess roots if the iterable has shrunk.
-			console.log([...this.#roots])
-			const extra = this.#roots.splice(i)
-			this.#roots.length = i
-			// extra.sort((a, b) => b.span.start - a.span.start)
-			extra.reverse()
-			for (const root of extra) {
-				console.log(
-					'detach',
-					[...root.span.parentNode.childNodes],
-					root.span.start,
-					root.span.end,
-					root._instance?.template._content.textContent,
-					[...root.span],
-				)
+			while (this.#roots.length > i) {
+				const root = /** @type {Root} */ (this.#roots.pop())
 				root.detach()
 				root.span.deleteContents()
-				console.log('after detach', [...root.span.parentNode.childNodes], root.span.start, root.span.end)
 			}
 
 			this.#span.end = this.#roots[this.#roots.length - 1]?.span.end ?? this.#span.start
