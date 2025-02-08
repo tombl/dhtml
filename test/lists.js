@@ -1,7 +1,8 @@
 import { Root, html } from 'dhtml'
-import { assert } from './_lib.js'
+import { expect, test } from 'vitest'
 
-export default root => {
+test('lists', () => {
+	const root = document.createElement('div')
 	const r = Root.appendInto(root)
 
 	let items = null
@@ -14,36 +15,33 @@ export default root => {
 	`
 
 	r.render(listOfItems())
-	assert.eq(root.innerHTML.replace(/\s+/g, ' '), ' <ul> <li>Before</li> <li>After</li> </ul> ')
+	expect(root.innerHTML.replace(/\s+/g, ' ')).toBe(' <ul> <li>Before</li> <li>After</li> </ul> ')
 
 	items = [html`<li>Item 1</li>`, html`<li>Item 2</li>`, html`<li>Item 3</li>`]
 
 	r.render(listOfItems())
-	assert.eq(
-		root.innerHTML.replace(/\s+/g, ' '),
+	expect(root.innerHTML.replace(/\s+/g, ' ')).toBe(
 		' <ul> <li>Before</li> <li>Item 1</li><li>Item 2</li><li>Item 3</li> <li>After</li> </ul> ',
 	)
 	const [item1, item2, item3] = root.querySelectorAll('li')
 
 	items.push(html`<li>Item 4</li>`)
 	r.render(listOfItems())
-	assert.eq(
-		root.innerHTML.replace(/\s+/g, ' '),
+	expect(root.innerHTML.replace(/\s+/g, ' ')).toBe(
 		' <ul> <li>Before</li> <li>Item 1</li><li>Item 2</li><li>Item 3</li><li>Item 4</li> <li>After</li> </ul> ',
 	)
 	const [item1b, item2b, item3b] = root.querySelectorAll('li')
-	assert.eq(item1, item1b)
-	assert.eq(item2, item2b)
-	assert.eq(item3, item3b)
+	expect(item1).toBe(item1b)
+	expect(item2).toBe(item2b)
+	expect(item3).toBe(item3b)
 
 	items.pop()
 	items.pop()
 	r.render(listOfItems())
-	assert.eq(
-		root.innerHTML.replace(/\s+/g, ' '),
+	expect(root.innerHTML.replace(/\s+/g, ' ')).toBe(
 		' <ul> <li>Before</li> <li>Item 1</li><li>Item 2</li> <li>After</li> </ul> ',
 	)
 	const [item1c, item2c] = root.querySelectorAll('li')
-	assert.eq(item1, item1c)
-	assert.eq(item2, item2c)
-}
+	expect(item1).toBe(item1c)
+	expect(item2).toBe(item2c)
+})

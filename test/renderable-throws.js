@@ -1,7 +1,8 @@
-import { assert } from './_lib.js'
 import { Root, html } from 'dhtml'
+import { expect, test } from 'vitest'
 
-export default root => {
+test('renderable-throws', () => {
+	const root = document.createElement('div')
 	const r = Root.appendInto(root)
 
 	const oops = new Error('oops')
@@ -17,8 +18,8 @@ export default root => {
 	} catch (error) {
 		thrown = error
 	}
-	assert.eq(thrown, oops)
+	expect(thrown).toBe(oops)
 
 	// on an error, don't leave any visible artifacts
-	assert.eq(root.innerHTML, '<!---->')
-}
+	expect(root.innerHTML).toBe('<!---->')
+})

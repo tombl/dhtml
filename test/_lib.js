@@ -5,24 +5,6 @@ export function h(tag, props, ...children) {
 	return el
 }
 
-export function assert(condition, message = 'Assertion failed') {
-	if (!condition) throw new Error(message)
-}
-
-assert.eq = (actual, expected) => {
-	if (Object.is(actual, expected)) return
-	throw new Error(
-		[
-			'Expected:',
-			...`${expected}`.split('\n').map(line => '  ' + line),
-			'Actual:',
-			...`${actual}`.split('\n').map(line => '  ' + line),
-		].join('\n'),
-	)
-}
-
-assert.deepEq = (actual, expected) => assert.eq(JSON.stringify(actual, null, 2), JSON.stringify(expected, null, 2))
-
 export function mock(inner) {
 	function stub(...args) {
 		const call = { this: this, args }

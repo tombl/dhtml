@@ -1,24 +1,25 @@
 import { Root, html } from 'dhtml'
-import { assert } from './_lib.js'
+import { expect, test } from 'vitest'
 
-export default root => {
+test('list-reorder-implicit-keyed', () => {
+	const root = document.createElement('div')
 	const r = Root.appendInto(root)
 
 	const items = [html`<h1>Item 1</h1>`, html`<h2>Item 2</h2>`]
 
 	r.render(items)
-	assert.eq(root.innerHTML, '<h1>Item 1</h1><h2>Item 2</h2>')
-	assert.eq(root.children[0].tagName, 'H1')
-	assert.eq(root.children[1].tagName, 'H2')
+	expect(root.innerHTML).toBe('<h1>Item 1</h1><h2>Item 2</h2>')
+	expect(root.children[0].tagName).toBe('H1')
+	expect(root.children[1].tagName).toBe('H2')
 	const original = [...root.children]
 
 	;[items[0], items[1]] = [items[1], items[0]]
 
 	r.render(items)
-	assert.eq(root.innerHTML, '<h2>Item 2</h2><h1>Item 1</h1>')
-	assert.eq(root.children[0].tagName, 'H2')
-	assert.eq(root.children[1].tagName, 'H1')
+	expect(root.innerHTML).toBe('<h2>Item 2</h2><h1>Item 1</h1>')
+	expect(root.children[0].tagName).toBe('H2')
+	expect(root.children[1].tagName).toBe('H1')
 
-	assert.eq(root.children[0], original[1])
-	assert.eq(root.children[1], original[0])
-}
+	expect(root.children[0]).toBe(original[1])
+	expect(root.children[1]).toBe(original[0])
+})

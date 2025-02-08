@@ -1,7 +1,8 @@
-import { assert } from './_lib.js'
 import { Root, html, invalidate } from 'dhtml'
+import { expect, test } from 'vitest'
 
-export default async root => {
+test('renderable', async () => {
+	const root = document.createElement('div')
 	const r = Root.appendInto(root)
 
 	r.render(
@@ -11,7 +12,7 @@ export default async root => {
 			},
 		}}`,
 	)
-	assert.eq(root.innerHTML, '<h1>Hello, world!</h1>')
+	expect(root.innerHTML).toBe('<h1>Hello, world!</h1>')
 
 	const app = {
 		i: 0,
@@ -20,11 +21,11 @@ export default async root => {
 		},
 	}
 	r.render(app)
-	assert.eq(root.innerHTML, 'Count: 0')
+	expect(root.innerHTML).toBe('Count: 0')
 	r.render(app)
-	assert.eq(root.innerHTML, 'Count: 1')
+	expect(root.innerHTML).toBe('Count: 1')
 	await invalidate(app)
-	assert.eq(root.innerHTML, 'Count: 2')
+	expect(root.innerHTML).toBe('Count: 2')
 	await invalidate(app)
-	assert.eq(root.innerHTML, 'Count: 3')
-}
+	expect(root.innerHTML).toBe('Count: 3')
+})

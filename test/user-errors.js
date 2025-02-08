@@ -1,7 +1,8 @@
 import { Root, html } from 'dhtml'
-import { assert } from './_lib.js'
+import { expect, test } from 'vitest'
 
-export default root => {
+test('user-errors', () => {
+	const root = document.createElement('div')
 	const r = Root.appendInto(root)
 
 	let thrown
@@ -10,6 +11,7 @@ export default root => {
 	} catch (error) {
 		thrown = error
 	}
-	assert.eq(root.innerHTML, '<button></button>')
-	assert(thrown instanceof Error && /expected a function/i.test(thrown.message))
-}
+	expect(root.innerHTML).toBe('<button></button>')
+	expect(thrown).instanceOf(Error)
+	expect(/** @type {Error} */ (thrown).message).toMatch(/expected a function/i)
+})

@@ -1,5 +1,5 @@
 import { Root, html } from 'dhtml'
-import { assert } from './_lib.js'
+import { expect, test } from 'vitest'
 
 class CustomElement extends HTMLElement {
 	#thing
@@ -13,10 +13,11 @@ class CustomElement extends HTMLElement {
 
 customElements.define('custom-element', CustomElement)
 
-export default root => {
+test('custom-element-compat', () => {
+	const root = document.createElement('div')
 	const r = Root.appendInto(root)
 
 	r.render(html`<custom-element .thing=${'hello'}></custom-element>`)
-	assert(root.firstElementChild instanceof CustomElement)
-	assert.eq(root.firstElementChild.thing, 'HELLO')
-}
+	expect(root.firstElementChild).toBeInstanceOf(CustomElement)
+	expect(root.firstElementChild.thing).toBe('HELLO')
+})

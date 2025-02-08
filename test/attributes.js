@@ -1,7 +1,8 @@
-import { assert, mock } from './_lib.js'
 import { Root, html } from 'dhtml'
+import { expect, test, vi } from 'vitest'
 
-export default root => {
+test('attributes', () => {
+	const root = document.createElement('div')
 	const r = Root.appendInto(root)
 
 	let clicked = false
@@ -18,29 +19,28 @@ export default root => {
 			Click me
 		</button>
 	`)
-	assert.eq(root.querySelector('h1').style.color, 'red')
-	assert.eq(root.querySelector('h2').className, 'foo')
-	assert.eq(root.querySelector('h3').className, 'bar')
-	assert.eq(root.querySelector('details').open, true)
+	expect(root.querySelector('h1').style.color).toBe('red')
+	expect(root.querySelector('h2').className).toBe('foo')
+	expect(root.querySelector('h3').className).toBe('bar')
+	expect(root.querySelector('details').open).toBe(true)
 
-	assert.eq(clicked, false)
+	expect(clicked).toBe(false)
 	root.querySelector('button').click()
-	assert.eq(clicked, true)
+	expect(clicked).toBe(true)
 
 	const template = handler => html`<input @blur=${handler}>Click me</input>`
 
-	const handler = mock(_event => {})
+	const handler = vi.fn()
 	r.render(template(handler))
-	assert.eq(handler.calls.length, 0)
+	expect(handler).not.toBeCalled()
 
 	const event = new Event('blur')
 	root.querySelector('input').dispatchEvent(event)
-	assert.eq(handler.calls.length, 1)
-	assert.eq(handler.calls[0].args[0], event)
+	expect(handler).toHaveBeenCalledExactlyOnceWith(event)
 
 	r.render(template(null))
 	root.querySelector('input').dispatchEvent(new Event('blur'))
-	assert.eq(handler.calls.length, 1)
+	expect(handler).toHaveBeenCalledOnce()
 
 	r.render(null)
-}
+})

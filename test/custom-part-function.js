@@ -1,7 +1,8 @@
-import { assert } from './_lib.js'
 import { Root, html } from 'dhtml'
+import { expect, test } from 'vitest'
 
-export default root => {
+test('custom-part-function', () => {
+	const root = document.createElement('div')
 	const r = Root.appendInto(root)
 
 	function redifier(node) {
@@ -30,13 +31,13 @@ export default root => {
 	const template = Part => html`<div ${Part}>Hello, world!</div>`
 
 	r.render(template(redifier))
-	assert.eq(root.firstChild.style.cssText, 'color: red;')
+	expect(root.firstChild.style.cssText).toBe('color: red;')
 
 	r.render(template(flipper))
-	assert.eq(root.firstChild.style.cssText, 'transform: scaleX(-1);')
+	expect(root.firstChild.style.cssText).toBe('transform: scaleX(-1);')
 
 	r.render(template(null))
-	assert.eq(root.firstChild.style.cssText, '')
+	expect(root.firstChild.style.cssText).toBe('')
 
 	r.render(null)
-}
+})

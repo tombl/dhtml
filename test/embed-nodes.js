@@ -1,19 +1,20 @@
 import { Root, html } from 'dhtml'
-import { assert, h } from './_lib.js'
+import { expect, test } from 'vitest'
 
-export default root => {
+test('embed-nodes', () => {
+	const root = document.createElement('div')
 	const r = Root.appendInto(root)
 
-	let node = h('span')
+	let node = document.createElement('span')
 
 	r.render(html`<div>${node}</div>`)
-	assert.eq(root.innerHTML, '<div><span></span></div>')
-	assert.eq(root.children[0].children[0], node)
+	expect(root.innerHTML).toBe('<div><span></span></div>')
+	expect(root.children[0].children[0]).toBe(node)
 
 	node = document.createDocumentFragment()
-	node.append(h('h1'), h('h2'), h('h3'))
+	node.append(document.createElement('h1'), document.createElement('h2'), document.createElement('h3'))
 
 	r.render(html`<div>${node}</div>`)
-	assert.eq(root.innerHTML, '<div><h1></h1><h2></h2><h3></h3></div>')
-	assert.eq(node.children.length, 0)
-}
+	expect(root.innerHTML).toBe('<div><h1></h1><h2></h2><h3></h3></div>')
+	expect(node.children.length).toBe(0)
+})
