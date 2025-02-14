@@ -1,7 +1,8 @@
 import { Root, onUnmount } from 'dhtml'
-import { assert } from './_lib.js'
+import { expect, test } from 'vitest'
 
-export default root => {
+test('renderable-unmount-deep', () => {
+	const root = document.createElement('div')
 	const r = Root.appendInto(root)
 
 	const sequence = []
@@ -40,25 +41,25 @@ export default root => {
 
 	outer.show = true
 	r.render(outer)
-	assert.eq(root.innerHTML, 'inner')
-	assert.deepEq(sequence, ['outer render', 'inner render'])
+	expect(root.innerHTML).toBe('inner')
+	expect(sequence).toEqual(['outer render', 'inner render'])
 	sequence.length = 0
 
 	outer.show = false
 	r.render(outer)
-	assert.eq(root.innerHTML, '')
-	assert.deepEq(sequence, ['outer render', 'inner abort'])
+	expect(root.innerHTML).toBe('')
+	expect(sequence).toEqual(['outer render', 'inner abort'])
 	sequence.length = 0
 
 	outer.show = true
 	r.render(outer)
-	assert.eq(root.innerHTML, 'inner')
-	assert.deepEq(sequence, ['outer render', 'inner render'])
+	expect(root.innerHTML).toBe('inner')
+	expect(sequence).toEqual(['outer render', 'inner render'])
 	sequence.length = 0
 
 	outer.show = false
 	r.render(outer)
-	assert.eq(root.innerHTML, '')
-	assert.deepEq(sequence, ['outer render', 'inner abort'])
+	expect(root.innerHTML).toBe('')
+	expect(sequence).toEqual(['outer render', 'inner abort'])
 	sequence.length = 0
-}
+})

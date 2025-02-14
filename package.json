@@ -5,14 +5,18 @@
 	"scripts": {
 		"build": "./build.sh",
 		"format": "prettier --write .",
-		"check": "tsc"
+		"check": "tsc",
+		"test": "vitest"
 	},
 	"devDependencies": {
+		"@vitest/ui": "^3.0.5",
 		"dhtml": ".",
 		"esbuild": "^0.24.0",
+		"happy-dom": "^17.0.0",
 		"prettier": "^3.4.2",
 		"terser": "^5.37.0",
-		"typescript": "^5.7.2"
+		"typescript": "^5.7.2",
+		"vitest": "^3.0.5"
 	},
 	"prettier": {
 		"arrowParens": "avoid",

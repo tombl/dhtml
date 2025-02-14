@@ -1,9 +1,10 @@
 import { Root, html } from 'dhtml'
-import { assert } from './_lib.js'
+import { expect, test } from 'vitest'
 
 const DEPTH = 10
 
-export default root => {
+test('recursive', () => {
+	const root = document.createElement('div')
 	const r = Root.appendInto(root)
 
 	r.render({
@@ -13,7 +14,7 @@ export default root => {
 			return this
 		},
 	})
-	assert.eq(root.innerHTML, 'hello!')
+	expect(root.innerHTML).toBe('hello!')
 
 	r.render({
 		renders: 0,
@@ -22,5 +23,5 @@ export default root => {
 			return html`<span>${this}</span>`
 		},
 	})
-	assert.eq(root.innerHTML, '<span>'.repeat(DEPTH) + 'hello!' + '</span>'.repeat(DEPTH))
-}
+	expect(root.innerHTML).toBe('<span>'.repeat(DEPTH) + 'hello!' + '</span>'.repeat(DEPTH))
+})

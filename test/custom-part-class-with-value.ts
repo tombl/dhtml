@@ -1,7 +1,8 @@
-import { assert } from './_lib.js'
 import { Root, html } from 'dhtml'
+import { expect, test } from 'vitest'
 
-export default root => {
+test('custom-part-class-with-value', () => {
+	const root = document.createElement('div')
 	const r = Root.appendInto(root)
 
 	let init = 0
@@ -37,14 +38,14 @@ export default root => {
 	const template = value => html`<div ${Classes}=${value}>Hello, world!</div>`
 
 	r.render(template(['a', 'b']))
-	assert.eq(root.firstChild.className, 'a b')
+	expect(root.firstChild.className).toBe('a b')
 
 	r.render(template(['c', 'd']))
-	assert.eq(root.firstChild.className, 'c d')
+	expect(root.firstChild.className).toBe('c d')
 
-	assert.eq(init, 1) // should only be constructed once
+	expect(init).toBe(1) // should only be constructed once
 
-	assert(!detached)
+	expect(detached).toBe(false)
 	r.render(null)
-	assert(detached)
-}
+	expect(detached).toBe(true)
+})
