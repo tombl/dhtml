@@ -19,27 +19,27 @@ test('attributes', () => {
 			Click me
 		</button>
 	`)
-	expect(root.querySelector('h1').style.color).toBe('red')
-	expect(root.querySelector('h2').className).toBe('foo')
-	expect(root.querySelector('h3').className).toBe('bar')
-	expect(root.querySelector('details').open).toBe(true)
+	expect(root.querySelector('h1')!.style.color).toBe('red')
+	expect(root.querySelector('h2')!.className).toBe('foo')
+	expect(root.querySelector('h3')!.className).toBe('bar')
+	expect(root.querySelector('details')!.open).toBe(true)
 
 	expect(clicked).toBe(false)
-	root.querySelector('button').click()
+	root.querySelector('button')!.click()
 	expect(clicked).toBe(true)
 
-	const template = handler => html`<input @blur=${handler}>Click me</input>`
+	const template = (handler: (() => void) | null) => html`<input @blur=${handler}>Click me</input>`
 
 	const handler = vi.fn()
 	r.render(template(handler))
 	expect(handler).not.toBeCalled()
 
 	const event = new Event('blur')
-	root.querySelector('input').dispatchEvent(event)
+	root.querySelector('input')!.dispatchEvent(event)
 	expect(handler).toHaveBeenCalledExactlyOnceWith(event)
 
 	r.render(template(null))
-	root.querySelector('input').dispatchEvent(new Event('blur'))
+	root.querySelector('input')!.dispatchEvent(new Event('blur'))
 	expect(handler).toHaveBeenCalledOnce()
 
 	r.render(null)

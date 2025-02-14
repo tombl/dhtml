@@ -13,5 +13,5 @@ test('user-errors', () => {
 	}
 	expect(root.innerHTML).toBe('<button></button>')
 	expect(thrown).instanceOf(Error)
-	expect(/** @type {Error} */ (thrown).message).toMatch(/expected a function/i)
+	expect((thrown as Error).message).toMatch(/expected a function/i)
 })
