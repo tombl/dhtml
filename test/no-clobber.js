@@ -1,16 +1,15 @@
 import { Root, html } from 'dhtml'
 import { expect, test } from 'vitest'
-import { h } from './_lib'
 
 test('no-clobber', () => {
-	const root = h('div', {}, h('div', {}, 'before'))
-
+	const root = document.createElement('div')
+	root.appendChild(document.createElement('div')).textContent = 'before'
 	const r = Root.appendInto(root)
 
 	r.render(html`<h1>Hello, world!</h1>`)
 	expect(root.innerHTML).toBe('<div>before</div><h1>Hello, world!</h1>')
 
-	root.append(h('div', {}, 'after'))
+	root.appendChild(document.createElement('div')).textContent = 'after'
 	r.render(html`<h2>Goodbye, world!</h2>`)
 	expect(root.innerHTML).toBe('<div>before</div><h2>Goodbye, world!</h2><div>after</div>')
 
