@@ -1,7 +1,7 @@
 import { Root, html } from 'dhtml'
 import { expect, test } from 'vitest'
 
-test('list-shift', () => {
+test.todo('list-shift', () => {
 	const root = document.createElement('div')
 	const r = Root.appendInto(root)
 

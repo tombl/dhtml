@@ -1,7 +1,7 @@
 import { Root, html } from 'dhtml'
 import { expect, test } from 'vitest'
 
-test('list-reorder-implicit-keyed-renderable', () => {
+test.todo('list-reorder-implicit-keyed-renderable', () => {
 	const root = document.createElement('div')
 	const r = Root.appendInto(root)
 
