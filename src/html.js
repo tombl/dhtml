@@ -3,6 +3,7 @@
 	CustomPartConstructor,
 	CustomPartInstance,
 	Displayable,
+	Key,
 	Part,
 	Renderable,
 	Span as SpanInstance
@@ -139,6 +140,8 @@ class BoundTemplateInstance {
 }
 
 export class Root {
+	/** @type {Key | undefined} */ _key
+
 	/** @param {Span} span */
 	constructor(span) {
 		this._span = span
@@ -387,6 +390,13 @@ export function getParentNode(renderable) {
 	return controller._parentNode
 }
 
+const keys = new WeakMap()
+export function keyed(renderable, key) {
+	if (keys.has(renderable)) throw new Error('renderable already has a key')
+	keys.set(renderable, key)
+	return renderable
+}
+
 /** @implements {Part} */
 class ChildPart {
 	#childIndex
@@ -499,14 +509,42 @@ class ChildPart {
 			let i = 0
 			let end = this.#span._end
 			for (const item of value) {
-				const root = (this.#roots[i++] ??= Root.insertAfter(end))
+				// @ts-expect-error -- WeakMap lookups of non-objects always return undefined, which is fine
+				const key = keys.get(item) ?? item
+				const root = (this.#roots[i] ??= Root.insertAfter(end))
+
+				if (key !== undefined && root._key !== key) {
+					const j = this.#roots.findIndex(r => r._key === key)
+					root._key = key
+					if (j !== -1) {
+						const root1 = root
+						const root2 = this.#roots[j]
+
+						// swap the contents of the spans
+						const content1 = root2._span._extractContents()
+						const content2 = root1._span._extractContents()
+						root2._span._insertNode(content2)
+						root1._span._insertNode(content1)
+
+						// swap the spans back
+						;[root1._span, root2._span] = [root2._span, root1._span]
+
+						// swap the roots
+						this.#roots[i] = root2
+						this.#roots[j] = root1
+					}
+				}
+
 				root.render(item)
 				end = root._span._end
+
+				i++
 			}
 
 			// and now remove excess roots if the iterable has shrunk.
 			while (this.#roots.length > i) {
-				const root = /** @type {Root} */ (this.#roots.pop())
+				const root = this.#roots.pop()
+				assert(root)
 				root.detach()
 				root._span._deleteContents()
 			}
