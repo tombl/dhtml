@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<link rel="stylesheet" href="reset.css" />
+		<script type="module">
+			import { Root, html } from './src/html.js'
+			const r = Root.appendInto(document.body)
+			r.render(html`there`)
+			document.body.insertAdjacentText('beforeend', '!')
+			r.render(html`again`)
+		</script>
+	</head>
+	<body>
+		Hello
+	</body>
+</html>
