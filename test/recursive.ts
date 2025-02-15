@@ -1,27 +1,36 @@
 import { Root, html } from 'dhtml'
-import { expect, test } from 'vitest'
+import { describe, it } from 'vitest'
 
 const DEPTH = 10
 
-test('recursive', () => {
-	const root = document.createElement('div')
-	const r = Root.appendInto(root)
+describe('recursion', () => {
+	it('handles basic recursion', ({ expect }) => {
+		const root = document.createElement('div')
+		const r = Root.appendInto(root)
 
-	r.render({
-		renders: 0,
-		render() {
-			if (++this.renders > DEPTH) return 'hello!'
-			return this
-		},
+		const app = {
+			renders: 0,
+			render() {
+				if (++this.renders > DEPTH) return 'hello!'
+				return this
+			},
+		}
+		r.render(app)
+		expect(root.innerHTML).toBe('hello!')
 	})
-	expect(root.innerHTML).toBe('hello!')
 
-	r.render({
-		renders: 0,
-		render() {
-			if (++this.renders > DEPTH) return 'hello!'
-			return html`<span>${this}</span>`
-		},
+	it('handles nested recursion', ({ expect }) => {
+		const root = document.createElement('div')
+		const r = Root.appendInto(root)
+
+		const app = {
+			renders: 0,
+			render() {
+				if (++this.renders > DEPTH) return 'hello!'
+				return html`<span>${this}</span>`
+			},
+		}
+		r.render(app)
+		expect(root.innerHTML).toBe('<span>'.repeat(DEPTH) + 'hello!' + '</span>'.repeat(DEPTH))
 	})
-	expect(root.innerHTML).toBe('<span>'.repeat(DEPTH) + 'hello!' + '</span>'.repeat(DEPTH))
 })

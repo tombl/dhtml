@@ -1,12 +1,12 @@
-import { Root, html } from 'dhtml'
+import { Root, html, type Displayable } from 'dhtml'
 import { expect, test } from 'vitest'
 
 test('update-identity', () => {
 	const root = document.createElement('div')
 	const r = Root.appendInto(root)
 
-	const template = n => html`<h1>Hello, ${n}!</h1>`
-	const template2 = n => html`<h1>Hello, ${n}!</h1>`
+	const template = (n: Displayable) => html`<h1>Hello, ${n}!</h1>`
+	const template2 = (n: Displayable) => html`<h1>Hello, ${n}!</h1>`
 
 	r.render(template(1))
 	expect(root.innerHTML).toBe('<h1>Hello, 1!</h1>')

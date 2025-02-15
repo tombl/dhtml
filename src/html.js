@@ -4,6 +4,8 @@
  * @typedef {import('./types.ts').Renderable} Renderable
  * @typedef {import('./types.ts').CompiledTemplate} CompiledTemplate
  * @_typedef {import('./types.ts').Key} Key
+ * @typedef {import('./types.ts').CustomPartConstructor} CustomPartConstructor
+ * @typedef {import('./types.ts').CustomPartInstance} CustomPartInstance
  */
 
 // @ts-expect-error -- undefined global
@@ -684,7 +686,9 @@ class AttributePart {
 /** @implements {Part} */
 class CustomPartBase {
 	#node
+	/** @type {CustomPartInstance | undefined | null} */
 	#instance
+	/** @type {CustomPartConstructor | null | undefined} */
 	#prevClass
 	// abstract _value
 	// abstract _class

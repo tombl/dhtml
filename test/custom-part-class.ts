@@ -1,4 +1,4 @@
-import { Root, html } from 'dhtml'
+import { Root, html, type CustomPart } from 'dhtml'
 import { expect, test } from 'vitest'
 
 test('custom-part-class', () => {
@@ -7,7 +7,8 @@ test('custom-part-class', () => {
 
 	class Redifier {
 		#node
-		constructor(node) {
+		constructor(node: Element) {
+			if (!(node instanceof HTMLElement)) throw new Error('expected HTMLElement')
 			this.#node = node
 			node.style.color = 'red'
 		}
@@ -20,7 +21,8 @@ test('custom-part-class', () => {
 	}
 	class Flipper {
 		#node
-		constructor(node) {
+		constructor(node: Element) {
+			if (!(node instanceof HTMLElement)) throw new Error('expected HTMLElement')
 			this.#node = node
 			node.style.transform = 'scaleX(-1)'
 		}
@@ -32,16 +34,18 @@ test('custom-part-class', () => {
 		}
 	}
 
-	const template = Part => html`<div ${Part}>Hello, world!</div>`
+	const template = (Part: CustomPart | null) => html`<div ${Part}>Hello, world!</div>`
 
 	r.render(template(Redifier))
-	expect(root.firstChild.style.cssText).toBe('color: red;')
+	const div = root.firstChild as HTMLElement
+	expect(div.nodeName).toBe('DIV')
+	expect(div.style.cssText).toBe('color: red;')
 
 	r.render(template(Flipper))
-	expect(root.firstChild.style.cssText).toBe('transform: scaleX(-1);')
+	expect(div.style.cssText).toBe('transform: scaleX(-1);')
 
 	r.render(template(null))
-	expect(root.firstChild.style.cssText).toBe('')
+	expect(div.style.cssText).toBe('')
 
 	r.render(null)
 })

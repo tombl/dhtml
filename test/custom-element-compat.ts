@@ -2,12 +2,12 @@ import { Root, html } from 'dhtml'
 import { expect, test } from 'vitest'
 
 class CustomElement extends HTMLElement {
-	#thing
+	#thing?: string
 	get thing() {
 		return this.#thing
 	}
 	set thing(value) {
-		this.#thing = value.toUpperCase()
+		this.#thing = value?.toUpperCase()
 	}
 }
 
@@ -19,5 +19,5 @@ test('custom-element-compat', () => {
 
 	r.render(html`<custom-element .thing=${'hello'}></custom-element>`)
 	expect(root.firstElementChild).toBeInstanceOf(CustomElement)
-	expect(root.firstElementChild.thing).toBe('HELLO')
+	expect((root.firstElementChild as CustomElement).thing).toBe('HELLO')
 })

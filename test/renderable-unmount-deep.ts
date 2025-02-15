@@ -5,7 +5,7 @@ test('renderable-unmount-deep', () => {
 	const root = document.createElement('div')
 	const r = Root.appendInto(root)
 
-	const sequence = []
+	const sequence: string[] = []
 
 	const inner = {
 		attached: false,

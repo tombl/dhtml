@@ -3,6 +3,7 @@
 		"strict": true,
 		"noImplicitAny": false,
 		"checkJs": true,
+		"skipLibCheck": true,
 		"noEmit": true,
 		"target": "es2020",
 		"verbatimModuleSyntax": true,

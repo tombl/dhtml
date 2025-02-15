@@ -1,5 +1,9 @@
-import { Root, html, keyed } from 'dhtml'
+import { Root, html } from 'dhtml'
 import { expect, test } from 'vitest'
+
+function keyed<T>(renderable: T, _key: unknown) {
+	return renderable
+}
 
 test.todo('list-reorder-explicit-keyed', () => {
 	const root = document.createElement('div')

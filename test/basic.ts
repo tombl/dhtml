@@ -11,7 +11,7 @@ test('basic', () => {
 	r.render(html`<h1>${html`Inner content!`}</h1>`)
 	expect(root.innerHTML).toBe('<h1>Inner content!</h1>')
 
-	const template = n => html`<h1>Hello, ${n}!</h1>`
+	const template = (n: number) => html`<h1>Hello, ${n}!</h1>`
 	r.render(template(1))
 	expect(root.innerHTML).toBe('<h1>Hello, 1!</h1>')
 })

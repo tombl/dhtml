@@ -1,16 +1,13 @@
-import type { Displayable, Renderable, BoundTemplateInstance, /*Key,*/ Span } from './types.ts'
+import type { BoundTemplateInstance, CustomPartConstructor, Displayable, /*Key,*/ Renderable } from './types.ts'
 
-export { Displayable, Renderable }
+export { CustomPartConstructor as CustomPart, Displayable, Renderable }
 
-export function html(statics: TemplateStringsArray, ...dynamics: Displayable[]): BoundTemplateInstance
+export function html(statics: TemplateStringsArray, ...dynamics: unknown[]): BoundTemplateInstance
 // export function keyed<T extends Displayable & object>(value: T, key: Key): T
 export function invalidate(renderable: Renderable): Promise<void>
 export function onUnmount(renderable: Renderable, callback: () => void): void
 
 export class Root {
-	span: Span
-	constructor(span: Span)
-
 	static appendInto(parent: Node): Root
 	static replace(node: Node): Root
 

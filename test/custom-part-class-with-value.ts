@@ -10,14 +10,14 @@ test('custom-part-class-with-value', () => {
 
 	class Classes {
 		#node
-		constructor(node, value) {
+		constructor(node: Element, value: string[]) {
 			init++
 			this.#node = node
 			this.update(value)
 		}
 
-		#prev
-		update(value) {
+		#prev: Set<string> | undefined
+		update(value: string[]) {
 			const added = new Set(value)
 			for (const name of added) {
 				this.#prev?.delete(name)
@@ -35,13 +35,15 @@ test('custom-part-class-with-value', () => {
 		}
 	}
 
-	const template = value => html`<div ${Classes}=${value}>Hello, world!</div>`
+	const template = (value: string[]) => html`<div ${Classes}=${value}>Hello, world!</div>`
 
 	r.render(template(['a', 'b']))
-	expect(root.firstChild.className).toBe('a b')
+	const div = root.firstChild as Element
+	expect(div.tagName).toBe('DIV')
+	expect(div.className).toBe('a b')
 
 	r.render(template(['c', 'd']))
-	expect(root.firstChild.className).toBe('c d')
+	expect(div.className).toBe('c d')
 
 	expect(init).toBe(1) // should only be constructed once
 

@@ -1,4 +1,4 @@
-import { Root, html } from 'dhtml'
+import { Root, html, type CustomPart } from 'dhtml'
 import { expect, test } from 'vitest'
 
 test('custom-part-function-with-value', () => {
@@ -8,9 +8,9 @@ test('custom-part-function-with-value', () => {
 	let init = 0
 	let detached = false
 
-	function classes(node, value) {
+	const classes: CustomPart<string[]> = (node, value) => {
 		init++
-		let prev
+		let prev: Set<string> | undefined
 		update(value)
 
 		return {
@@ -21,7 +21,7 @@ test('custom-part-function-with-value', () => {
 			},
 		}
 
-		function update(value) {
+		function update(value: string[]) {
 			const added = new Set(value)
 			for (const name of added) {
 				prev?.delete(name)
@@ -34,13 +34,15 @@ test('custom-part-function-with-value', () => {
 		}
 	}
 
-	const template = value => html`<div ${classes}=${value}>Hello, world!</div>`
+	const template = (value: string[]) => html`<div ${classes}=${value}>Hello, world!</div>`
 
 	r.render(template(['a', 'b']))
-	expect(root.firstChild.className).toBe('a b')
+	const div = root.firstChild as HTMLElement
+	expect(div.tagName).toBe('DIV')
+	expect(div.className).toBe('a b')
 
 	r.render(template(['c', 'd']))
-	expect(root.firstChild.className).toBe('c d')
+	expect(div.className).toBe('c d')
 
 	expect(init).toBe(1) // should only be constructed once
 

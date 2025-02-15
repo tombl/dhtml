@@ -1,11 +1,11 @@
-import { Root, html } from 'dhtml'
+import { Root, html, type Displayable } from 'dhtml'
 import { expect, test } from 'vitest'
 
 test('lists', () => {
 	const root = document.createElement('div')
 	const r = Root.appendInto(root)
 
-	let items = null
+	let items: Displayable[] | null = null
 	const listOfItems = () => html`
 		<ul>
 			<li>Before</li>

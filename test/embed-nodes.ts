@@ -5,7 +5,7 @@ test('embed-nodes', () => {
 	const root = document.createElement('div')
 	const r = Root.appendInto(root)
 
-	let node = document.createElement('span')
+	let node: ParentNode = document.createElement('span')
 
 	r.render(html`<div>${node}</div>`)
 	expect(root.innerHTML).toBe('<div><span></span></div>')

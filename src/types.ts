@@ -33,6 +33,14 @@ export interface Part {
 	detach(): void
 }
 
+export interface CustomPartInstance<T> {
+	update?(value: T): void
+	detach?(): void
+}
+export type CustomPartConstructor<T = unknown> =
+	| ((node: Element, value: T) => CustomPartInstance<T>)
+	| (new (node: Element, value: T) => CustomPartInstance<T>)
+
 export interface CompiledTemplate {
 	_content: DocumentFragment
 	_parts: [idx: number, createPart: (prev: Part, span: Span) => Part][]
