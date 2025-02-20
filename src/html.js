@@ -298,15 +298,14 @@ function compileTemplate(statics) {
 					const idx = parseInt(match[1])
 
 					match = DYNAMIC_WHOLE.exec(value)
-					const valueIdx = match === null ? null : parseInt(match[1])
 
-					if (match === null) {
+					if (match) {
+						patch(node, idx, () => new CustomPartName())
+						patch(node, parseInt(match[1]), prev => new CustomPartValue(prev))
+					} else {
 						if (DEV && DYNAMIC_GLOBAL.test(value))
 							throw new Error(`expected a whole dynamic value for ${name}, got a partial one`)
 						patch(node, idx, () => new CustomPartStandalone(value))
-					} else {
-						patch(node, idx, () => new CustomPartName())
-						patch(node, valueIdx, prev => new CustomPartValue(prev))
 					}
 					continue
 				}
@@ -327,11 +326,11 @@ function compileTemplate(statics) {
 						toRemove.push(name)
 						name = name.slice(1).replace(/-([a-z])/g, (_, c) => c.toUpperCase())
 						match = DYNAMIC_WHOLE.exec(value)
-						if (match === null) {
+						if (match) {
+							patch(node, parseInt(match[1]), () => new PropertyPart(name))
+						} else {
 							assert(!DYNAMIC_GLOBAL.test(value), `expected a whole dynamic value for ${name}, got a partial one`)
 							staticPatch(node, value, () => new PropertyPart(name))
-						} else {
-							patch(node, parseInt(match[1]), () => new PropertyPart(name))
 						}
 						break
 					}
@@ -339,11 +338,11 @@ function compileTemplate(statics) {
 					// attribute:
 					default: {
 						match = DYNAMIC_WHOLE.exec(value)
-						if (match === null) {
+						if (match) {
+							patch(node, parseInt(match[1]), () => new AttributePart(name))
+						} else {
 							assert(!DYNAMIC_GLOBAL.test(value), `expected a whole dynamic value for ${name}, got a partial one`)
-							continue
 						}
-						patch(node, parseInt(match[1]), () => new AttributePart(name))
 					}
 				}
 			}
