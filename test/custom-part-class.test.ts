@@ -1,9 +1,9 @@
-import { Root, html, type CustomPart } from 'dhtml'
+import { html, type CustomPart } from 'dhtml'
 import { expect, test } from 'vitest'
+import { setup } from './setup'
 
 test('custom-part-class', () => {
-	const root = document.createElement('div')
-	const r = Root.appendInto(root)
+	const { root, el } = setup()
 
 	class Redifier {
 		#node
@@ -36,16 +36,16 @@ test('custom-part-class', () => {
 
 	const template = (Part: CustomPart | null) => html`<div ${Part}>Hello, world!</div>`
 
-	r.render(template(Redifier))
-	const div = root.firstChild as HTMLElement
+	root.render(template(Redifier))
+	const div = el.firstChild as HTMLElement
 	expect(div.nodeName).toBe('DIV')
 	expect(div.style.cssText).toBe('color: red;')
 
-	r.render(template(Flipper))
+	root.render(template(Flipper))
 	expect(div.style.cssText).toBe('transform: scaleX(-1);')
 
-	r.render(template(null))
+	root.render(template(null))
 	expect(div.style.cssText).toBe('')
 
-	r.render(null)
+	root.render(null)
 })

@@ -1,11 +1,11 @@
 import { Root, html, type CustomPart } from 'dhtml'
 import { expect, test } from 'vitest'
+import { setup } from './setup'
 
 test('custom-part-function', () => {
-	const root = document.createElement('div')
-	const r = Root.appendInto(root)
+	const { root, el } = setup()
 
-	const redifier: CustomPart = (node) => {
+	const redifier: CustomPart = node => {
 		if (!(node instanceof HTMLElement)) throw new Error('expected HTMLElement')
 		node.style.color = 'red'
 		return {
@@ -17,7 +17,7 @@ test('custom-part-function', () => {
 			},
 		}
 	}
-	const flipper: CustomPart = (node) => {
+	const flipper: CustomPart = node => {
 		if (!(node instanceof HTMLElement)) throw new Error('expected HTMLElement')
 		node.style.transform = 'scaleX(-1)'
 		return {
@@ -32,16 +32,16 @@ test('custom-part-function', () => {
 
 	const template = (Part: CustomPart | null) => html`<div ${Part}>Hello, world!</div>`
 
-	r.render(template(redifier))
-	const div = root.firstChild as HTMLElement
+	root.render(template(redifier))
+	const div = el.firstChild as HTMLElement
 	expect(div.tagName).toBe('DIV')
 	expect(div.style.cssText).toBe('color: red;')
 
-	r.render(template(flipper))
+	root.render(template(flipper))
 	expect(div.style.cssText).toBe('transform: scaleX(-1);')
 
-	r.render(template(null))
+	root.render(template(null))
 	expect(div.style.cssText).toBe('')
 
-	r.render(null)
+	root.render(null)
 })

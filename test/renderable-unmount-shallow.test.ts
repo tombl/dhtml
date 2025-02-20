@@ -1,9 +1,9 @@
-import { Root, onUnmount } from 'dhtml'
+import { html, onUnmount } from 'dhtml'
 import { expect, test } from 'vitest'
+import { setup } from './setup'
 
-test('renderable-unmount-deep', () => {
-	const root = document.createElement('div')
-	const r = Root.appendInto(root)
+test('renderable-unmount-shallow', () => {
+	const { root, el } = setup()
 
 	const sequence: string[] = []
 
@@ -34,32 +34,31 @@ test('renderable-unmount-deep', () => {
 					sequence.push('outer abort')
 				})
 			}
-			if (!this.show) return null
-			return inner
+			return html`${this.show ? inner : null}`
 		},
 	}
 
 	outer.show = true
-	r.render(outer)
-	expect(root.innerHTML).toBe('inner')
+	root.render(outer)
+	expect(el.innerHTML).toBe('inner')
 	expect(sequence).toEqual(['outer render', 'inner render'])
 	sequence.length = 0
 
 	outer.show = false
-	r.render(outer)
-	expect(root.innerHTML).toBe('')
+	root.render(outer)
+	expect(el.innerHTML).toBe('')
 	expect(sequence).toEqual(['outer render', 'inner abort'])
 	sequence.length = 0
 
 	outer.show = true
-	r.render(outer)
-	expect(root.innerHTML).toBe('inner')
+	root.render(outer)
+	expect(el.innerHTML).toBe('inner')
 	expect(sequence).toEqual(['outer render', 'inner render'])
 	sequence.length = 0
 
 	outer.show = false
-	r.render(outer)
-	expect(root.innerHTML).toBe('')
+	root.render(outer)
+	expect(el.innerHTML).toBe('')
 	expect(sequence).toEqual(['outer render', 'inner abort'])
 	sequence.length = 0
 })

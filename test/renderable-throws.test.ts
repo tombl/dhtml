@@ -1,14 +1,14 @@
-import { Root, html } from 'dhtml'
+import { html } from 'dhtml'
 import { expect, test } from 'vitest'
+import { setup } from './setup'
 
 test('renderable-throws', () => {
-	const root = document.createElement('div')
-	const r = Root.appendInto(root)
+	const { root, el } = setup()
 
 	const oops = new Error('oops')
 	let thrown
 	try {
-		r.render(
+		root.render(
 			html`${{
 				render() {
 					throw oops
@@ -21,5 +21,5 @@ test('renderable-throws', () => {
 	expect(thrown).toBe(oops)
 
 	// on an error, don't leave any visible artifacts
-	expect(root.innerHTML).toBe('<!---->')
+	expect(el.innerHTML).toBe('<!---->')
 })

@@ -1,9 +1,9 @@
-import { Root, html } from 'dhtml'
+import { html } from 'dhtml'
 import { expect, test } from 'vitest'
+import { setup } from './setup'
 
 test('custom-part-class-with-value', () => {
-	const root = document.createElement('div')
-	const r = Root.appendInto(root)
+	const { root, el } = setup()
 
 	let init = 0
 	let detached = false
@@ -37,17 +37,17 @@ test('custom-part-class-with-value', () => {
 
 	const template = (value: string[]) => html`<div ${Classes}=${value}>Hello, world!</div>`
 
-	r.render(template(['a', 'b']))
-	const div = root.firstChild as Element
+	root.render(template(['a', 'b']))
+	const div = el.firstChild as Element
 	expect(div.tagName).toBe('DIV')
 	expect(div.className).toBe('a b')
 
-	r.render(template(['c', 'd']))
+	root.render(template(['c', 'd']))
 	expect(div.className).toBe('c d')
 
 	expect(init).toBe(1) // should only be constructed once
 
 	expect(detached).toBe(false)
-	r.render(null)
+	root.render(null)
 	expect(detached).toBe(true)
 })
