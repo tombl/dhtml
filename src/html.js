@@ -38,22 +38,6 @@ const assert = (value, message = 'assertion failed') => {
 	if (!value) throw new Error(message)
 }
 
-const flash =
-	DEV && new URLSearchParams(location.search).has('flash')
-		? (node, r, g, b) => {
-				if (isElement(node))
-					return node.animate(
-						[
-							{ boxShadow: `0 0 0 1px rgba(${r}, ${g}, ${b}, 1)` },
-							{ boxShadow: `0 0 0 1px rgba(${r}, ${g}, ${b}, 0)` },
-						],
-						{
-							duration: 200,
-						},
-					).finished
-			}
-		: undefined
-
 /** @implements {SpanInstance} */
 class Span {
 	/**
@@ -74,32 +58,12 @@ class Span {
 			this._end = 0
 			return
 		}
-		while (this._end > this._start) {
-			const node = this.parentNode.childNodes[--this._end]
-			if (flash && node instanceof HTMLElement) {
-				const box = node.getBoundingClientRect()
-				const cloned = /** @type {HTMLElement} */ (node.cloneNode(true))
-				node.remove()
-				Object.assign(cloned.style, {
-					position: 'absolute',
-					top: box.top + 'px',
-					left: box.left + 'px',
-					width: box.width + 'px',
-					height: box.height + 'px',
-					pointerEvents: 'none',
-				})
-				document.body.appendChild(cloned)
-				Promise.resolve(flash(cloned, 255, 0, 0)).then(() => cloned.remove())
-			} else {
-				node.remove()
-			}
-		}
+		while (this._end > this._start) this.parentNode.childNodes[--this._end].remove()
 	}
 	_insertNode(node) {
 		const length = isDocumentFragment(node) ? node.childNodes.length : 1
 		this.parentNode.insertBefore(node, this.parentNode.childNodes[this._end] ?? null)
 		this._end += length
-		if (flash) for (const node of this) flash(node, 0, 255, 0)
 	}
 	*[Symbol.iterator]() {
 		for (let i = this._start; i < this._end; i++) yield this.parentNode.childNodes[i]
