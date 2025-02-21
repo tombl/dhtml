@@ -3,7 +3,6 @@
 	CustomPartConstructor,
 	CustomPartInstance,
 	Displayable,
-	// Key,
 	Part,
 	Renderable,
 	Span as SpanInstance
@@ -141,8 +140,6 @@ class BoundTemplateInstance {
 }
 
 export class Root {
-	// /** @type {Key | undefined} */ _key
-
 	constructor(span) {
 		this._span = span
 	}
@@ -470,73 +467,6 @@ class ChildPart {
 				root.render(item)
 				offset = root._span._end
 				i++
-
-				// @_ts-expect-error -- WeakMap lookups of non-objects always return undefined, which is fine
-				// const key = keys.get(item) ?? item
-
-				// 	if (key !== undefined) {
-				// 		let first = this.#roots[i]
-				// 		let i1 = i
-				// 		if (first?._key !== key) {
-				// 			let i2 = this.#roots.findIndex(root => root?._key === key)
-				// 			if (i2 !== -1) {
-				// 				let second = this.#roots[i2]
-
-				// 				if (second._span._start < first._span._start) {
-				// 					// first must refer to the lower index.
-				// 					;[first, second] = [second, first]
-				// 					;[i1, i2] = [i2, i1]
-				// 				}
-
-				// 				// swap the contents of the spans
-				// 				const content1 = second._span._extractContents()
-				// 				const content2 = first._span._extractContents()
-				// 				second._span._insertNode(content2)
-				// 				first._span._insertNode(content1)
-
-				// 				// swap the spans back
-				// 				;[first._span, second._span] = [second._span, first._span]
-
-				// 				// swap the roots
-				// 				this.#roots[i1] = second
-				// 				this.#roots[i2] = first
-
-				// 				const difference = second._span.length - first._span.length
-				// 				for (let j = i1 + 1; j <= i2; j++) {
-				// 					this.#roots[j]._span._start += difference
-				// 					this.#roots[j]._span._end += difference
-				// 				}
-				// 			}
-				// 		}
-				// 	}
-
-				// 	const root = (this.#roots[i++] ??= new Root(new Span(this.#span.parentNode, offset, offset)))
-				// 	root.render(item)
-				// 	console.log(offset, root._span._end)
-				// 	offset = root._span._end
-
-				// 	// TODO: make this a weak relationship, because if key is collected, the comparison will always be false.
-				// 	if (key !== undefined) root._key = key
-				// }
-
-				// // and now remove excess roots if the iterable has shrunk.
-				// console.log([...this.#roots])
-				// const extra = this.#roots.splice(i)
-				// this.#roots.length = i
-				// // extra.sort((a, b) => b._span._start - a._span._start)
-				// extra.reverse()
-				// for (const root of extra) {
-				// 	console.log(
-				// 		'detach',
-				// 		[...root._span.parentNode.childNodes],
-				// 		root._span._start,
-				// 		root._span._end,
-				// 		root._instance?.template._content.textContent,
-				// 		[...root._span],
-				// 	)
-				// 	root.detach()
-				// 	root._span._deleteContents()
-				// 	console.log('after detach', [...root._span.parentNode.childNodes], root._span._start, root._span._end)
 			}
 
 			// and now remove excess roots if the iterable has shrunk.
