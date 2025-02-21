@@ -1,4 +1,5 @@
-/// <reference types="@vitest/browser/matchers" />
+/// <reference types='vite/client' />
+/// <reference types='@vitest/browser/matchers' />
 
 import { Root } from 'dhtml'
 import { afterEach } from 'vitest'

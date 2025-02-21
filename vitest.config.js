@@ -1,8 +1,15 @@
 import { defineConfig } from 'vitest/config'
 
-const ci = 'CI' in process.env
+const ci = !!process.env.CI
+const prod = !!process.env.PROD
 
 export default defineConfig({
+	resolve: {
+		alias: { dhtml: new URL(prod ? 'dist/html.min.js' : 'src/html.js', import.meta.url) },
+	},
+	define: {
+		DHTML_PROD: prod,
+	},
 	test: {
 		coverage: {
 			enabled: ci,

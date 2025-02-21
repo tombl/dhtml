@@ -46,7 +46,7 @@ describe('basic', () => {
 		expect(el.innerHTML).toMatchInlineSnapshot(`"<div>before</div><h1>Hello, world!</h1><div>after</div>"`)
 	})
 
-	it('user errors', () => {
+	it('user errors', { skip: import.meta.env.PROD }, () => {
 		const { root, el } = setup()
 
 		let thrown
