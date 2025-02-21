@@ -3,7 +3,7 @@
 a post-component library for building user interfaces on the web.
 
 ```javascript
-import { Root, html, invalidate } from 'https://tombl.github.io/dhtml/html.js'
+import { Root, html, invalidate } from 'https://tombl.github.io/dhtml/src/html.js'
 
 const app = {
 	i: 0,
