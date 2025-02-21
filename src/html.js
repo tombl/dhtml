@@ -58,24 +58,29 @@ const flash =
 
 /** @implements {SpanInstance} */
 class Span {
+	/**
+	 * @param {ParentNode} parentNode
+	 * @param {number} start
+	 * @param {number} end
+	 */
 	constructor(parentNode, start, end) {
 		this.parentNode = parentNode
-		this.start = start
-		this.end = end
+		this._start = start
+		this._end = end
 	}
-	deleteContents() {
+	_deleteContents() {
 		// optimization for clearing when we own the entire parent.
-		if (this.start === 0 && this.end >= this.parentNode.childNodes.length) {
-			if (DEV && this.end !== this.parentNode.childNodes.length) console.warn('end is past the end of the parent')
+		if (this._start === 0 && this._end >= this.parentNode.childNodes.length) {
+			if (DEV && this._end !== this.parentNode.childNodes.length) console.warn('end is past the end of the parent')
 			this.parentNode.textContent = ''
-			this.end = 0
+			this._end = 0
 			return
 		}
-		while (this.end > this.start) {
-			const node = this.parentNode.childNodes[--this.end]
-			if (flash && node.getBoundingClientRect) {
+		while (this._end > this._start) {
+			const node = this.parentNode.childNodes[--this._end]
+			if (flash && node instanceof HTMLElement) {
 				const box = node.getBoundingClientRect()
-				const cloned = node.cloneNode(true)
+				const cloned = /** @type {HTMLElement} */ (node.cloneNode(true))
 				node.remove()
 				Object.assign(cloned.style, {
 					position: 'absolute',
@@ -92,30 +97,29 @@ class Span {
 			}
 		}
 	}
-	insertNode(node) {
+	_insertNode(node) {
 		const length = isDocumentFragment(node) ? node.childNodes.length : 1
-		this.parentNode.insertBefore(node, this.parentNode.childNodes[this.end] ?? null)
-		this.end += length
+		this.parentNode.insertBefore(node, this.parentNode.childNodes[this._end] ?? null)
+		this._end += length
 		if (flash) for (const node of this) flash(node, 0, 255, 0)
 	}
 	*[Symbol.iterator]() {
-		for (let i = this.start; i < this.end; i++)
-			yield (console.log(this.parentNode.childNodes[i]), this.parentNode.childNodes[i])
+		for (let i = this._start; i < this._end; i++) yield this.parentNode.childNodes[i]
 	}
-	extractContents() {
+	_extractContents() {
 		const fragment = document.createDocumentFragment()
-		while (this.end > this.start) fragment.prepend(this.parentNode.childNodes[--this.end])
+		while (this._end > this._start) fragment.prepend(this.parentNode.childNodes[--this._end])
 		return fragment
 	}
 	get length() {
-		return this.end - this.start
+		return this._end - this._start
 	}
 }
 
 if (DEV) {
 	Span.prototype.toString = function () {
 		let result = ''
-		for (const node of this) result += node.outerHTML
+		for (const node of this) result += /** @type {HTMLElement} */ (node).outerHTML ?? String(node)
 		return result
 	}
 }
@@ -141,7 +145,7 @@ export class Root {
 	// /** @type {Key | undefined} */ _key
 
 	constructor(span) {
-		this.span = span
+		this._span = span
 	}
 
 	static appendInto(parent) {
@@ -160,17 +164,15 @@ export class Root {
 			this._instance.update(t._dynamics)
 		} else {
 			this.detach()
-			this._instance = new TemplateInstance(t._template, t._dynamics, this.span)
+			this._instance = new TemplateInstance(t._template, t._dynamics, this._span)
 		}
 	}
 
 	detach() {
-		if (this._instance === undefined) return
-
+		if (!this._instance) return
 		// scan through all the parts of the previous tree, and clear any renderables.
-		for (const [_idx, part] of this._instance.parts) part.detach()
-
-		this._instance = undefined
+		for (const [_idx, part] of this._instance._parts) part.detach()
+		delete this._instance
 	}
 }
 
@@ -185,18 +187,18 @@ class TemplateInstance {
 		const doc = /** @type {DocumentFragment} */ (template._content.cloneNode(true))
 
 		const nodeByPart = []
-		for (const node of doc.querySelectorAll('[data-dyn-parts]')) {
-			const parts = node.getAttribute('data-dyn-parts')
+		for (const node of doc.querySelectorAll('[data-dynparts]')) {
+			const parts = node.getAttribute('data-dynparts')
 			assert(parts)
-			node.removeAttribute('data-dyn-parts')
+			node.removeAttribute('data-dynparts')
 			for (const part of parts.split(' ')) nodeByPart[part] = node
 		}
 
 		const nodeByStaticPart = []
-		for (const node of doc.querySelectorAll('[data-dyn-static-parts]')) {
-			const parts = node.getAttribute('data-dyn-static-parts')
+		for (const node of doc.querySelectorAll('[data-dynstaticparts]')) {
+			const parts = node.getAttribute('data-dynstaticparts')
 			assert(parts)
-			node.removeAttribute('data-dyn-static-parts')
+			node.removeAttribute('data-dynstaticparts')
 			for (const part of parts.split(' ')) nodeByStaticPart[part] = node
 		}
 
@@ -206,15 +208,15 @@ class TemplateInstance {
 		// because they need to know their final location.
 		// this also ensures that custom elements are upgraded before we do things
 		// to them, like setting properties or attributes.
-		span.deleteContents()
-		span.insertNode(doc)
+		span._deleteContents()
+		span._insertNode(doc)
 
 		template._staticParts.map(([value, createPart], elementIdx) =>
 			createPart().create(nodeByStaticPart[elementIdx], value),
 		)
 
 		let prev
-		this.parts = template._parts.map(([dynamicIdx, createPart], elementIdx) => {
+		this._parts = template._parts.map(([dynamicIdx, createPart], elementIdx) => {
 			const part = createPart(prev, span)
 			part.create(nodeByPart[elementIdx], dynamics[dynamicIdx])
 			prev = part
@@ -223,7 +225,7 @@ class TemplateInstance {
 	}
 
 	update(dynamics) {
-		for (const [idx, part] of this.parts) part.update(dynamics[idx])
+		for (const [idx, part] of this._parts) part.update(dynamics[idx])
 	}
 }
 
@@ -251,42 +253,39 @@ function compileTemplate(statics) {
 
 	function patch(node, idx, createPart) {
 		if (isDocumentFragment(node)) compiled._rootParts.push(nextPart)
-		else if ('dynParts' in node.dataset) node.dataset.dynParts += ' ' + nextPart
-		else node.dataset.dynParts = nextPart
+		else if ('dynparts' in node.dataset) node.dataset.dynparts += ' ' + nextPart
+		else node.dataset.dynparts = nextPart
 		if (DEV && nextPart !== idx) console.warn('dynamic value detected in static location')
 		compiled._parts[nextPart++] = [idx, createPart]
 	}
 	function staticPatch(node, value, createPart) {
 		const nextStaticPart = compiled._staticParts.push([value, createPart]) - 1
-		if ('dynStaticParts' in node.dataset) node.dataset.dynStaticParts += ' ' + nextStaticPart
-		else node.dataset.dynStaticParts = nextStaticPart
+		if ('dynstaticparts' in node.dataset) node.dataset.dynstaticparts += ' ' + nextStaticPart
+		else node.dataset.dynstaticparts = nextStaticPart
 	}
 
 	const walker = document.createTreeWalker(templateElement.content, NODE_FILTER_TEXT | NODE_FILTER_ELEMENT)
 	while (nextPart < compiled._parts.length && walker.nextNode()) {
 		const node = /** @type {Text | Element} */ (walker.currentNode)
 		if (isTextNode(node)) {
-			/** @type {[Comment, idx: number][]} */
-			const nodes = []
-
-			// reverse the order of the matches so we don't need any extra bookkeeping.
-			// by splitting the text starting from the end, we only have to split the original node.
-			for (const match of [...node.data.matchAll(DYNAMIC_GLOBAL)].reverse()) {
+			const nodes = [...node.data.matchAll(DYNAMIC_GLOBAL)].reverse().map(match => {
 				node.splitText(match.index + match[0].length)
 				const dyn = new Comment()
 				node.splitText(match.index).replaceWith(dyn)
-				nodes.push([dyn, parseInt(match[1])])
-			}
+				return /** @type {const} */ ([dyn, parseInt(match[1])])
+			})
 
 			// put them back in order, inverting the effect of the reverse above.
 			// not relevant for behavior, but it satisfies the warning when parts are used out of order.
 			nodes.reverse()
 
-			let siblings
-			for (const [node, idx] of nodes) {
-				assert(node.parentNode)
-				const child = (siblings ??= [...node.parentNode.childNodes]).indexOf(node)
-				patch(node.parentNode, idx, (_prev, span) => new ChildPart(child, span))
+			if (nodes.length) {
+				DEV: assert(node.parentNode !== null, 'all text nodes should have a parent node')
+				let siblings = [...node.parentNode.childNodes]
+				for (const [node, idx] of nodes) {
+					const child = siblings.indexOf(node)
+					patch(node.parentNode, idx, (_prev, span) => new ChildPart(child, span))
+				}
 			}
 		} else {
 			const toRemove = []
@@ -305,46 +304,37 @@ function compileTemplate(statics) {
 						patch(node, idx, () => new CustomPartName())
 						patch(node, parseInt(match[1]), prev => new CustomPartValue(prev))
 					} else {
-						if (DEV && DYNAMIC_GLOBAL.test(value))
-							throw new Error(`expected a whole dynamic value for ${name}, got a partial one`)
+						DEV: assert(!DYNAMIC_GLOBAL.test(value), `expected a whole dynamic value for ${name}, got a partial one`)
 						patch(node, idx, () => new CustomPartStandalone(value))
 					}
 					continue
 				}
 
-				switch (name[0]) {
+				if (name[0] === '@') {
 					// event:
-					case '@': {
-						toRemove.push(name)
-						name = name.slice(1)
-						match = DYNAMIC_WHOLE.exec(value)
-						assert(match, `expected a whole dynamic value for ${name}, got a partial one`)
-						patch(node, parseInt(match[1]), () => new EventPart(name))
-						break
-					}
-
+					toRemove.push(name)
+					match = DYNAMIC_WHOLE.exec(value)
+					name = name.slice(1)
+					assert(match, `expected a whole dynamic value for ${name}, got a partial one`)
+					patch(node, parseInt(match[1]), () => new EventPart(name))
+				} else if (name[0] === '.') {
 					// property:
-					case '.': {
-						toRemove.push(name)
-						name = name.slice(1).replace(/-([a-z])/g, (_, c) => c.toUpperCase())
-						match = DYNAMIC_WHOLE.exec(value)
-						if (match) {
-							patch(node, parseInt(match[1]), () => new PropertyPart(name))
-						} else {
-							assert(!DYNAMIC_GLOBAL.test(value), `expected a whole dynamic value for ${name}, got a partial one`)
-							staticPatch(node, value, () => new PropertyPart(name))
-						}
-						break
+					toRemove.push(name)
+					match = DYNAMIC_WHOLE.exec(value)
+					name = name.slice(1).replace(/-([a-z])/g, (_, c) => c.toUpperCase())
+					if (match) {
+						patch(node, parseInt(match[1]), () => new PropertyPart(name))
+					} else {
+						DEV: assert(!DYNAMIC_GLOBAL.test(value), `expected a whole dynamic value for ${name}, got a partial one`)
+						staticPatch(node, value, () => new PropertyPart(name))
 					}
-
+				} else {
 					// attribute:
-					default: {
-						match = DYNAMIC_WHOLE.exec(value)
-						if (match) {
-							patch(node, parseInt(match[1]), () => new AttributePart(name))
-						} else {
-							assert(!DYNAMIC_GLOBAL.test(value), `expected a whole dynamic value for ${name}, got a partial one`)
-						}
+					match = DYNAMIC_WHOLE.exec(value)
+					if (match) {
+						patch(node, parseInt(match[1]), () => new AttributePart(name))
+					} else {
+						DEV: assert(!DYNAMIC_GLOBAL.test(value), `expected a whole dynamic value for ${name}, got a partial one`)
 					}
 				}
 			}
@@ -367,7 +357,7 @@ export function invalidate(renderable) {
 			controller._invalidateQueued = null
 			controller._invalidate()
 		}))
-	} else {
+	} else if (DEV) {
 		throw new Error('could not invalidate a non-rendered renderable')
 		// TODO: check again in a microtask?
 		// just in case the renderable was created between invalidation and rerendering
@@ -395,7 +385,7 @@ class ChildPart {
 	create(node, value) {
 		this.#span =
 			node instanceof Span
-				? new Span(node.parentNode, node.start + this.#childIndex, node.start + this.#childIndex + 1)
+				? new Span(node.parentNode, node._start + this.#childIndex, node._start + this.#childIndex + 1)
 				: new Span(node, this.#childIndex, this.#childIndex + 1)
 
 		this.#childIndex = undefined // we only need this once.
@@ -418,7 +408,7 @@ class ChildPart {
 
 	/** @param {Renderable | null} next */
 	#switchRenderable(next) {
-		if (this.#renderable !== next && this.#renderable !== null) {
+		if (this.#renderable && this.#renderable !== next) {
 			const controller = controllers.get(this.#renderable)
 			if (controller?._unmountCallbacks) for (const callback of controller._unmountCallbacks) callback()
 			controllers.delete(this.#renderable)
@@ -468,18 +458,18 @@ class ChildPart {
 			if (!this.#roots) {
 				// we previously rendered a single value, so we need to clear it.
 				this.#disconnectRoot()
-				this.#span.deleteContents()
+				this.#span._deleteContents()
 
 				this.#roots = []
 			}
 
 			// create or update a root for every item.
 			let i = 0
-			let offset = this.#span.end
+			let offset = this.#span._end
 			for (const item of value) {
 				const root = (this.#roots[i] ??= new Root(new Span(this.#span.parentNode, offset, offset)))
 				root.render(item)
-				offset = root.span.end
+				offset = root._span._end
 				i++
 
 				// @_ts-expect-error -- WeakMap lookups of non-objects always return undefined, which is fine
@@ -493,29 +483,29 @@ class ChildPart {
 				// 			if (i2 !== -1) {
 				// 				let second = this.#roots[i2]
 
-				// 				if (second.span.start < first.span.start) {
+				// 				if (second._span._start < first._span._start) {
 				// 					// first must refer to the lower index.
 				// 					;[first, second] = [second, first]
 				// 					;[i1, i2] = [i2, i1]
 				// 				}
 
 				// 				// swap the contents of the spans
-				// 				const content1 = second.span.extractContents()
-				// 				const content2 = first.span.extractContents()
-				// 				second.span.insertNode(content2)
-				// 				first.span.insertNode(content1)
+				// 				const content1 = second._span._extractContents()
+				// 				const content2 = first._span._extractContents()
+				// 				second._span._insertNode(content2)
+				// 				first._span._insertNode(content1)
 
 				// 				// swap the spans back
-				// 				;[first.span, second.span] = [second.span, first.span]
+				// 				;[first._span, second._span] = [second._span, first._span]
 
 				// 				// swap the roots
 				// 				this.#roots[i1] = second
 				// 				this.#roots[i2] = first
 
-				// 				const difference = second.span.length - first.span.length
+				// 				const difference = second._span.length - first._span.length
 				// 				for (let j = i1 + 1; j <= i2; j++) {
-				// 					this.#roots[j].span.start += difference
-				// 					this.#roots[j].span.end += difference
+				// 					this.#roots[j]._span._start += difference
+				// 					this.#roots[j]._span._end += difference
 				// 				}
 				// 			}
 				// 		}
@@ -523,8 +513,8 @@ class ChildPart {
 
 				// 	const root = (this.#roots[i++] ??= new Root(new Span(this.#span.parentNode, offset, offset)))
 				// 	root.render(item)
-				// 	console.log(offset, root.span.end)
-				// 	offset = root.span.end
+				// 	console.log(offset, root._span._end)
+				// 	offset = root._span._end
 
 				// 	// TODO: make this a weak relationship, because if key is collected, the comparison will always be false.
 				// 	if (key !== undefined) root._key = key
@@ -534,30 +524,30 @@ class ChildPart {
 				// console.log([...this.#roots])
 				// const extra = this.#roots.splice(i)
 				// this.#roots.length = i
-				// // extra.sort((a, b) => b.span.start - a.span.start)
+				// // extra.sort((a, b) => b._span._start - a._span._start)
 				// extra.reverse()
 				// for (const root of extra) {
 				// 	console.log(
 				// 		'detach',
-				// 		[...root.span.parentNode.childNodes],
-				// 		root.span.start,
-				// 		root.span.end,
+				// 		[...root._span.parentNode.childNodes],
+				// 		root._span._start,
+				// 		root._span._end,
 				// 		root._instance?.template._content.textContent,
-				// 		[...root.span],
+				// 		[...root._span],
 				// 	)
 				// 	root.detach()
-				// 	root.span.deleteContents()
-				// 	console.log('after detach', [...root.span.parentNode.childNodes], root.span.start, root.span.end)
+				// 	root._span._deleteContents()
+				// 	console.log('after detach', [...root._span.parentNode.childNodes], root._span._start, root._span._end)
 			}
 
 			// and now remove excess roots if the iterable has shrunk.
 			while (this.#roots.length > i) {
 				const root = /** @type {Root} */ (this.#roots.pop())
 				root.detach()
-				root.span.deleteContents()
+				root._span._deleteContents()
 			}
 
-			this.#span.end = this.#roots[this.#roots.length - 1]?.span.end ?? this.#span.start
+			this.#span._end = this.#roots[this.#roots.length - 1]?._span._end ?? this.#span._start
 
 			return
 		} else if (this.#roots) {
@@ -579,17 +569,17 @@ class ChildPart {
 
 			if (this.#value != null && value !== null && !(this.#value instanceof Node) && !(value instanceof Node)) {
 				// we previously rendered a string, and we're rendering a string again.
-				this.#span.parentNode.childNodes[this.#span.start].data = value
+				this.#span.parentNode.childNodes[this.#span._start].data = value
 			} else {
-				this.#span.deleteContents()
-				if (value !== null) this.#span.insertNode(value instanceof Node ? value : new Text(value.toString()))
+				this.#span._deleteContents()
+				if (value !== null) this.#span._insertNode(value instanceof Node ? value : new Text(value.toString()))
 			}
 		}
 
 		// if we've grown past the end of our parent, update their end.
-		if (this.#span.parentNode === this.#parentSpan.parentNode && this.#span.end > this.#parentSpan.start) {
+		if (this.#span.parentNode === this.#parentSpan.parentNode && this.#span._end > this.#parentSpan._start) {
 			// TODO: does this need to also apply for shrinkage?
-			this.#parentSpan.end = this.#span.end
+			this.#parentSpan._end = this.#span._end
 		}
 
 		this.#value = value
@@ -608,8 +598,6 @@ class EventPart {
 		this.#name = name
 	}
 
-	#attached = false
-	#handler = {}
 	#node
 	create(node, value) {
 		this.#node = node
@@ -617,24 +605,18 @@ class EventPart {
 	}
 
 	update(value) {
-		this.#handler.handleEvent = value
-		if (typeof value === 'function') {
-			if (!this.#attached) {
-				this.#node.addEventListener(this.#name, this.#handler)
-				this.#attached = true
-			}
-		} else if (value === null) {
+		this.handleEvent = value
+		if (value === null) {
 			this.detach()
-		} else if (DEV) {
+		} else if (DEV && typeof value !== 'function') {
 			throw new Error(`Expected a function or null, got ${value}`)
+		} else {
+			this.#node.addEventListener(this.#name, this)
 		}
 	}
 
 	detach() {
-		if (this.#attached) {
-			this.#node.removeEventListener(this.#name, this.#handler)
-			this.#attached = false
-		}
+		this.#node.removeEventListener(this.#name, this)
 	}
 }
 

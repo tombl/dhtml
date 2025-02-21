@@ -14,17 +14,9 @@ export declare class BoundTemplateInstance {
 // export type Key = string | number | bigint | boolean | symbol | object | null
 
 export declare class Span {
-	parentNode: Node
-	start: number
-	end: number
-
-	constructor(parentNode: Node, start: number, end: number)
-
-	deleteContents(): void
-	insertNode(node: Node): void
-	[Symbol.iterator](): IterableIterator<Node>
-	extractContents(): DocumentFragment
-	get length(): number
+	parentNode: ParentNode
+	_start: number
+	_end: number
 }
 
 export interface Part {
