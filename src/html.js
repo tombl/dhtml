@@ -1,12 +1,13 @@
-/**
- * @typedef {import('./types.ts').Part} Part
- * @typedef {import('./types.ts').Displayable} Displayable
- * @typedef {import('./types.ts').Renderable} Renderable
- * @typedef {import('./types.ts').CompiledTemplate} CompiledTemplate
- * @_typedef {import('./types.ts').Key} Key
- * @typedef {import('./types.ts').CustomPartConstructor} CustomPartConstructor
- * @typedef {import('./types.ts').CustomPartInstance} CustomPartInstance
- */
+/** @import {
+	CompiledTemplate,
+	CustomPartConstructor,
+	CustomPartInstance,
+	Displayable,
+	// Key,
+	Part,
+	Renderable,
+	Span as SpanInstance
+} from './types' */
 
 // @ts-expect-error -- undefined global
 const DEV = typeof DHTML_PROD === 'undefined' || !DHTML_PROD
@@ -55,6 +56,7 @@ const flash =
 			}
 		: undefined
 
+/** @implements {SpanInstance} */
 class Span {
 	constructor(parentNode, start, end) {
 		this.parentNode = parentNode
