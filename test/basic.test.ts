@@ -114,4 +114,13 @@ describe('basic', () => {
 		expect(el.innerHTML).toBe('<div><h1></h1><h2></h2><h3></h3></div>')
 		expect(node.children.length).toBe(0)
 	})
+
+	it.todo('does not add extra empty text nodes', () => {
+		const { root, el } = setup()
+
+		root.render(html`${'abc'}`)
+		expect(el.childNodes.length).toBe(1)
+		expect(el.firstChild).toBeInstanceOf(Text)
+		expect((el.firstChild as Text).data).toBe('abc')
+	})
 })
