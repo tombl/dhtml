@@ -1,3 +1,7 @@
+declare global {
+	const DHTML_PROD: unknown
+}
+
 interface ToString {
 	toString(): string
 }

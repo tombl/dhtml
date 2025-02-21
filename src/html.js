@@ -9,7 +9,6 @@
 	Span as SpanInstance
 } from './types' */
 
-// @ts-expect-error -- undefined global
 const DEV = typeof DHTML_PROD === 'undefined' || !DHTML_PROD
 
 /** @type {typeof NodeFilter.SHOW_ELEMENT} */ const NODE_FILTER_ELEMENT = 1
