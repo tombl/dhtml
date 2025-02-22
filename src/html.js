@@ -312,6 +312,7 @@ function compileTemplate(statics) {
 	_invalidateQueued: Promise<void> | null
 	_invalidate: () => void
 	_unmountCallbacks: Set<() => void> | null
+	_parentNode: Node
 }>} */
 const controllers = new WeakMap()
 export function invalidate(renderable) {
@@ -335,6 +336,9 @@ export function onUnmount(renderable, callback) {
 	} else {
 		// TODO: throw here?
 	}
+}
+export function getParentNode(renderable) {
+	return controllers.get(renderable)?._parentNode
 }
 
 /** @implements {Part} */
@@ -402,6 +406,7 @@ class ChildPart {
 						this.update(renderable)
 					},
 					_unmountCallbacks: null, // will be upgraded to a Set if needed.
+					_parentNode: this.#span.parentNode,
 				})
 
 			value = renderable.render()
