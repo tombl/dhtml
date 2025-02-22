@@ -308,6 +308,11 @@ function compileTemplate(statics) {
 	return compiled
 }
 
+/** @type {WeakMap<object, {
+	_invalidateQueued: Promise<void> | null
+	_invalidate: () => void
+	_unmountCallbacks: Set<() => void> | null
+}>} */
 const controllers = new WeakMap()
 export function invalidate(renderable) {
 	const controller = controllers.get(renderable)
