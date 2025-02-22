@@ -317,28 +317,28 @@ function compileTemplate(statics) {
 const controllers = new WeakMap()
 export function invalidate(renderable) {
 	const controller = controllers.get(renderable)
-	if (controller) {
-		// TODO: cancel this invalidation if a higher up one comes along
-		return (controller._invalidateQueued ??= Promise.resolve().then(() => {
-			controller._invalidateQueued = null
-			controller._invalidate()
-		}))
-	} else if (DEV) {
-		throw new Error('could not invalidate a non-rendered renderable')
-		// TODO: check again in a microtask?
-		// just in case the renderable was created between invalidation and rerendering
-	}
+	// TODO: if no controller, check again in a microtask?
+	// just in case the renderable was created between invalidation and rerendering
+	assert(controller, 'the renderable has not been rendered')
+
+	// TODO: cancel this invalidation if a higher up one comes along
+	return (controller._invalidateQueued ??= Promise.resolve().then(() => {
+		controller._invalidateQueued = null
+		controller._invalidate()
+	}))
 }
 export function onUnmount(renderable, callback) {
 	const controller = controllers.get(renderable)
-	if (controller) {
-		;(controller._unmountCallbacks ??= new Set()).add(callback)
-	} else {
-		// TODO: throw here?
-	}
+	assert(controller, 'the renderable has not been rendered')
+
+	controller._unmountCallbacks ??= new Set()
+	controller._unmountCallbacks.add(callback)
 }
 export function getParentNode(renderable) {
-	return controllers.get(renderable)?._parentNode
+	const controller = controllers.get(renderable)
+	assert(controller, 'the renderable has not been rendered')
+
+	return controller._parentNode
 }
 
 /** @implements {Part} */
