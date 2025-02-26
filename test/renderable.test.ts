@@ -1,5 +1,5 @@
-import { html, invalidate, onUnmount } from 'dhtml'
-import { describe, expect, it } from 'vitest'
+import { getParentNode, html, invalidate, onUnmount, type Renderable } from 'dhtml'
+import { describe, expect, it, vi } from 'vitest'
 import { setup } from './setup'
 
 describe('renderable', () => {
@@ -175,5 +175,59 @@ describe('renderable', () => {
 		expect(el.innerHTML).toBe('')
 		expect(sequence).toEqual(['outer render', 'inner abort'])
 		sequence.length = 0
+	})
+})
+
+describe('getParentNode', () => {
+	it('works externally', () => {
+		const { root, el } = setup()
+
+		const app = {
+			render() {
+				return html`<div></div>`
+			},
+		}
+
+		root.render(app)
+		expect(el.innerHTML).toBe('<div></div>')
+		expect(getParentNode(app)).toBe(el)
+	})
+
+	it('works internally', () => {
+		const { root, el } = setup()
+
+		root.render({
+			render() {
+				return html`<div>${getParentNode(this) === el}</div>`
+			},
+		} satisfies Renderable)
+
+		expect(el.innerHTML).toBe('<div>true</div>')
+	})
+
+	it('handles nesting', () => {
+		const { root, el } = setup()
+
+		const inner = {
+			render() {
+				const parent = getParentNode(this)
+
+				expect(parent).toBeInstanceOf(HTMLDivElement)
+				expect((parent as HTMLDivElement).className).toBe('the-app')
+				expect(parent.parentNode).toBe(el)
+
+				return null
+			},
+		}
+
+		const spy = vi.spyOn(inner, 'render')
+
+		root.render({
+			render() {
+				return html`<div class="the-app">${inner}</div>`
+			},
+		})
+
+		expect(spy).toHaveBeenCalledOnce()
 	})
 })

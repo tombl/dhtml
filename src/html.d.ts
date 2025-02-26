@@ -5,6 +5,7 @@ export { CustomPartConstructor as CustomPart, Displayable, Renderable }
 export function html(statics: TemplateStringsArray, ...dynamics: unknown[]): BoundTemplateInstance
 export function invalidate(renderable: Renderable): Promise<void>
 export function onUnmount(renderable: Renderable, callback: () => void): void
+export function getParentNode(renderable: Renderable): Node
 
 export class Root {
 	static appendInto(parent: Node): Root
