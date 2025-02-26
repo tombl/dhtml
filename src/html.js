@@ -104,6 +104,7 @@ class BoundTemplateInstance {
 }
 
 export class Root {
+	_key
 	constructor(span) {
 		this._span = span
 	}
@@ -308,6 +309,12 @@ function compileTemplate(statics) {
 	return compiled
 }
 
+const keys = new WeakMap()
+export function keyed(displayable, key) {
+	keys.set(displayable, key)
+	return displayable
+}
+
 /** @type {WeakMap<object, {
 	_invalidateQueued: Promise<void> | null
 	_invalidate: () => void
@@ -393,7 +400,7 @@ class ChildPart {
 
 	/** @param {Displayable} value */
 	update(value) {
-		const endsWereEqual = this.#parentSpan._end === this.#span._end
+		const endsWereEqual = this.#span._end === this.#parentSpan._end
 
 		if (isRenderable(value)) {
 			this.#switchRenderable(value)
@@ -436,24 +443,87 @@ class ChildPart {
 			}
 
 			// create or update a root for every item.
-			let i = 0
-			let offset = this.#span._end
+			let itemIdx = 0
+			let end = this.#span._end
+			const permutation = []
+			const claimed = new Set(this.#roots.map((_, i) => i))
 			for (const item of value) {
-				const root = (this.#roots[i] ??= new Root(new Span(this.#span.parentNode, offset, offset)))
+				// @ts-expect-error -- for a non-object item, keys.get will always return undefined.
+				const key = keys.get(item) ?? item
+				let rootIdx = this.#roots.findIndex((root, i) => root._key === key && claimed.delete(i))
+
+				let root
+				if (rootIdx === -1) {
+					root = new Root(new Span(this.#span.parentNode, end, end))
+					root._key = key
+					rootIdx = this.#roots.push(root) - 1
+				} else {
+					root = this.#roots[rootIdx]
+				}
+
+				permutation[itemIdx] = rootIdx
+				// permutation[rootIdx] = itemIdx
+
 				root.render(item)
-				offset = root._span._end
-				i++
+				end = root._span._end
+				itemIdx++
+			}
+
+			console.log('p', permutation, itemIdx, claimed)
+
+			const visited = new Set()
+			const swaps = []
+			for (let start = 0; start < permutation.length; start++) {
+				if (visited.has(start)) continue
+
+				let current = start
+				const cycle = []
+
+				while (!visited.has(current)) {
+					visited.add(current)
+					cycle.push(current)
+					current = permutation[current]
+				}
+
+				if (cycle.length === 1) continue
+				for (let i = cycle.length - 1; i > 0; i--) {
+					console.log(cycle[i], i, cycle)
+					swaps.push([cycle[0], cycle[i]])
+				}
+			}
+
+			console.log('s', swaps)
+
+			for (let [from, to] of swaps) {
+
+				if (from > to) [from, to] = [to, from]
+
+				const content2 = this.#roots[to]._span._extractContents()
+				const content1 = this.#roots[from]._span._extractContents()
+
+				const diff = content2.childNodes.length - content1.childNodes.length
+
+				this.#roots[to]._span._insertNode(content1)
+				this.#roots[from]._span._insertNode(content2)
+
+				const temp = this.#roots[from]
+				this.#roots[from] = this.#roots[to]
+				this.#roots[to] = temp
+
+				for (let i = from + 1; i < to; i++) {
+					this.#roots[i]._span._start += diff
+					this.#roots[i]._span._end += diff
+				}
 			}
 
 			// and now remove excess roots if the iterable has shrunk.
-			while (this.#roots.length > i) {
+			while (this.#roots.length > itemIdx) {
 				const root = /** @type {Root} */ (this.#roots.pop())
 				root.detach()
 				root._span._deleteContents()
 			}
 
 			this.#span._end = this.#roots[this.#roots.length - 1]?._span._end ?? this.#span._start
-
 			if (endsWereEqual) this.#parentSpan._end = this.#span._end
 
 			return
