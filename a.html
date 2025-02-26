@@ -7,7 +7,7 @@
 			import { Root, html } from './src/html.js'
 			const r = Root.appendInto(document.body)
 			r.render(html`there`)
-			document.body.insertAdjacentText('beforeend', '!')
+			document.body.append("!")
 			r.render(html`again`)
 		</script>
 	</head>

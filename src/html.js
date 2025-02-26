@@ -19,6 +19,9 @@ const isElement = node => node.nodeType === /** @satisfies {typeof Node.ELEMENT_
 /** @return {node is Text} */
 const isText = node => node.nodeType === /** @satisfies {typeof Node.TEXT_NODE} */ (3)
 
+/** @return {node is Comment} */
+const isComment = node => node.nodeType === /** @satisfies {typeof Node.COMMENT_NODE} */ (8)
+
 /** @return {node is DocumentFragment} */
 const isDocumentFragment = node => node.nodeType === /** @satisfies {typeof Node.DOCUMENT_FRAGMENT_NODE} */ (11)
 
@@ -42,14 +45,14 @@ const assert = (value, message = 'assertion failed') => {
 class Span {
 	/**
 	 * @param {ParentNode} parentNode
-	 * @param {Node | null} start the first node in the span, or null if the span starts at the beginning of the parent.
-	 * @param {Node | null} end the node after the last node in the span, or null if the span ends at the end of the parent.
+	 * @param {Node} start the first node in the span
+	 * @param {Node} end the last node in the span
 	 */
 	constructor(parentNode, start, end) {
 		DEV: {
 			assert(parentNode != null)
-			assert(start === null || start.parentNode === parentNode)
-			assert(end === null || end.parentNode === parentNode)
+			assert(start.parentNode === parentNode)
+			assert(end.parentNode === parentNode)
 		}
 
 		this.parentNode = parentNode
@@ -58,30 +61,46 @@ class Span {
 	}
 
 	_deleteContents() {
-		// optimization for clearing when we own the entire parent.
-		if (this.parentNode.firstChild === this._start && this._end === null) {
-			this.parentNode.textContent = ''
-			this._start = null
-			return
-		}
+		const marker = new Comment()
+		this.parentNode.insertBefore(marker, this._start)
+
+		console.log('removing', ...this)
+
 		for (const node of this) this.parentNode.removeChild(node)
-		this._start = this._end
+
+		this._start = this._end = marker
 	}
 
 	/** @param {Node} node */
 	_insertNode(node) {
-		if (isDocumentFragment(node) && node.childNodes.length === 0) return
-		if (this._start === null) assert(this._end === null)
-		if (this._start === this._end) this._start = isDocumentFragment(node) ? node.firstChild : node
-		this.parentNode.insertBefore(node, this._end)
+		const end = isDocumentFragment(node) ? node.lastChild : node
+		if (end === null) return // empty fragment
+		this.parentNode.insertBefore(node, this._end.nextSibling)
+		this._end = end
+
+		if (isComment(this._start)) {
+			assert(this._start.nextSibling)
+			const comment = this._start
+			this._start = this._start.nextSibling
+			this.parentNode.removeChild(comment)
+		}
 	}
 	*[Symbol.iterator]() {
-		for (let node = this._start; node !== this._end && node !== null; node = node.nextSibling) yield node
+		let node = this._start
+		while (node !== this._end) {
+			assert(node.nextSibling !== null, 'expected more nodes')
+			node = node.nextSibling
+			yield node
+		}
 	}
 	_extractContents() {
+		const marker = new Comment()
+		this.parentNode.insertBefore(marker, this._start)
+
 		const fragment = document.createDocumentFragment()
 		for (const node of this) fragment.appendChild(node)
-		this._start = this._end = null
+
+		this._start = this._end = marker
 		return fragment
 	}
 	get length() {
@@ -120,16 +139,30 @@ class BoundTemplateInstance {
 }
 
 export class Root {
+	/** @param {Span} span */
 	constructor(span) {
 		this._span = span
 	}
 
+	/** @param {ParentNode} parent */
 	static appendInto(parent) {
-		return new Root(new Span(parent, null, null))
+		const marker = new Comment()
+		parent.appendChild(marker)
+		return new Root(new Span(parent, marker, marker))
 	}
 
+	/** @param {Node} node */
+	static insertAfter(node) {
+		assert(node.parentNode, 'expected a parent node')
+		const marker = new Comment()
+		node.parentNode.insertBefore(marker, node.nextSibling)
+		return new Root(new Span(node.parentNode, marker, marker))
+	}
+
+	/** @param {Node} node */
 	static replace(node) {
-		return new Root(new Span(node.parentNode, node, node.nextSibling))
+		assert(node.parentNode, 'expected a parent node')
+		return new Root(new Span(node.parentNode, node, node))
 	}
 
 	render(value) {
@@ -376,10 +409,10 @@ class ChildPart {
 				assert(child.nextSibling !== node._end, 'ran out of siblings before the end')
 				child = child.nextSibling
 			}
-			this.#span = new Span(node.parentNode, child, child.nextSibling)
+			this.#span = new Span(node.parentNode, child, child)
 		} else {
 			const child = node.childNodes[this.#childIndex]
-			this.#span = new Span(node, child, child.nextSibling)
+			this.#span = new Span(node, child, child)
 		}
 
 		this.#childIndex = undefined // we only need this once.
@@ -466,7 +499,7 @@ class ChildPart {
 			let i = 0
 			let end = this.#span._end
 			for (const item of value) {
-				const root = (this.#roots[i++] ??= new Root(new Span(this.#span.parentNode, end, end)))
+				const root = (this.#roots[i++] ??= Root.insertAfter(end))
 				root.render(item)
 				end = root._span._end
 			}
