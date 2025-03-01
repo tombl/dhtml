@@ -2,8 +2,15 @@ import { html, type Displayable } from 'dhtml'
 import { describe, expect, it } from 'vitest'
 import { setup } from './setup'
 
-function keyed<T>(renderable: T, _key: unknown) {
-	return renderable
+function keyed<T extends Displayable>(displayable: T, _key: unknown) {
+	return displayable
+}
+
+function shuffle<T>(array: T[]) {
+	for (let i = 0; i < array.length; i++) {
+		const j = Math.floor(Math.random() * i)
+		;[array[i], array[j]] = [array[j], array[i]]
+	}
 }
 
 describe('lists', () => {
@@ -274,5 +281,20 @@ describe.todo('list reordering', () => {
 
 		expect(el.children[0]).toBe(original[1])
 		expect(el.children[1]).toBe(original[0])
+	})
+
+	it('reorders many items', () => {
+		const { root, el } = setup()
+
+		const items = Array.from({ length: 10 }, (_, i) => [html`<p>Item ${i}</p>`, `<p>Item ${i}</p>`])
+
+		root.render(items.map(([item]) => item))
+		expect(el.innerHTML).toBe(items.map(([, html]) => html).join(''))
+
+		shuffle(items)
+		// items.reverse()
+
+		root.render(items.map(([item]) => item))
+		expect(el.innerHTML).toBe(items.map(([, html]) => html).join(''))
 	})
 })
