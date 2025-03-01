@@ -393,6 +393,8 @@ class ChildPart {
 
 	/** @param {Displayable} value */
 	update(value) {
+		const endsWereEqual = this.#parentSpan._end === this.#span._end
+
 		if (isRenderable(value)) {
 			this.#switchRenderable(value)
 
@@ -452,6 +454,8 @@ class ChildPart {
 
 			this.#span._end = this.#roots[this.#roots.length - 1]?._span._end ?? this.#span._start
 
+			if (endsWereEqual) this.#parentSpan._end = this.#span._end
+
 			return
 		} else if (this.#roots) {
 			for (const root of this.#roots) root.detach()
@@ -479,11 +483,7 @@ class ChildPart {
 			}
 		}
 
-		// if we've grown past the end of our parent, update their end.
-		if (this.#span.parentNode === this.#parentSpan.parentNode && this.#span._end > this.#parentSpan._start) {
-			// TODO: does this need to also apply for shrinkage?
-			this.#parentSpan._end = this.#span._end
-		}
+		if (endsWereEqual) this.#parentSpan._end = this.#span._end
 
 		this.#value = value
 	}
