@@ -20,21 +20,18 @@ const isElement = node => node.nodeType === /** @satisfies {typeof Node.ELEMENT_
 /** @return {node is Text} */
 const isText = node => node.nodeType === /** @satisfies {typeof Node.TEXT_NODE} */ (3)
 
-/** @return {node is Comment} */
-const isComment = node => node.nodeType === /** @satisfies {typeof Node.COMMENT_NODE} */ (8)
-
 /** @return {node is DocumentFragment} */
 const isDocumentFragment = node => node.nodeType === /** @satisfies {typeof Node.DOCUMENT_FRAGMENT_NODE} */ (11)
-
-export const html = (statics, ...dynamics) => new BoundTemplateInstance(statics, dynamics)
-
-const singlePartTemplate = part => html`${part}`
 
 /** @return {value is Renderable} */
 const isRenderable = value => typeof value === 'object' && value !== null && 'render' in value
 
 /** @return {value is Iterable<unknown>} */
 const isIterable = value => typeof value === 'object' && value !== null && Symbol.iterator in value
+
+export const html = (statics, ...dynamics) => new BoundTemplateInstance(statics, dynamics)
+
+const singlePartTemplate = part => html`${part}`
 
 /** @return {asserts value} */
 const assert = (value, message = 'assertion failed') => {
@@ -45,27 +42,19 @@ const assert = (value, message = 'assertion failed') => {
 /** @implements {SpanInstance} */
 class Span {
 	/**
-	 * @param {ParentNode} parentNode
-	 * @param {Node} start the first node in the span
-	 * @param {Node} end the last node in the span
+	 * @param {Node} node the only node in the span
 	 */
-	constructor(parentNode, start, end) {
-		DEV: {
-			assert(parentNode != null)
-			assert(start.parentNode === parentNode)
-			assert(end.parentNode === parentNode)
-		}
-
-		this.parentNode = parentNode
-		this._start = start
-		this._end = end
+	constructor(node) {
+		DEV: assert(node.parentNode !== null)
+		this._parentNode = node.parentNode
+		this._start = this._end = node
 	}
 
 	_deleteContents() {
 		const marker = new Text()
-		this.parentNode.insertBefore(marker, this._start)
+		this._parentNode.insertBefore(marker, this._start)
 
-		for (const node of this) this.parentNode.removeChild(node)
+		for (const node of this) this._parentNode.removeChild(node)
 
 		this._start = this._end = marker
 	}
@@ -74,40 +63,37 @@ class Span {
 	_insertNode(node) {
 		const end = isDocumentFragment(node) ? node.lastChild : node
 		if (end === null) return // empty fragment
-		this.parentNode.insertBefore(node, this._end.nextSibling)
+		this._parentNode.insertBefore(node, this._end.nextSibling)
 		this._end = end
 
 		if (isText(this._start) && this._start.data === '') {
-			assert(this._start.nextSibling)
 			const marker = this._start
+
+			DEV: assert(this._start.nextSibling)
 			this._start = this._start.nextSibling
-			this.parentNode.removeChild(marker)
+
+			this._parentNode.removeChild(marker)
 		}
 	}
 	*[Symbol.iterator]() {
 		let node = this._start
 		for (;;) {
-			const { nextSibling } = node
+			const next = node.nextSibling
 			yield node
 			if (node === this._end) return
-			assert(nextSibling, 'expected more siblings')
-			node = nextSibling
+			assert(next, 'expected more siblings')
+			node = next
 		}
 	}
 	_extractContents() {
 		const marker = new Text()
-		this.parentNode.insertBefore(marker, this._start)
+		this._parentNode.insertBefore(marker, this._start)
 
 		const fragment = document.createDocumentFragment()
 		for (const node of this) fragment.appendChild(node)
 
 		this._start = this._end = marker
 		return fragment
-	}
-	get length() {
-		let length = 0
-		for (const _ of this) length++
-		return length
 	}
 }
 
@@ -151,21 +137,20 @@ export class Root {
 	static appendInto(parent) {
 		const marker = new Text()
 		parent.appendChild(marker)
-		return new Root(new Span(parent, marker, marker))
+		return new Root(new Span(marker))
 	}
 
 	/** @param {Node} node */
 	static insertAfter(node) {
-		assert(node.parentNode, 'expected a parent node')
+		DEV: assert(node.parentNode, 'expected a parent node')
 		const marker = new Text()
 		node.parentNode.insertBefore(marker, node.nextSibling)
-		return new Root(new Span(node.parentNode, marker, marker))
+		return new Root(new Span(marker))
 	}
 
 	/** @param {Node} node */
 	static replace(node) {
-		assert(node.parentNode, 'expected a parent node')
-		return new Root(new Span(node.parentNode, node, node))
+		return new Root(new Span(node))
 	}
 
 	render(value) {
@@ -409,23 +394,20 @@ class ChildPart {
 	/** @type {Span | undefined} */
 	#span
 	create(node, value) {
-		assert(this.#childIndex !== undefined)
-
 		if (node instanceof Span) {
 			let child = node._start
-			assert(child, 'expected a start node')
 			for (let i = 0; i < this.#childIndex; i++) {
-				assert(child.nextSibling !== null, 'expected more siblings')
-				assert(child.nextSibling !== node._end, 'ran out of siblings before the end')
+				DEV: {
+					assert(child.nextSibling !== null, 'expected more siblings')
+					assert(child.nextSibling !== node._end, 'ran out of siblings before the end')
+				}
 				child = child.nextSibling
 			}
-			this.#span = new Span(node.parentNode, child, child)
+			this.#span = new Span(child)
 		} else {
 			const child = node.childNodes[this.#childIndex]
-			this.#span = new Span(node, child, child)
+			this.#span = new Span(child)
 		}
-
-		this.#childIndex = undefined // we only need this once.
 
 		this.update(value)
 	}
@@ -461,9 +443,9 @@ class ChildPart {
 
 	/** @param {Displayable} value */
 	update(value) {
-		assert(this.#span)
+		DEV: assert(this.#span)
 		const endsWereEqual =
-			this.#span.parentNode === this.#parentSpan.parentNode && this.#span._end === this.#parentSpan._end
+			this.#span._parentNode === this.#parentSpan.parentNode && this.#span._end === this.#parentSpan._end
 
 		if (isRenderable(value)) {
 			this.#switchRenderable(value)
@@ -474,11 +456,11 @@ class ChildPart {
 				controllers.set(renderable, {
 					_invalidateQueued: null,
 					_invalidate: () => {
-						assert(this.#renderable === renderable, 'could not invalidate an outdated renderable')
+						DEV: assert(this.#renderable === renderable, 'could not invalidate an outdated renderable')
 						this.update(renderable)
 					},
 					_unmountCallbacks: null, // will be upgraded to a Set if needed.
-					_parentNode: this.#span.parentNode,
+					_parentNode: this.#span._parentNode,
 				})
 
 			value = renderable.render()
@@ -507,11 +489,10 @@ class ChildPart {
 
 			// create or update a root for every item.
 			let i = 0
-			let end = this.#span._end
 			for (const item of value) {
 				// @ts-expect-error -- WeakMap lookups of non-objects always return undefined, which is fine
 				const key = keys.get(item) ?? item
-				let root = (this.#roots[i] ??= Root.insertAfter(end))
+				let root = (this.#roots[i] ??= Root.insertAfter(this.#span._end))
 
 				if (key !== undefined && root._key !== key) {
 					const j = this.#roots.findIndex(r => r._key === key)
@@ -531,13 +512,13 @@ class ChildPart {
 						root2._span = tmpSpan
 
 						// swap the roots
-						root = this.#roots[i] = root2
 						this.#roots[j] = root1
+						root = this.#roots[i] = root2
 					}
 				}
 
 				root.render(item)
-				end = root._span._end
+				this.#span._end = root._span._end
 
 				i++
 			}
@@ -550,7 +531,6 @@ class ChildPart {
 				root._span._deleteContents()
 			}
 
-			this.#span._end = end
 			if (endsWereEqual) this.#parentSpan._end = this.#span._end
 
 			return
@@ -573,12 +553,11 @@ class ChildPart {
 
 			if (this.#value != null && value !== null && !(this.#value instanceof Node) && !(value instanceof Node)) {
 				// we previously rendered a string, and we're rendering a string again.
-				assert(this.#span.length === 1, `expected a single node, got ${this.#span.length}`)
-				assert(this.#span._start instanceof Text)
-				this.#span._start.data = value.toString()
+				DEV: assert(this.#span._start === this.#span._end && this.#span._start instanceof Text)
+				this.#span._start.data = '' + value
 			} else {
 				this.#span._deleteContents()
-				if (value !== null) this.#span._insertNode(value instanceof Node ? value : new Text(value.toString()))
+				if (value !== null) this.#span._insertNode(value instanceof Node ? value : new Text('' + value))
 			}
 		}
 

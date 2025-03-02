@@ -18,7 +18,6 @@ export declare class BoundTemplateInstance {
 export type Key = string | number | bigint | boolean | symbol | object | null
 
 export declare class Span {
-	parentNode: ParentNode
 	_start: Node | null
 	_end: Node | null
 }
