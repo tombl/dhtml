@@ -6,8 +6,9 @@
 		"build": "./build.sh",
 		"format": "prettier --write .",
 		"check": "tsc",
-		"test": "vitest",
-		"test:prod": "npm run build && NODE_ENV=production vitest"
+		"test": "vitest run",
+    "test:watch": "vitest dev",
+		"test:prod": "npm run build && NODE_ENV=production vitest run"
 	},
 	"devDependencies": {
 		"@vitest/browser": "^3.0.6",
