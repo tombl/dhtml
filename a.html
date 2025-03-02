@@ -5,13 +5,10 @@
 		<link rel="stylesheet" href="reset.css" />
 		<script type="module">
 			import { Root, html } from './src/html.js'
-			const r = Root.appendInto(document.body)
-			r.render(html`there`)
-			document.body.append("!")
-			r.render(html`again`)
+			const root = Root.appendInto(document.body)
+			root.render(html`${"A"}`)
+			root.render('B')
 		</script>
 	</head>
-	<body>
-		Hello
-	</body>
+	<body></body>
 </html>

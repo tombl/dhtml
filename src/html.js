@@ -64,8 +64,6 @@ class Span {
 		const marker = new Text()
 		this.parentNode.insertBefore(marker, this._start)
 
-		console.log('removing', this, this.length, ...this)
-
 		for (const node of this) this.parentNode.removeChild(node)
 
 		this._start = this._end = marker
@@ -88,10 +86,11 @@ class Span {
 	*[Symbol.iterator]() {
 		let node = this._start
 		for (;;) {
+			const { nextSibling } = node
 			yield node
 			if (node === this._end) return
-			assert(node.nextSibling, 'expected more siblings')
-			node = node.nextSibling
+			assert(nextSibling, 'expected more siblings')
+			node = nextSibling
 		}
 	}
 	_extractContents() {
