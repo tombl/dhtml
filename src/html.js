@@ -61,7 +61,7 @@ class Span {
 	}
 
 	_deleteContents() {
-		const marker = new Comment()
+		const marker = new Text()
 		this.parentNode.insertBefore(marker, this._start)
 
 		console.log('removing', ...this)
@@ -78,11 +78,11 @@ class Span {
 		this.parentNode.insertBefore(node, this._end.nextSibling)
 		this._end = end
 
-		if (isComment(this._start)) {
+		if (isText(this._start) && this._start.data === '') {
 			assert(this._start.nextSibling)
-			const comment = this._start
+			const marker = this._start
 			this._start = this._start.nextSibling
-			this.parentNode.removeChild(comment)
+			this.parentNode.removeChild(marker)
 		}
 	}
 	*[Symbol.iterator]() {
@@ -94,7 +94,7 @@ class Span {
 		}
 	}
 	_extractContents() {
-		const marker = new Comment()
+		const marker = new Text()
 		this.parentNode.insertBefore(marker, this._start)
 
 		const fragment = document.createDocumentFragment()
@@ -146,7 +146,7 @@ export class Root {
 
 	/** @param {ParentNode} parent */
 	static appendInto(parent) {
-		const marker = new Comment()
+		const marker = new Text()
 		parent.appendChild(marker)
 		return new Root(new Span(parent, marker, marker))
 	}
@@ -154,7 +154,7 @@ export class Root {
 	/** @param {Node} node */
 	static insertAfter(node) {
 		assert(node.parentNode, 'expected a parent node')
-		const marker = new Comment()
+		const marker = new Text()
 		node.parentNode.insertBefore(marker, node.nextSibling)
 		return new Root(new Span(node.parentNode, marker, marker))
 	}
@@ -279,6 +279,7 @@ function compileTemplate(statics) {
 			const nodes = [...node.data.matchAll(DYNAMIC_GLOBAL)].reverse().map(match => {
 				node.splitText(match.index + match[0].length)
 				const dyn = new Comment()
+				if (DEV) dyn.data = `dhtml:dyn:${match[1]}`
 				node.splitText(match.index).replaceWith(dyn)
 				return /** @type {const} */ ([dyn, parseInt(match[1])])
 			})
