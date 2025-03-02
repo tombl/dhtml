@@ -64,7 +64,7 @@ class Span {
 		const marker = new Text()
 		this.parentNode.insertBefore(marker, this._start)
 
-		console.log('removing', ...this)
+		console.log('removing', this, this.length, ...this)
 
 		for (const node of this) this.parentNode.removeChild(node)
 
@@ -87,10 +87,11 @@ class Span {
 	}
 	*[Symbol.iterator]() {
 		let node = this._start
-		while (node !== this._end) {
-			assert(node.nextSibling !== null, 'expected more nodes')
-			node = node.nextSibling
+		for (;;) {
 			yield node
+			if (node === this._end) return
+			assert(node.nextSibling, 'expected more siblings')
+			node = node.nextSibling
 		}
 	}
 	_extractContents() {
@@ -279,7 +280,6 @@ function compileTemplate(statics) {
 			const nodes = [...node.data.matchAll(DYNAMIC_GLOBAL)].reverse().map(match => {
 				node.splitText(match.index + match[0].length)
 				const dyn = new Comment()
-				if (DEV) dyn.data = `dhtml:dyn:${match[1]}`
 				node.splitText(match.index).replaceWith(dyn)
 				return /** @type {const} */ ([dyn, parseInt(match[1])])
 			})
