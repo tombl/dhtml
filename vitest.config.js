@@ -17,16 +17,10 @@ export default defineConfig({
 			reportOnFailure: true,
 			include: ['src/html.js'],
 		},
-		browser: ci
-			? {
-					enabled: true,
-					provider: 'playwright',
-					instances: [{ browser: 'chromium' }],
-				}
-			: {
-					enabled: true,
-					provider: 'preview',
-					instances: [{ browser: 'preview' }],
-				},
+		browser: {
+			enabled: true,
+			provider: 'playwright',
+			instances: [{ browser: 'chromium' }],
+		},
 	},
 })
