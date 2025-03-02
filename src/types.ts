@@ -17,8 +17,8 @@ export declare class BoundTemplateInstance {
 
 export declare class Span {
 	parentNode: ParentNode
-	_start: number
-	_end: number
+	_start: Node | null
+	_end: Node | null
 }
 
 export interface Part {

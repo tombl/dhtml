@@ -36,6 +36,8 @@ describe('basic', () => {
 		expect(el.innerHTML).toMatchInlineSnapshot(`"<div>before</div><h1>Hello, world!</h1>"`)
 
 		el.appendChild(document.createElement('div')).textContent = 'after'
+		expect(el.innerHTML).toMatchInlineSnapshot(`"<div>before</div><h1>Hello, world!</h1><div>after</div>"`)
+
 		root.render(html`<h2>Goodbye, world!</h2>`)
 		expect(el.innerHTML).toMatchInlineSnapshot(`"<div>before</div><h2>Goodbye, world!</h2><div>after</div>"`)
 
