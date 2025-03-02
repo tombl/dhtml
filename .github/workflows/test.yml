@@ -11,10 +11,13 @@ jobs:
       contents: read
       pull-requests: write
 
+    container:
+      image: mcr.microsoft.com/playwright:v1.50.1-noble
+      options: --user 1001
+
     steps:
       - uses: actions/checkout@v4
       - run: npm install
-      - run: npx playwright install --with-deps chromium
       - run: npm run test
       - if: always() && github.event_name == 'pull_request'
         uses: davelosert/vitest-coverage-report-action@v2
