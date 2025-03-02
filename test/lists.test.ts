@@ -163,17 +163,16 @@ describe.todo('list reordering', () => {
 
 		root.render([a(), b()])
 		expect(el.innerHTML).toBe('<h1>Item 1</h1><h2>Item 2</h2>')
-		expect(el.children[0].tagName).toBe('H1')
-		expect(el.children[1].tagName).toBe('H2')
-		const original = [...el.children]
+
+		const [h1, h2] = el.children
+		expect(h1.tagName).toBe('H1')
+		expect(h2.tagName).toBe('H2')
 
 		root.render([b(), a()])
 		expect(el.innerHTML).toBe('<h2>Item 2</h2><h1>Item 1</h1>')
-		expect(el.children[0].tagName).toBe('H2')
-		expect(el.children[1].tagName).toBe('H1')
 
-		expect(el.children[0]).not.toBe(original[1])
-		expect(el.children[1]).not.toBe(original[0])
+		expect(el.children[0]).toBe(h2)
+		expect(el.children[1]).toBe(h1)
 	})
 
 	it('explicit keyed', () => {
@@ -184,17 +183,16 @@ describe.todo('list reordering', () => {
 
 		root.render([a(), b()])
 		expect(el.innerHTML).toBe('<h1>Item 1</h1><h2>Item 2</h2>')
-		expect(el.children[0].tagName).toBe('H1')
-		expect(el.children[1].tagName).toBe('H2')
-		const original = [...el.children]
+
+		const [h1, h2] = el.children
+		expect(h1.tagName).toBe('H1')
+		expect(h2.tagName).toBe('H2')
 
 		root.render([b(), a()])
 		expect(el.innerHTML).toBe('<h2>Item 2</h2><h1>Item 1</h1>')
-		expect(el.children[0].tagName).toBe('H2')
-		expect(el.children[1].tagName).toBe('H1')
 
-		expect(el.children[0]).toBe(original[1])
-		expect(el.children[1]).toBe(original[0])
+		expect(el.children[0]).toBe(h2)
+		expect(el.children[1]).toBe(h1)
 	})
 
 	it('implicit keyed', () => {
@@ -204,10 +202,10 @@ describe.todo('list reordering', () => {
 
 		root.render(items)
 		expect(el.innerHTML).toBe('<h1>Item 1</h1><h2>Item 2</h2>')
-		expect(el.children[0].tagName).toBe('H1')
-		expect(el.children[1].tagName).toBe('H2')
-		const original = [...el.children]
 
+		const [h1, h2] = el.children
+		expect(h1.tagName).toBe('H1')
+		expect(h2.tagName).toBe('H2')
 		;[items[0], items[1]] = [items[1], items[0]]
 
 		root.render(items)
@@ -215,8 +213,8 @@ describe.todo('list reordering', () => {
 		expect(el.children[0].tagName).toBe('H2')
 		expect(el.children[1].tagName).toBe('H1')
 
-		expect(el.children[0]).toBe(original[1])
-		expect(el.children[1]).toBe(original[0])
+		expect(el.children[0]).toBe(h2)
+		expect(el.children[1]).toBe(h1)
 	})
 
 	it('implicit keyed resize', () => {
@@ -232,10 +230,11 @@ describe.todo('list reordering', () => {
 
 		root.render(items)
 		expect(el.innerHTML.replace(/\s+/g, ' ')).toBe('<h1>Item 1</h1> <h2>Item 2</h2> <p>Body content</p> ')
-		expect(el.children[0].tagName).toBe('H1')
-		expect(el.children[1].tagName).toBe('H2')
-		expect(el.children[2].tagName).toBe('P')
-		const original = [...el.children]
+
+		const [h1, h2, p] = el.children
+		expect(h1.tagName).toBe('H1')
+		expect(h2.tagName).toBe('H2')
+		expect(p.tagName).toBe('P')
 
 		// Swap
 		;[items[0], items[1]] = [items[1], items[0]]
@@ -245,9 +244,9 @@ describe.todo('list reordering', () => {
 		expect(el.children[1].tagName).toBe('P')
 		expect(el.children[2].tagName).toBe('H1')
 
-		expect(el.children[0]).toBe(original[1])
-		expect(el.children[1]).toBe(original[2])
-		expect(el.children[2]).toBe(original[0])
+		expect(el.children[0]).toBe(h2)
+		expect(el.children[1]).toBe(p)
+		expect(el.children[2]).toBe(h1)
 
 		// Swap back
 		;[items[0], items[1]] = [items[1], items[0]]
@@ -256,9 +255,9 @@ describe.todo('list reordering', () => {
 		expect(el.children[0].tagName).toBe('H1')
 		expect(el.children[1].tagName).toBe('H2')
 		expect(el.children[2].tagName).toBe('P')
-		expect(el.children[0]).toBe(original[0])
-		expect(el.children[1]).toBe(original[1])
-		expect(el.children[2]).toBe(original[2])
+		expect(el.children[0]).toBe(h1)
+		expect(el.children[1]).toBe(h2)
+		expect(el.children[2]).toBe(p)
 	})
 
 	it('implicit keyed renderable', () => {
@@ -268,10 +267,10 @@ describe.todo('list reordering', () => {
 
 		root.render(items)
 		expect(el.innerHTML).toBe('<h1>Item 1</h1><h2>Item 2</h2>')
-		expect(el.children[0].tagName).toBe('H1')
-		expect(el.children[1].tagName).toBe('H2')
-		const original = [...el.children]
 
+		const [h1, h2] = el.children
+		expect(h1.tagName).toBe('H1')
+		expect(h2.tagName).toBe('H2')
 		;[items[0], items[1]] = [items[1], items[0]]
 
 		root.render(items)
@@ -279,8 +278,8 @@ describe.todo('list reordering', () => {
 		expect(el.children[0].tagName).toBe('H2')
 		expect(el.children[1].tagName).toBe('H1')
 
-		expect(el.children[0]).toBe(original[1])
-		expect(el.children[1]).toBe(original[0])
+		expect(el.children[0]).toBe(h2)
+		expect(el.children[1]).toBe(h1)
 	})
 
 	it('reorders many items', () => {
