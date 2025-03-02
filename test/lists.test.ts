@@ -1,10 +1,6 @@
-import { html, type Displayable } from 'dhtml'
+import { html, keyed, type Displayable } from 'dhtml'
 import { describe, expect, it } from 'vitest'
 import { setup } from './setup'
-
-function keyed<T extends Displayable>(displayable: T, _key: unknown) {
-	return displayable
-}
 
 function shuffle<T>(array: T[]) {
 	for (let i = 0; i < array.length; i++) {
@@ -84,7 +80,7 @@ describe('lists', () => {
 		expect(el.innerHTML).toBe('[]')
 	})
 
-	it.todo('swap', () => {
+	it('swap', () => {
 		const { root, el } = setup()
 
 		const items = [html`<p>Item 1</p>`, html`<p>Item 2</p>`, html`<p>Item 3</p>`]
@@ -127,7 +123,7 @@ describe('lists', () => {
 		expect(el.children[2]).toBe(item3)
 	})
 
-	it.todo('shift', () => {
+	it('shift', () => {
 		const { root, el } = setup()
 
 		const items = [html`<p>Item 1</p>`, html`<p>Item 2</p>`, html`<p>Item 3</p>`]
@@ -154,7 +150,7 @@ describe('lists', () => {
 	})
 })
 
-describe.todo('list reordering', () => {
+describe('list reordering', () => {
 	it('unkeyed', () => {
 		const { root, el } = setup()
 
@@ -171,8 +167,13 @@ describe.todo('list reordering', () => {
 		root.render([b(), a()])
 		expect(el.innerHTML).toBe('<h2>Item 2</h2><h1>Item 1</h1>')
 
-		expect(el.children[0]).toBe(h2)
-		expect(el.children[1]).toBe(h1)
+		// visually they should be swapped
+		expect(el.children[0]).toEqual(h2)
+		expect(el.children[1]).toEqual(h1)
+
+		// but there's no stable identity, so they're recreated
+		expect(el.children[0]).not.toBe(h2)
+		expect(el.children[1]).not.toBe(h1)
 	})
 
 	it('explicit keyed', () => {
