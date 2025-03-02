@@ -17,7 +17,7 @@ const DEV = typeof DHTML_PROD === 'undefined' || !DHTML_PROD
 const isElement = node => node.nodeType === /** @satisfies {typeof Node.ELEMENT_NODE} */ (1)
 
 /** @return {node is Text} */
-const isTextNode = node => node.nodeType === /** @satisfies {typeof Node.TEXT_NODE} */ (3)
+const isText = node => node.nodeType === /** @satisfies {typeof Node.TEXT_NODE} */ (3)
 
 /** @return {node is DocumentFragment} */
 const isDocumentFragment = node => node.nodeType === /** @satisfies {typeof Node.DOCUMENT_FRAGMENT_NODE} */ (11)
@@ -81,7 +81,10 @@ class Span {
 if (DEV) {
 	Span.prototype.toString = function () {
 		let result = ''
-		for (const node of this) result += /** @type {HTMLElement} */ (node).outerHTML ?? String(node)
+		for (const node of this)
+			result += isElement(node)
+				? node.outerHTML
+				: `${node.constructor.name}(${'data' in node ? JSON.stringify(node.data) : node})`
 		return result
 	}
 }
@@ -227,7 +230,7 @@ function compileTemplate(statics) {
 	const walker = document.createTreeWalker(templateElement.content, NODE_FILTER_TEXT | NODE_FILTER_ELEMENT)
 	while (nextPart < compiled._parts.length && walker.nextNode()) {
 		const node = /** @type {Text | Element} */ (walker.currentNode)
-		if (isTextNode(node)) {
+		if (isText(node)) {
 			const nodes = [...node.data.matchAll(DYNAMIC_GLOBAL)].reverse().map(match => {
 				node.splitText(match.index + match[0].length)
 				const dyn = new Comment()
@@ -255,6 +258,7 @@ function compileTemplate(statics) {
 
 				let match = DYNAMIC_WHOLE.exec(name)
 				if (match !== null) {
+					// custom part:
 					toRemove.push(name)
 					const idx = parseInt(match[1])
 
@@ -267,10 +271,7 @@ function compileTemplate(statics) {
 						DEV: assert(!DYNAMIC_GLOBAL.test(value), `expected a whole dynamic value for ${name}, got a partial one`)
 						patch(node, idx, () => new CustomPartStandalone(value))
 					}
-					continue
-				}
-
-				if (name[0] === '@') {
+				} else if (name[0] === '@') {
 					// event:
 					toRemove.push(name)
 					match = DYNAMIC_WHOLE.exec(value)
