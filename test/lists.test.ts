@@ -167,8 +167,13 @@ describe('list reordering', () => {
 		root.render([b(), a()])
 		expect(el.innerHTML).toBe('<h2>Item 2</h2><h1>Item 1</h1>')
 
-		expect(el.children[0]).toBe(h2)
-		expect(el.children[1]).toBe(h1)
+		// visually they should be swapped
+		expect(el.children[0]).toEqual(h2)
+		expect(el.children[1]).toEqual(h1)
+
+		// but there's no stable identity, so they're recreated
+		expect(el.children[0]).not.toBe(h2)
+		expect(el.children[1]).not.toBe(h1)
 	})
 
 	it('explicit keyed', () => {

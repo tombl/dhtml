@@ -511,7 +511,7 @@ class ChildPart {
 			for (const item of value) {
 				// @ts-expect-error -- WeakMap lookups of non-objects always return undefined, which is fine
 				const key = keys.get(item) ?? item
-				const root = (this.#roots[i] ??= Root.insertAfter(end))
+				let root = (this.#roots[i] ??= Root.insertAfter(end))
 
 				if (key !== undefined && root._key !== key) {
 					const j = this.#roots.findIndex(r => r._key === key)
@@ -521,16 +521,17 @@ class ChildPart {
 						const root2 = this.#roots[j]
 
 						// swap the contents of the spans
-						const content1 = root2._span._extractContents()
-						const content2 = root1._span._extractContents()
-						root2._span._insertNode(content2)
-						root1._span._insertNode(content1)
+						const tmpContent = root1._span._extractContents()
+						root1._span._insertNode(root2._span._extractContents())
+						root2._span._insertNode(tmpContent)
 
 						// swap the spans back
-						;[root1._span, root2._span] = [root2._span, root1._span]
+						const tmpSpan = root1._span
+						root1._span = root2._span
+						root2._span = tmpSpan
 
 						// swap the roots
-						this.#roots[i] = root2
+						root = this.#roots[i] = root2
 						this.#roots[j] = root1
 					}
 				}
@@ -549,7 +550,7 @@ class ChildPart {
 				root._span._deleteContents()
 			}
 
-			this.#span._end = end ?? this.#span._start
+			this.#span._end = end
 			if (endsWereEqual) this.#parentSpan._end = this.#span._end
 
 			return
