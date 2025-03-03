@@ -1,16 +1,17 @@
 import { Root, html, invalidate } from 'dhtml'
 
 function classes(node, value) {
-	let prev
+	let prev = new Set()
 	update(value)
 	return { update, detach: update }
 	function update(value = []) {
+		if (!Array.isArray(value)) value = [value]
 		const added = new Set(value.filter(Boolean).flatMap(x => x.split(' ')))
 		for (const name of added) {
-			prev?.delete(name)
+			prev.delete(name)
 			node.classList.add(name)
 		}
-		for (const name of prev ?? []) {
+		for (const name of prev) {
 			node.classList.remove(name)
 		}
 		prev = added
@@ -36,11 +37,11 @@ class TodoItem {
 					<input
 						class="toggle"
 						type="checkbox"
-						checked=${this.completed}
+						.checked=${this.completed}
 						@change=${e => {
 							e.preventDefault()
 							this.completed = e.target.checked
-							invalidate(this)
+							invalidate(this.app)
 						}}
 					/>
 					<label
@@ -102,6 +103,7 @@ class App {
 		this.todos = this.todos.filter(todo => todo.id !== id)
 	}
 
+	filter = 'All'
 	render() {
 		const completedCount = this.todos.filter(todo => todo.completed).length
 		const activeCount = this.todos.length - completedCount
@@ -129,18 +131,48 @@ class App {
 				? html`
 						<main class="main">
 							<div class="toggle-all-container">
-								<input class="toggle-all" type="checkbox" checked=${this.todos.every(todo => todo.completed)} />
+								<input
+									class="toggle-all"
+									id="toggle-all"
+									type="checkbox"
+									.checked=${activeCount === 0}
+									@change=${e => {
+										for (const todo of this.todos) todo.completed = e.target.checked
+										invalidate(this)
+									}}
+								/>
+								<label class="toggle-all-label" for="toggle-all">Toggle All Input</label>
 							</div>
 							<ul class="todo-list">
-								${this.todos}
+								${this.todos.filter(todo => {
+									switch (this.filter) {
+										case 'Active':
+											return !todo.completed
+										case 'Completed':
+											return todo.completed
+										case 'All':
+											return true
+									}
+								})}
 							</ul>
 						</main>
 						<footer class="footer">
 							<span class="todo-count">${activeCount} ${activeCount === 1 ? 'item' : 'items'} left</span>
 							<ul class="filters">
-								<li><a href="#" class="selected">All</a></li>
-								<li><a href="#">Active</a></li>
-								<li><a href="#">Completed</a></li>
+								${['All', 'Active', 'Completed'].map(
+									filter =>
+										html`<li>
+											<a
+												href="#"
+												${classes}=${this.filter === filter && 'selected'}
+												@click=${() => {
+													this.filter = filter
+													invalidate(this)
+												}}
+												>${filter}</a
+											>
+										</li>`,
+								)}
 							</ul>
 							${completedCount > 0 ? html`<button class="clear-completed">Clear completed</button>` : null}
 						</footer>
