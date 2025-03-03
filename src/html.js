@@ -489,10 +489,11 @@ class ChildPart {
 
 			// create or update a root for every item.
 			let i = 0
+			let end = this.#span._start
 			for (const item of value) {
 				// @ts-expect-error -- WeakMap lookups of non-objects always return undefined, which is fine
 				const key = keys.get(item) ?? item
-				let root = (this.#roots[i] ??= Root.insertAfter(this.#span._end))
+				let root = (this.#roots[i] ??= Root.insertAfter(end))
 
 				if (key !== undefined && root._key !== key) {
 					const j = this.#roots.findIndex(r => r._key === key)
@@ -518,8 +519,7 @@ class ChildPart {
 				}
 
 				root.render(item)
-				this.#span._end = root._span._end
-
+				end = root._span._end
 				i++
 			}
 
@@ -531,6 +531,7 @@ class ChildPart {
 				root._span._deleteContents()
 			}
 
+			this.#span._end = end
 			if (endsWereEqual) this.#parentSpan._end = this.#span._end
 
 			return

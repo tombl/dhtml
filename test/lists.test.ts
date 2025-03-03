@@ -148,6 +148,19 @@ describe('lists', () => {
 		root.render(wrapped)
 		expect(el.innerHTML).toBe('[]')
 	})
+
+	it('full then empty then full', () => {
+		const { root, el } = setup()
+
+		root.render([1])
+		expect(el.innerHTML).toBe('1')
+
+		root.render([])
+		expect(el.innerHTML).toBe('')
+
+		root.render([2])
+		expect(el.innerHTML).toBe('2')
+	})
 })
 
 describe('list reordering', () => {
