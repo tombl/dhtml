@@ -3,28 +3,38 @@ import { describe, expect, it, vi } from 'vitest'
 import { setup } from './setup'
 
 describe('attributes', () => {
-	it('supports regular attributes', async () => {
+	it('supports regular attributes', () => {
 		const { root, el } = setup()
 
 		root.render(html`<h1 style=${'color: red'}>Hello, world!</h1>`)
 		expect(el.querySelector('h1')).toHaveAttribute('style', 'color: red')
 	})
 
-	it('supports properties attributes', async () => {
+	it('supports property attributes', () => {
 		const { root, el } = setup()
 
 		root.render(html`<h1 .class-name=${'foo'}>Hello, world!</h1>`)
 		expect(el.querySelector('h1')).toHaveClass('foo')
 	})
 
-	it('supports booleans', async () => {
+	it('throws on property attributes without dynamic values', () => {
+		const { root } = setup()
+
+		expect(() => {
+			root.render(html`<h1 .class-name="bar">This also</h1>`)
+		}).toThrowErrorMatchingInlineSnapshot(
+			`[Error: static properties are not supported, please wrap the value of .class-name in \${...}]`,
+		)
+	})
+
+	it('supports booleans', () => {
 		const { root, el } = setup()
 
 		root.render(html`<details open=${true}></details>`)
 		expect(el.querySelector('details')?.open).toBe(true)
 	})
 
-	it('supports events', async () => {
+	it('supports events', () => {
 		const { root, el } = setup()
 
 		let clicks = 0
@@ -45,7 +55,7 @@ describe('attributes', () => {
 		expect(clicks).toBe(2)
 	})
 
-	it('supports event handlers that change', async () => {
+	it('supports event handlers that change', () => {
 		const { root, el } = setup()
 
 		const template = (handler: (() => void) | null) => html`<input @blur=${handler}>Click me</input>`
