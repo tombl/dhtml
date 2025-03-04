@@ -7,7 +7,7 @@
 		"format": "prettier --write .",
 		"check": "tsc",
 		"test": "vitest run",
-    "test:watch": "vitest dev",
+		"test:watch": "vitest dev",
 		"test:prod": "npm run build && NODE_ENV=production vitest run"
 	},
 	"devDependencies": {

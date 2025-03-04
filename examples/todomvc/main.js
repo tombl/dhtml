@@ -1,4 +1,4 @@
-import { Root, html, invalidate } from 'dhtml'
+import { createRoot, html, invalidate } from 'dhtml'
 
 function classes(node, value) {
 	let prev = new Set()
@@ -193,4 +193,4 @@ app.todos.push(new TodoItem(app, 'world'))
 
 const rootEl = document.getElementById('root')
 if (!rootEl) throw new Error('Root element not found')
-Root.appendInto(rootEl).render(app)
+createRoot(rootEl).render(app)
