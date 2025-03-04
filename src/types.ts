@@ -39,6 +39,5 @@ export type CustomPartConstructor<T = unknown> =
 export interface CompiledTemplate {
 	_content: DocumentFragment
 	_parts: [idx: number, createPart: (prev: Part, span: Span) => Part][]
-	_staticParts: [value: unknown, createPart: () => Part][]
 	_rootParts: number[]
 }

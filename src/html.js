@@ -190,14 +190,6 @@ class TemplateInstance {
 			for (const part of parts.split(' ')) nodeByPart[part] = node
 		}
 
-		const nodeByStaticPart = []
-		for (const node of doc.querySelectorAll('[data-dynstaticparts]')) {
-			const parts = node.getAttribute('data-dynstaticparts')
-			assert(parts)
-			node.removeAttribute('data-dynstaticparts')
-			for (const part of parts.split(' ')) nodeByStaticPart[part] = node
-		}
-
 		for (const part of template._rootParts) nodeByPart[part] = span
 
 		// the fragment must be inserted before the parts are constructed,
@@ -206,10 +198,6 @@ class TemplateInstance {
 		// to them, like setting properties or attributes.
 		span._deleteContents()
 		span._insertNode(doc)
-
-		template._staticParts.map(([value, createPart], elementIdx) =>
-			createPart().create(nodeByStaticPart[elementIdx], value),
-		)
 
 		let prev
 		this._parts = template._parts.map(([dynamicIdx, createPart], elementIdx) => {
@@ -243,25 +231,21 @@ function compileTemplate(statics) {
 	const compiled = {
 		_content: templateElement.content,
 		_parts: Array(statics.length - 1),
-		_staticParts: [],
 		_rootParts: [],
 	}
 
 	function patch(node, idx, createPart) {
+		DEV: assert(nextPart < compiled._parts.length, 'got more parts than expected')
 		if (isDocumentFragment(node)) compiled._rootParts.push(nextPart)
 		else if ('dynparts' in node.dataset) node.dataset.dynparts += ' ' + nextPart
 		else node.dataset.dynparts = nextPart
 		if (DEV && nextPart !== idx) console.warn('dynamic value detected in static location')
 		compiled._parts[nextPart++] = [idx, createPart]
 	}
-	function staticPatch(node, value, createPart) {
-		const nextStaticPart = compiled._staticParts.push([value, createPart]) - 1
-		if ('dynstaticparts' in node.dataset) node.dataset.dynstaticparts += ' ' + nextStaticPart
-		else node.dataset.dynstaticparts = nextStaticPart
-	}
 
 	const walker = document.createTreeWalker(templateElement.content, NODE_FILTER_TEXT | NODE_FILTER_ELEMENT)
-	while (nextPart < compiled._parts.length && walker.nextNode()) {
+	// stop iterating once we've hit the last part, but if we're in dev mode, keep going to check for mistakes.
+	while ((DEV || nextPart < compiled._parts.length) && walker.nextNode()) {
 		const node = /** @type {Text | Element} */ (walker.currentNode)
 		if (isText(node)) {
 			const nodes = [...node.data.matchAll(DYNAMIC_GLOBAL)].reverse().map(match => {
@@ -294,9 +278,7 @@ function compileTemplate(statics) {
 					// custom part:
 					toRemove.push(name)
 					const idx = parseInt(match[1])
-
 					match = DYNAMIC_WHOLE.exec(value)
-
 					if (match) {
 						patch(node, idx, () => new CustomPartName())
 						patch(node, parseInt(match[1]), prev => new CustomPartValue(prev))
@@ -315,12 +297,12 @@ function compileTemplate(statics) {
 					// property:
 					toRemove.push(name)
 					match = DYNAMIC_WHOLE.exec(value)
-					name = name.slice(1).replace(/-([a-z])/g, (_, c) => c.toUpperCase())
 					if (match) {
+						name = name.slice(1).replace(/-([a-z])/g, (_, c) => c.toUpperCase())
 						patch(node, parseInt(match[1]), () => new PropertyPart(name))
 					} else {
 						DEV: assert(!DYNAMIC_GLOBAL.test(value), `expected a whole dynamic value for ${name}, got a partial one`)
-						staticPatch(node, value, () => new PropertyPart(name))
+						DEV: throw new Error(`static properties are not supported, please wrap the value of ${name} in \${...}`)
 					}
 				} else {
 					// attribute:
