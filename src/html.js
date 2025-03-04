@@ -125,32 +125,27 @@ class BoundTemplateInstance {
 	}
 }
 
-export class Root {
+/** @param {ParentNode} parent */
+export function createRoot(parent) {
+	const marker = new Text()
+	parent.appendChild(marker)
+	return new Root(new Span(marker))
+}
+
+/** @param {Node} node */
+function insertRootAfter(node) {
+	DEV: assert(node.parentNode, 'expected a parent node')
+	const marker = new Text()
+	node.parentNode.insertBefore(marker, node.nextSibling)
+	return new Root(new Span(marker))
+}
+
+class Root {
 	/** @type {Key | undefined} */ _key
 
 	/** @param {Span} span */
 	constructor(span) {
 		this._span = span
-	}
-
-	/** @param {ParentNode} parent */
-	static appendInto(parent) {
-		const marker = new Text()
-		parent.appendChild(marker)
-		return new Root(new Span(marker))
-	}
-
-	/** @param {Node} node */
-	static insertAfter(node) {
-		DEV: assert(node.parentNode, 'expected a parent node')
-		const marker = new Text()
-		node.parentNode.insertBefore(marker, node.nextSibling)
-		return new Root(new Span(marker))
-	}
-
-	/** @param {Node} node */
-	static replace(node) {
-		return new Root(new Span(node))
 	}
 
 	render(value) {
@@ -298,19 +293,19 @@ function compileTemplate(statics) {
 					toRemove.push(name)
 					match = DYNAMIC_WHOLE.exec(value)
 					if (match) {
-						name = name.slice(1).replace(/-([a-z])/g, (_, c) => c.toUpperCase())
+						name = name.slice(1).replace(/-./g, match => match[1].toUpperCase())
 						patch(node, parseInt(match[1]), () => new PropertyPart(name))
-					} else {
-						DEV: assert(!DYNAMIC_GLOBAL.test(value), `expected a whole dynamic value for ${name}, got a partial one`)
-						DEV: throw new Error(`static properties are not supported, please wrap the value of ${name} in \${...}`)
+					} else if (DEV) {
+						assert(!DYNAMIC_GLOBAL.test(value), `expected a whole dynamic value for ${name}, got a partial one`)
+						throw new Error(`static properties are not supported, please wrap the value of ${name} in \${...}`)
 					}
 				} else {
 					// attribute:
 					match = DYNAMIC_WHOLE.exec(value)
 					if (match) {
 						patch(node, parseInt(match[1]), () => new AttributePart(name))
-					} else {
-						DEV: assert(!DYNAMIC_GLOBAL.test(value), `expected a whole dynamic value for ${name}, got a partial one`)
+					} else if (DEV) {
+						assert(!DYNAMIC_GLOBAL.test(value), `expected a whole dynamic value for ${name}, got a partial one`)
 					}
 				}
 			}
@@ -475,7 +470,7 @@ class ChildPart {
 			for (const item of value) {
 				// @ts-expect-error -- WeakMap lookups of non-objects always return undefined, which is fine
 				const key = keys.get(item) ?? item
-				let root = (this.#roots[i] ??= Root.insertAfter(end))
+				let root = (this.#roots[i] ??= insertRootAfter(end))
 
 				if (key !== undefined && root._key !== key) {
 					const j = this.#roots.findIndex(r => r._key === key)

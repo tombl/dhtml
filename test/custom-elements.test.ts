@@ -1,5 +1,5 @@
-import { html, Root } from 'dhtml'
-import { expect, describe, it } from 'vitest'
+import { createRoot, html } from 'dhtml'
+import { describe, expect, it } from 'vitest'
 import { setup } from './setup'
 
 class CustomElement extends HTMLElement {
@@ -35,7 +35,7 @@ describe('custom elements', () => {
 		const { el } = setup()
 		const shadowRoot = el.attachShadow({ mode: 'open' })
 
-		const root = Root.appendInto(shadowRoot)
+		const root = createRoot(shadowRoot)
 		root.render(html`<p>hello</p>`)
 
 		expect(el.innerHTML).toBe(``)

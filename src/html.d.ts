@@ -8,10 +8,9 @@ export function invalidate(renderable: Renderable): Promise<void>
 export function onUnmount(renderable: Renderable, callback: () => void): void
 export function getParentNode(renderable: Renderable): Node
 
-export class Root {
-	static appendInto(parent: Node): Root
-	static replace(node: Node): Root
-
+export interface Root {
 	render(value: Displayable): void
 	detach(): void
 }
+
+export function createRoot(node: Node): Root

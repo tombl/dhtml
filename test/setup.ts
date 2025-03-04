@@ -3,7 +3,7 @@
 
 import '../reset.css'
 
-import { Root } from 'dhtml'
+import { createRoot, type Root } from 'dhtml'
 import { afterEach, expect } from 'vitest'
 
 const roots: Root[] = []
@@ -22,7 +22,7 @@ export function setup(initialHtml = '') {
 	el.innerHTML = initialHtml
 	document.body.appendChild(parentEl).appendChild(el)
 
-	const root = Root.appendInto(el)
+	const root = createRoot(el)
 	roots.push(root)
 
 	return { root, el }
