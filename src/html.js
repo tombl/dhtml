@@ -97,6 +97,7 @@ class Span {
 	}
 }
 
+/* v8 ignore start */
 if (DEV) {
 	Span.prototype.toString = function () {
 		let result = ''
@@ -107,6 +108,7 @@ if (DEV) {
 		return result
 	}
 }
+/* v8 ignore stop */
 
 class BoundTemplateInstance {
 	/** @type {CompiledTemplate | undefined} */ #template
