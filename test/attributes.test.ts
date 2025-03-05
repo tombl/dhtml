@@ -35,7 +35,7 @@ describe('attributes', () => {
 		expect(el.querySelector('h1')).toHaveClass('foo')
 	})
 
-	it('throws on property attributes without dynamic values', () => {
+	it('throws on property attributes without dynamic values', { skip: import.meta.env.PROD }, () => {
 		const { root } = setup()
 
 		expect(() => {

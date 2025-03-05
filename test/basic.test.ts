@@ -112,11 +112,6 @@ describe('basic', () => {
 	})
 })
 
-const console = {
-	warn: vi.fn(),
-}
-vi.stubGlobal('console', console)
-
 describe('errors', () => {
 	it('throws on non-function event handlers', { skip: import.meta.env.PROD }, () => {
 		const { root, el } = setup()
@@ -155,25 +150,19 @@ describe('errors', () => {
 		expect(el.innerHTML).toBe('<!---->')
 	})
 
-	it('warns on invalid part placement', () => {
+	it('warns on invalid part placement', { skip: import.meta.env.PROD }, () => {
 		const { root, el } = setup()
 
-		expect(console.warn).not.toHaveBeenCalled()
-
-		root.render(html`<${'div'}>${'text'}</${'div'}>`)
-		expect(el.innerHTML).toMatchInlineSnapshot(`"<dyn-$0>text</dyn-$0>"`)
-
-		expect(console.warn).toHaveBeenCalledWith('dynamic value detected in static location')
+		expect(() => root.render(html`<${'div'}>${'text'}</${'div'}>`)).toThrowErrorMatchingInlineSnapshot(
+			`[Error: expected the same number of dynamics as parts. do you have a \${...} in an unsupported place?]`,
+		)
+		expect(el.innerHTML).toBe('')
 	})
 
-	it('does not warn parts in comments', () => {
+	it('does not throw on parts in comments', () => {
 		const { root, el } = setup()
-
-		expect(console.warn).not.toHaveBeenCalled()
 
 		root.render(html`<!-- ${'text'} -->`)
 		expect(el.innerHTML).toMatchInlineSnapshot(`"<!-- dyn-$0 -->"`)
-
-		expect(console.warn).not.toHaveBeenCalled()
 	})
 })

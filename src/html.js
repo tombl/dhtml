@@ -13,12 +13,16 @@ const DEV = typeof DHTML_PROD === 'undefined' || !DHTML_PROD
 
 /** @type {typeof NodeFilter.SHOW_ELEMENT} */ const NODE_FILTER_ELEMENT = 1
 /** @type {typeof NodeFilter.SHOW_TEXT} */ const NODE_FILTER_TEXT = 4
+/** @type {typeof NodeFilter.SHOW_COMMENT} */ const NODE_FILTER_COMMENT = 128
 
 /** @return {node is Element} */
 const isElement = node => node.nodeType === /** @satisfies {typeof Node.ELEMENT_NODE} */ (1)
 
 /** @return {node is Text} */
 const isText = node => node.nodeType === /** @satisfies {typeof Node.TEXT_NODE} */ (3)
+
+/** @return {node is Comment} */
+const isComment = node => node.nodeType === /** @satisfies {typeof Node.COMMENT_NODE} */ (8)
 
 /** @return {node is DocumentFragment} */
 const isDocumentFragment = node => node.nodeType === /** @satisfies {typeof Node.DOCUMENT_FRAGMENT_NODE} */ (11)
@@ -124,8 +128,11 @@ class BoundTemplateInstance {
 		this.#statics = statics
 		this._dynamics = dynamics
 
-		// just to check for errors
-		if (DEV) compileTemplate(statics)
+		// eagerly compile the template in DEV, plus some extra checks.
+		DEV: assert(
+			this._template._parts.length === dynamics.length,
+			'expected the same number of dynamics as parts. do you have a ${...} in an unsupported place?',
+		)
 	}
 }
 
@@ -238,14 +245,16 @@ function compileTemplate(statics) {
 		if (isDocumentFragment(node)) compiled._rootParts.push(nextPart)
 		else if ('dynparts' in node.dataset) node.dataset.dynparts += ' ' + nextPart
 		else node.dataset.dynparts = nextPart
-		if (DEV && nextPart !== idx) console.warn('dynamic value detected in static location')
 		compiled._parts[nextPart++] = [idx, createPart]
 	}
 
-	const walker = document.createTreeWalker(templateElement.content, NODE_FILTER_TEXT | NODE_FILTER_ELEMENT)
+	const walker = document.createTreeWalker(
+		templateElement.content,
+		NODE_FILTER_TEXT | NODE_FILTER_ELEMENT | (DEV ? NODE_FILTER_COMMENT : 0),
+	)
 	// stop iterating once we've hit the last part, but if we're in dev mode, keep going to check for mistakes.
-	while ((DEV || nextPart < compiled._parts.length) && walker.nextNode()) {
-		const node = /** @type {Text | Element} */ (walker.currentNode)
+	while ((nextPart < compiled._parts.length || DEV) && walker.nextNode()) {
+		const node = /** @type {Text | Element | Comment} */ (walker.currentNode)
 		if (isText(node)) {
 			const nodes = [...node.data.matchAll(DYNAMIC_GLOBAL)].reverse().map(match => {
 				node.splitText(match.index + match[0].length)
@@ -266,7 +275,16 @@ function compileTemplate(statics) {
 					patch(node.parentNode, idx, (_prev, span) => new ChildPart(child, span))
 				}
 			}
+		} else if (DEV && isComment(node)) {
+			// just in dev, stub out a fake part for every interpolation in a comment.
+			// this means you can comment out code inside a template and not run into
+			// issues with incorrect part counts.
+			// in production the check is skipped, so we can also skip this.
+			for (const _match of node.data.matchAll(DYNAMIC_GLOBAL)) {
+				compiled._parts[nextPart++] = [parseInt(_match[1]), () => ({ create() {}, update() {}, detach() {} })]
+			}
 		} else {
+			assert(isElement(node))
 			const toRemove = []
 			for (let name of node.getAttributeNames()) {
 				const value = node.getAttribute(name)
