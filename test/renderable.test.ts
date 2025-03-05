@@ -422,6 +422,27 @@ describe('onUnmount', () => {
 		`)
 		sequence.length = 0
 	})
+
+	it('works externally', async () => {
+		const { root } = setup()
+
+		const app = {
+			render() {
+				return html`<div></div>`
+			},
+		}
+
+		let unmounted = false
+		onUnmount(app, () => {
+			unmounted = true
+		})
+
+		root.render(app)
+		expect(unmounted).toBe(false)
+
+		root.render(null)
+		expect(unmounted).toBe(true)
+	})
 })
 
 describe('getParentNode', () => {

@@ -357,15 +357,7 @@ export function onMount(renderable, callback) {
 }
 
 export async function onUnmount(renderable, callback) {
-	let controller = controllers.get(renderable)
-	if (!controller) {
-		// it we haven't rendered yet, wait a microtask to give it time to render.
-		await Promise.resolve()
-		controller = controllers.get(renderable)
-	}
-
-	assert(controller, 'the renderable has not been rendered')
-	;(controller._unmountCallbacks ??= new Set()).add(callback)
+	onMount(renderable, () => callback)
 }
 
 export function getParentNode(renderable) {
