@@ -1,9 +1,9 @@
-import { getParentNode, html, invalidate, onUnmount, type Renderable } from 'dhtml'
+import { getParentNode, html, invalidate, onMount, onUnmount, type Renderable } from 'dhtml'
 import { describe, expect, it, vi } from 'vitest'
 import { setup } from './setup'
 
-describe('renderable', () => {
-	it('basic', async () => {
+describe('renderables', () => {
+	it('works', async () => {
 		const { root, el } = setup()
 
 		root.render(
@@ -32,28 +32,239 @@ describe('renderable', () => {
 		expect(app.i).toBe(4)
 	})
 
-	it('throws', () => {
+	it('handles undefined', () => {
 		const { root, el } = setup()
 
-		const oops = new Error('oops')
-		let thrown
-		try {
-			root.render(
-				html`${{
-					render() {
-						throw oops
-					},
-				}}`,
-			)
-		} catch (error) {
-			thrown = error
-		}
-		expect(thrown).toBe(oops)
+		root.render({
+			// @ts-expect-error
+			render() {},
+		})
 
-		// on an error, don't leave any visible artifacts
-		expect(el.innerHTML).toBe('<!---->')
+		expect(el.innerHTML).toBe('')
+	})
+})
+
+describe('onMount', () => {
+	it('calls in the right order', () => {
+		const { root, el } = setup()
+
+		const sequence: string[] = []
+
+		const inner = {
+			attached: false,
+			render() {
+				sequence.push('inner render')
+				if (!this.attached) {
+					this.attached = true
+					onMount(this, () => {
+						sequence.push('inner mount')
+						return () => {
+							sequence.push('inner cleanup')
+						}
+					})
+				}
+				return 'inner'
+			},
+		}
+
+		const outer = {
+			attached: false,
+			show: true,
+			render() {
+				sequence.push('outer render')
+				if (!this.attached) {
+					this.attached = true
+					onMount(this, () => {
+						sequence.push('outer mount')
+						return () => {
+							sequence.push('outer cleanup')
+						}
+					})
+				}
+				if (!this.show) return null
+				return inner
+			},
+		}
+
+		outer.show = true
+		root.render(outer)
+		expect(el.innerHTML).toBe('inner')
+		expect(sequence).toMatchInlineSnapshot(`
+			[
+			  "outer render",
+			  "inner render",
+			  "inner mount",
+			  "outer mount",
+			]
+		`)
+		sequence.length = 0
+
+		outer.show = false
+		root.render(outer)
+		expect(el.innerHTML).toBe('')
+		expect(sequence).toMatchInlineSnapshot(`
+			[
+			  "outer render",
+			  "inner cleanup",
+			]
+		`)
+		sequence.length = 0
+
+		outer.show = true
+		root.render(outer)
+		expect(el.innerHTML).toBe('inner')
+		expect(sequence).toMatchInlineSnapshot(`
+			[
+			  "outer render",
+			  "inner render",
+			]
+		`)
+		sequence.length = 0
 	})
 
+	it('registers multiple callbacks', () => {
+		const { root } = setup()
+
+		const sequence: string[] = []
+
+		const app = {
+			render() {
+				onMount(this, () => {
+					sequence.push('mount 1')
+					return () => sequence.push('cleanup 1')
+				})
+
+				onMount(this, () => {
+					sequence.push('mount 2')
+					return () => sequence.push('cleanup 2')
+				})
+
+				return 'app'
+			},
+		}
+
+		root.render(app)
+		expect(sequence).toMatchInlineSnapshot(`
+			[
+			  "mount 1",
+			  "mount 2",
+			]
+		`)
+		sequence.length = 0
+
+		root.render(null)
+		expect(sequence).toMatchInlineSnapshot(`
+			[
+			  "cleanup 1",
+			  "cleanup 2",
+			]
+		`)
+	})
+
+	it('registers a fixed callback once', () => {
+		const { root } = setup()
+
+		const sequence: string[] = []
+
+		function callback() {
+			sequence.push('mount')
+			return () => sequence.push('cleanup')
+		}
+
+		const app = {
+			render() {
+				onMount(this, callback)
+				onMount(this, callback)
+				return 'app'
+			},
+		}
+
+		root.render(app)
+		expect(sequence).toMatchInlineSnapshot(`
+			[
+			  "mount",
+			]
+		`)
+		sequence.length = 0
+
+		root.render(null)
+		expect(sequence).toMatchInlineSnapshot(`
+			[
+			  "cleanup",
+			]
+		`)
+	})
+
+	it('registers callbacks outside of render', () => {
+		const { root } = setup()
+
+		const sequence: string[] = []
+
+		const app = {
+			render() {
+				sequence.push('render')
+				return 'app'
+			},
+		}
+
+		onMount(app, () => {
+			sequence.push('mount')
+			return () => sequence.push('cleanup')
+		})
+
+		expect(sequence).toMatchInlineSnapshot(`[]`)
+
+		root.render(app)
+		expect(sequence).toMatchInlineSnapshot(`
+			[
+			  "render",
+			  "mount",
+			]
+		`)
+		sequence.length = 0
+
+		root.render(null)
+		expect(sequence).toMatchInlineSnapshot(`
+			[
+			  "cleanup",
+			]
+		`)
+	})
+
+	it('can access the dom in callback', () => {
+		const { root } = setup()
+
+		const app = {
+			render() {
+				onMount(this, () => {
+					const parent = getParentNode(this) as Element
+					expect(parent.firstElementChild).toBeInstanceOf(HTMLParagraphElement)
+				})
+				return html`<p>Hello, world!</p>`
+			},
+		}
+
+		root.render(app)
+	})
+
+	it('works after render', () => {
+		const { root } = setup()
+
+		const app = {
+			render() {
+				return 'app'
+			},
+		}
+
+		root.render(app)
+
+		const mounted = vi.fn()
+		onMount(app, mounted)
+		expect(mounted).toHaveBeenCalledOnce()
+	})
+})
+
+describe('onUnmount', () => {
 	it('unmount deep', () => {
 		const { root, el } = setup()
 
@@ -94,25 +305,45 @@ describe('renderable', () => {
 		outer.show = true
 		root.render(outer)
 		expect(el.innerHTML).toBe('inner')
-		expect(sequence).toEqual(['outer render', 'inner render'])
+		expect(sequence).toMatchInlineSnapshot(`
+			[
+			  "outer render",
+			  "inner render",
+			]
+		`)
 		sequence.length = 0
 
 		outer.show = false
 		root.render(outer)
 		expect(el.innerHTML).toBe('')
-		expect(sequence).toEqual(['outer render', 'inner abort'])
+		expect(sequence).toMatchInlineSnapshot(`
+			[
+			  "outer render",
+			  "inner abort",
+			]
+		`)
 		sequence.length = 0
 
 		outer.show = true
 		root.render(outer)
 		expect(el.innerHTML).toBe('inner')
-		expect(sequence).toEqual(['outer render', 'inner render'])
+		expect(sequence).toMatchInlineSnapshot(`
+			[
+			  "outer render",
+			  "inner render",
+			]
+		`)
 		sequence.length = 0
 
 		outer.show = false
 		root.render(outer)
 		expect(el.innerHTML).toBe('')
-		expect(sequence).toEqual(['outer render', 'inner abort'])
+		expect(sequence).toMatchInlineSnapshot(`
+			[
+			  "outer render",
+			  "inner abort",
+			]
+		`)
 		sequence.length = 0
 	})
 
@@ -155,26 +386,66 @@ describe('renderable', () => {
 		outer.show = true
 		root.render(outer)
 		expect(el.innerHTML).toBe('inner')
-		expect(sequence).toEqual(['outer render', 'inner render'])
+		expect(sequence).toMatchInlineSnapshot(`
+			[
+			  "outer render",
+			  "inner render",
+			]
+		`)
 		sequence.length = 0
 
 		outer.show = false
 		root.render(outer)
 		expect(el.innerHTML).toBe('')
-		expect(sequence).toEqual(['outer render', 'inner abort'])
+		expect(sequence).toMatchInlineSnapshot(`
+			[
+			  "outer render",
+			  "inner abort",
+			]
+		`)
 		sequence.length = 0
 
 		outer.show = true
 		root.render(outer)
 		expect(el.innerHTML).toBe('inner')
-		expect(sequence).toEqual(['outer render', 'inner render'])
+		expect(sequence).toMatchInlineSnapshot(`
+			[
+			  "outer render",
+			  "inner render",
+			]
+		`)
 		sequence.length = 0
 
 		outer.show = false
 		root.render(outer)
 		expect(el.innerHTML).toBe('')
-		expect(sequence).toEqual(['outer render', 'inner abort'])
+		expect(sequence).toMatchInlineSnapshot(`
+			[
+			  "outer render",
+			  "inner abort",
+			]
+		`)
 		sequence.length = 0
+	})
+
+	it('works externally', async () => {
+		const { root, el } = setup()
+
+		const app = {
+			render() {
+				return [1, 2, 3].map(i => html`<div>${i}</div>`)
+			},
+		}
+
+		const unmounted = vi.fn()
+		onUnmount(app, unmounted)
+
+		root.render(app)
+		expect(el.innerHTML).toMatchInlineSnapshot(`"<div>1</div><div>2</div><div>3</div>"`)
+		expect(unmounted).not.toHaveBeenCalled()
+
+		root.render(null)
+		expect(unmounted).toHaveBeenCalledOnce()
 	})
 })
 

@@ -11,6 +11,7 @@ export default defineConfig({
 		DHTML_PROD: prod,
 	},
 	test: {
+		clearMocks: true,
 		coverage: {
 			enabled: ci,
 			reporter: ['text', 'json-summary', 'json'],

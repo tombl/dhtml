@@ -33,11 +33,13 @@ export const html = (statics, ...dynamics) => new BoundTemplateInstance(statics,
 
 const singlePartTemplate = part => html`${part}`
 
+/* v8 ignore start */
 /** @return {asserts value} */
 const assert = (value, message = 'assertion failed') => {
 	if (!DEV) return
 	if (!value) throw new Error(message)
 }
+/* v8 ignore stop */
 
 /** @implements {SpanInstance} */
 class Span {
@@ -322,35 +324,47 @@ function compileTemplate(statics) {
 }
 
 /** @type {WeakMap<object, {
+  _mounted: boolean 
 	_invalidateQueued: Promise<void> | null
 	_invalidate: () => void
-	_unmountCallbacks: Set<() => void> | null
+	_unmountCallbacks: Set<void | (() => void)> | null
 	_parentNode: Node
 }>} */
 const controllers = new WeakMap()
+
 export function invalidate(renderable) {
 	const controller = controllers.get(renderable)
-	// TODO: if no controller, check again in a microtask?
-	// just in case the renderable was created between invalidation and rerendering
 	assert(controller, 'the renderable has not been rendered')
-
-	// TODO: cancel this invalidation if a higher up one comes along
 	return (controller._invalidateQueued ??= Promise.resolve().then(() => {
 		controller._invalidateQueued = null
 		controller._invalidate()
 	}))
 }
-export function onUnmount(renderable, callback) {
-	const controller = controllers.get(renderable)
-	assert(controller, 'the renderable has not been rendered')
 
-	controller._unmountCallbacks ??= new Set()
-	controller._unmountCallbacks.add(callback)
+/** @type {WeakMap<Renderable, Set<() => void | (() => void)>>} */
+const mountCallbacks = new WeakMap()
+
+export function onMount(renderable, callback) {
+	DEV: assert(isRenderable(renderable), 'expected a renderable')
+
+	const controller = controllers.get(renderable)
+	if (controller?._mounted) {
+		;(controller._unmountCallbacks ??= new Set()).add(callback())
+		return
+	}
+
+	let cb = mountCallbacks.get(renderable)
+	if (!cb) mountCallbacks.set(renderable, (cb = new Set()))
+	cb.add(callback)
 }
+
+export function onUnmount(renderable, callback) {
+	onMount(renderable, () => callback)
+}
+
 export function getParentNode(renderable) {
 	const controller = controllers.get(renderable)
 	assert(controller, 'the renderable has not been rendered')
-
 	return controller._parentNode
 }
 
@@ -408,7 +422,7 @@ class ChildPart {
 	#switchRenderable(next) {
 		if (this.#renderable && this.#renderable !== next) {
 			const controller = controllers.get(this.#renderable)
-			if (controller?._unmountCallbacks) for (const callback of controller._unmountCallbacks) callback()
+			if (controller?._unmountCallbacks) for (const callback of controller._unmountCallbacks) callback?.()
 			controllers.delete(this.#renderable)
 		}
 		this.#renderable = next
@@ -433,6 +447,7 @@ class ChildPart {
 
 			if (!controllers.has(renderable))
 				controllers.set(renderable, {
+					_mounted: false,
 					_invalidateQueued: null,
 					_invalidate: () => {
 						DEV: assert(this.#renderable === renderable, 'could not invalidate an outdated renderable')
@@ -511,6 +526,18 @@ class ChildPart {
 			}
 
 			this.#span._end = end
+
+			const controller = controllers.get(this.#renderable)
+			if (controller) {
+				controller._mounted = true
+				// @ts-expect-error -- WeakMap lookups of null always return undefined, which is fine
+				for (const callback of mountCallbacks.get(this.#renderable) ?? []) {
+					;(controller._unmountCallbacks ??= new Set()).add(callback())
+				}
+				// @ts-expect-error -- WeakMap lookups of null always return undefined, which is fine
+				mountCallbacks.delete(this.#renderable)
+			}
+
 			if (endsWereEqual) this.#parentSpan._end = this.#span._end
 
 			return
@@ -541,9 +568,20 @@ class ChildPart {
 			}
 		}
 
-		if (endsWereEqual) this.#parentSpan._end = this.#span._end
-
 		this.#value = value
+
+		const controller = controllers.get(this.#renderable)
+		if (controller) {
+			controller._mounted = true
+			// @ts-expect-error -- WeakMap lookups of null always return undefined, which is fine
+			for (const callback of mountCallbacks.get(this.#renderable) ?? []) {
+				;(controller._unmountCallbacks ??= new Set()).add(callback())
+			}
+			// @ts-expect-error -- WeakMap lookups of null always return undefined, which is fine
+			mountCallbacks.delete(this.#renderable)
+		}
+
+		if (endsWereEqual) this.#parentSpan._end = this.#span._end
 	}
 
 	detach() {

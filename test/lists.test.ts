@@ -161,6 +161,25 @@ describe('lists', () => {
 		root.render([2])
 		expect(el.innerHTML).toBe('2')
 	})
+
+	it('can disappear', () => {
+		const { root, el } = setup()
+
+		const app = {
+			show: true,
+			render() {
+				if (!this.show) return null
+				return [1, 2, 3].map(i => html`<div>${i}</div>`)
+			},
+		}
+
+		root.render(app)
+		expect(el.innerHTML).toMatchInlineSnapshot(`"<div>1</div><div>2</div><div>3</div>"`)
+
+		app.show = false
+		root.render(app)
+		expect(el.innerHTML).toMatchInlineSnapshot(`""`)
+	})
 })
 
 describe('list reordering', () => {
@@ -309,5 +328,12 @@ describe('list reordering', () => {
 
 		root.render(items.map(([item]) => item))
 		expect(el.innerHTML).toBe(items.map(([, html]) => html).join(''))
+	})
+})
+
+describe('list with keys', () => {
+	it("can't key something twice", () => {
+		expect(() => keyed(html``, 1)).not.toThrow()
+		expect(() => keyed(keyed(html``, 1), 1)).toThrow()
 	})
 })
