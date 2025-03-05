@@ -329,9 +329,6 @@ function compileTemplate(statics) {
 }>} */
 const controllers = new WeakMap()
 
-/** @type {WeakMap<Renderable, Set<() => void | (() => void)>>} */
-const mountCallbacks = new WeakMap()
-
 export function invalidate(renderable) {
 	const controller = controllers.get(renderable)
 	assert(controller, 'the renderable has not been rendered')
@@ -341,13 +338,15 @@ export function invalidate(renderable) {
 	}))
 }
 
+/** @type {WeakMap<Renderable, Set<() => void | (() => void)>>} */
+const mountCallbacks = new WeakMap()
+
 export function onMount(renderable, callback) {
 	DEV: assert(isRenderable(renderable), 'expected a renderable')
 
-	let controller = controllers.get(renderable)
+	const controller = controllers.get(renderable)
 	if (controller) {
-		const cleanup = callback()
-		if (cleanup) onUnmount(renderable, cleanup)
+		;(controller._unmountCallbacks ??= new Set()).add(callback())
 		return
 	}
 
@@ -365,10 +364,9 @@ export async function onUnmount(renderable, callback) {
 	}
 
 	assert(controller, 'the renderable has not been rendered')
-
-	controller._unmountCallbacks ??= new Set()
-	controller._unmountCallbacks.add(callback)
+	;(controller._unmountCallbacks ??= new Set()).add(callback)
 }
+
 export function getParentNode(renderable) {
 	const controller = controllers.get(renderable)
 	assert(controller, 'the renderable has not been rendered')
