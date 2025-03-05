@@ -4,7 +4,7 @@
 	"main": "src/html.js",
 	"scripts": {
 		"build": "./build.sh",
-		"format": "prettier --write .",
+		"format": "prettier --write . --cache",
 		"check": "tsc",
 		"test": "vitest run",
 		"test:watch": "vitest dev",
