@@ -10,6 +10,24 @@ describe('attributes', () => {
 		expect(el.querySelector('h1')).toHaveAttribute('style', 'color: red')
 	})
 
+	it('can toggle attributes', () => {
+		const { root, el } = setup()
+
+		let hidden: unknown = false
+		const template = () => html`<h1 hidden=${hidden}>Hello, world!</h1>`
+
+		root.render(template())
+		expect(el.querySelector('h1')).not.toHaveAttribute('hidden')
+
+		hidden = true
+		root.render(template())
+		expect(el.querySelector('h1')).toHaveAttribute('hidden')
+
+		hidden = null
+		root.render(template())
+		expect(el.querySelector('h1')).not.toHaveAttribute('hidden')
+	})
+
 	it('supports property attributes', () => {
 		const { root, el } = setup()
 

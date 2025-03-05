@@ -33,11 +33,13 @@ export const html = (statics, ...dynamics) => new BoundTemplateInstance(statics,
 
 const singlePartTemplate = part => html`${part}`
 
+/* v8 ignore start */
 /** @return {asserts value} */
 const assert = (value, message = 'assertion failed') => {
 	if (!DEV) return
 	if (!value) throw new Error(message)
 }
+/* v8 ignore stop */
 
 /** @implements {SpanInstance} */
 class Span {
@@ -356,7 +358,7 @@ export function onMount(renderable, callback) {
 	cb.add(callback)
 }
 
-export async function onUnmount(renderable, callback) {
+export function onUnmount(renderable, callback) {
 	onMount(renderable, () => callback)
 }
 

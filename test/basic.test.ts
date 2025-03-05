@@ -1,5 +1,5 @@
 import { html, type Displayable } from 'dhtml'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { setup } from './setup'
 
 describe('basic', () => {
@@ -46,21 +46,6 @@ describe('basic', () => {
 
 		root.render(html`<h1>Hello, world!</h1>`)
 		expect(el.innerHTML).toMatchInlineSnapshot(`"<div>before</div><h1>Hello, world!</h1><div>after</div>"`)
-	})
-
-	it('user errors', { skip: import.meta.env.PROD }, () => {
-		const { root, el } = setup()
-
-		let thrown
-		try {
-			root.render(html`<button @click=${123}></button>`)
-		} catch (error) {
-			thrown = error as Error
-		}
-
-		expect(el.innerHTML).toBe('<button></button>')
-		expect(thrown).toBeInstanceOf(Error)
-		expect(thrown!.message).toMatch(/expected a function/i)
 	})
 
 	it('update identity', () => {
@@ -124,5 +109,71 @@ describe('basic', () => {
 		expect(el.childNodes.length).toBe(1)
 		expect(el.firstChild).toBeInstanceOf(Text)
 		expect((el.firstChild as Text).data).toBe('abc')
+	})
+})
+
+const console = {
+	warn: vi.fn(),
+}
+vi.stubGlobal('console', console)
+
+describe('errors', () => {
+	it('throws on non-function event handlers', { skip: import.meta.env.PROD }, () => {
+		const { root, el } = setup()
+
+		let thrown
+		try {
+			root.render(html`<button @click=${123}></button>`)
+		} catch (error) {
+			thrown = error as Error
+		}
+
+		expect(el.innerHTML).toBe('<button></button>')
+		expect(thrown).toBeInstanceOf(Error)
+		expect(thrown!.message).toMatch(/expected a function/i)
+	})
+
+	it('throws cleanly', () => {
+		const { root, el } = setup()
+
+		const oops = new Error('oops')
+		let thrown
+		try {
+			root.render(
+				html`${{
+					render() {
+						throw oops
+					},
+				}}`,
+			)
+		} catch (error) {
+			thrown = error
+		}
+		expect(thrown).toBe(oops)
+
+		// on an error, don't leave any visible artifacts
+		expect(el.innerHTML).toBe('<!---->')
+	})
+
+	it('warns on invalid part placement', () => {
+		const { root, el } = setup()
+
+		expect(console.warn).not.toHaveBeenCalled()
+
+		root.render(html`<${'div'}>${'text'}</${'div'}>`)
+		expect(el.innerHTML).toMatchInlineSnapshot(`"<dyn-$0>text</dyn-$0>"`)
+
+		expect(console.warn).toHaveBeenCalledWith('dynamic value detected in static location')
+	})
+
+	it('does not warn parts in comments', () => {
+		const { root, el } = setup()
+
+		expect(console.warn).not.toHaveBeenCalled()
+
+		root.render(html`<!-- ${'text'} -->`)
+		expect(el.innerHTML).toMatchInlineSnapshot(`"<!-- dyn-$0 -->"`)
+
+		expect(console.warn).not.toHaveBeenCalled()
 	})
 })

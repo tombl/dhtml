@@ -32,26 +32,15 @@ describe('renderables', () => {
 		expect(app.i).toBe(4)
 	})
 
-	it('throws cleanly', () => {
+	it('handles undefined', () => {
 		const { root, el } = setup()
 
-		const oops = new Error('oops')
-		let thrown
-		try {
-			root.render(
-				html`${{
-					render() {
-						throw oops
-					},
-				}}`,
-			)
-		} catch (error) {
-			thrown = error
-		}
-		expect(thrown).toBe(oops)
+		root.render({
+			// @ts-expect-error
+			render() {},
+		})
 
-		// on an error, don't leave any visible artifacts
-		expect(el.innerHTML).toBe('<!---->')
+		expect(el.innerHTML).toBe('')
 	})
 })
 
@@ -257,6 +246,22 @@ describe('onMount', () => {
 
 		root.render(app)
 	})
+
+	it('works after render', () => {
+		const { root } = setup()
+
+		const app = {
+			render() {
+				return 'app'
+			},
+		}
+
+		root.render(app)
+
+		const mounted = vi.fn()
+		onMount(app, mounted)
+		expect(mounted).toHaveBeenCalledOnce()
+	})
 })
 
 describe('onUnmount', () => {
@@ -424,24 +429,23 @@ describe('onUnmount', () => {
 	})
 
 	it('works externally', async () => {
-		const { root } = setup()
+		const { root, el } = setup()
 
 		const app = {
 			render() {
-				return html`<div></div>`
+				return [1, 2, 3].map(i => html`<div>${i}</div>`)
 			},
 		}
 
-		let unmounted = false
-		onUnmount(app, () => {
-			unmounted = true
-		})
+		const unmounted = vi.fn()
+		onUnmount(app, unmounted)
 
 		root.render(app)
-		expect(unmounted).toBe(false)
+		expect(el.innerHTML).toMatchInlineSnapshot(`"<div>1</div><div>2</div><div>3</div>"`)
+		expect(unmounted).not.toHaveBeenCalled()
 
 		root.render(null)
-		expect(unmounted).toBe(true)
+		expect(unmounted).toHaveBeenCalledOnce()
 	})
 })
 
