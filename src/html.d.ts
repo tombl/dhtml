@@ -16,4 +16,4 @@ export interface Root {
 
 export function createRoot(node: Node): Root
 
-export function attr(name: string): Directive<string | boolean | null | undefined>
+export function attr(name: string, value: string | boolean | null | undefined): Directive

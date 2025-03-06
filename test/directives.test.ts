@@ -1,5 +1,5 @@
 import { attr, html, type Directive } from 'dhtml'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { setup } from './setup'
 
 describe('directives', () => {
@@ -40,15 +40,17 @@ describe('directives', () => {
 	it('functions with values', () => {
 		const { root, el } = setup()
 
-		const classes: Directive<string[]> = vi.fn((node, value) => {
+		function classes(value: string[]): Directive {
 			const values = value.filter(Boolean)
-			node.classList.add(...values)
-			return () => {
-				node.classList.remove(...values)
+			return node => {
+				node.classList.add(...values)
+				return () => {
+					node.classList.remove(...values)
+				}
 			}
-		})
+		}
 
-		const template = (value: string[]) => html`<div class="foo" ${classes}=${value}>Hello, world!</div>`
+		const template = (c: string[]) => html`<div class="foo" ${classes(c)}>Hello, world!</div>`
 
 		root.render(template(['a', 'b']))
 		const div = el.firstChild as HTMLElement
@@ -57,8 +59,6 @@ describe('directives', () => {
 
 		root.render(template(['c', 'd']))
 		expect(div.className).toBe('foo c d')
-
-		expect(classes).toHaveBeenCalledTimes(2)
 
 		root.render(template([]))
 		expect(div.className).toBe('foo')
@@ -71,7 +71,7 @@ describe('attr', () => {
 
 		const template = (value: string | null) => html`
 			<input id="attr-works-input"></input>
-			<label ${attr('for')}=${value}>Hello, world!</label>
+			<label ${attr('for', value)}>Hello, world!</label>
 		`
 
 		root.render(template('attr-works-input'))
@@ -87,7 +87,7 @@ describe('attr', () => {
 	it('supports booleans', () => {
 		const { root, el } = setup()
 
-		const template = (value: boolean) => html`<input ${attr('disabled')}=${value} />`
+		const template = (value: boolean) => html`<input ${attr('disabled', value)} />`
 
 		root.render(template(true))
 		expect(el.querySelector('input')).toHaveProperty('disabled', true)

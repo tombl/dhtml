@@ -1,6 +1,7 @@
 /** @import {
 	Cleanup,
 	CompiledTemplate,
+	Directive,
 	Displayable,
 	Key,
 	Part,
@@ -293,19 +294,12 @@ function compileTemplate(statics) {
 				if (match !== null) {
 					// directive:
 					toRemove.push(name)
-					const idx = parseInt(match[1])
-					match = DYNAMIC_WHOLE.exec(value)
-					if (match) {
-						patch(node, idx, () => new CustomPartName())
-						patch(node, parseInt(match[1]), prev => new CustomPartValue(prev))
-					} else {
-						DEV: assert(!DYNAMIC_GLOBAL.test(value), `expected a whole dynamic value for ${name}, got a partial one`)
-						patch(node, idx, () => new CustomPartStandalone(value))
-					}
+					DEV: assert(value === '', `directives must not have values`)
+					patch(node, parseInt(match[1]), () => new DirectivePart())
 				} else {
 					// properties:
 					match = DYNAMIC_WHOLE.exec(value)
-					if (match) {
+					if (match !== null) {
 						toRemove.push(name)
 						name = name.replace(/-./g, match => match[1].toUpperCase())
 						patch(node, parseInt(match[1]), () => new PropertyPart(name))
@@ -614,82 +608,30 @@ class PropertyPart {
 }
 
 /** @implements {Part} */
-class CustomPartBase {
+class DirectivePart {
 	#node
 	/** @type {Cleanup} */
 	#cleanup
-	// abstract _value
-	// abstract _fn
 
-	create(node) {
+	create(node, fn) {
 		this.#node = node
-		this.#cleanup = this._fn?.(this.#node, this._value)
+		this.#cleanup = fn?.(this.#node)
 	}
 
-	update() {
+	update(fn) {
 		this.#cleanup?.()
-		this.#cleanup = this._fn?.(this.#node, this._value)
+		this.#cleanup = fn?.(this.#node)
 	}
 
 	detach() {
 		this.#cleanup?.()
-		this.#cleanup = this._value = this._fn = null
+		this.#cleanup = null
 	}
 }
 
-class CustomPartStandalone extends CustomPartBase {
-	constructor(value) {
-		super()
-		this._value = value
-	}
-	create(node, fn) {
-		this._fn = fn
-		super.create(node)
-	}
-	update(fn) {
-		this._fn = fn
-		super.update()
-	}
-}
-
-/** @implements {Part} */
-class CustomPartName {
-	create(_node, fn) {
-		this._fn = fn
-	}
-	update(fn) {
-		this._fn = fn
-	}
-	detach() {}
-}
-
-class CustomPartValue extends CustomPartBase {
-	#namePart
-	constructor(namePart) {
-		super()
-		this.#namePart = namePart
-	}
-
-	// @ts-expect-error -- property in parent, accessor in subclass
-	get _fn() {
-		return this.#namePart._fn
-	}
-	set _fn(fn) {
-		this.#namePart._fn = fn
-	}
-
-	create(node, value) {
-		this._value = value
-		super.create(node)
-	}
-	update(value) {
-		this._value = value
-		super.update()
-	}
-}
-
-export function attr(name) {
-	return (node, value) => {
+/** @returns {Directive} */
+export function attr(name, value) {
+	return node => {
 		if (typeof value === 'boolean') node.toggleAttribute(name, value)
 		else if (value == null) node.removeAttribute(name)
 		else node.setAttribute(name, value)

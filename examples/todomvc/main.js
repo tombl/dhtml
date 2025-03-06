@@ -1,10 +1,12 @@
 import { createRoot, html, invalidate } from 'dhtml'
 
-function classes(node, value) {
-	const values = value.filter(Boolean)
-	node.classList.add(...values)
-	return () => {
-		node.classList.remove(...values)
+function classes(...args) {
+	const classes = args.flatMap(a => (a ? a.split(' ') : []))
+	return node => {
+		node.classList.add(...classes)
+		return () => {
+			node.classList.remove(...classes)
+		}
 	}
 }
 
@@ -22,7 +24,7 @@ class TodoItem {
 
 	render() {
 		return html`
-			<li ${classes}=${[this.completed && 'completed', this.editing && 'editing']}>
+			<li ${classes(this.completed && 'completed', this.editing && 'editing')}>
 				<div class="view">
 					<input
 						class="toggle"
@@ -154,7 +156,7 @@ class App {
 										html`<li>
 											<a
 												href="#"
-												${classes}=${this.filter === filter && 'selected'}
+												${classes(this.filter === filter && 'selected')}
 												onclick=${() => {
 													this.filter = filter
 													invalidate(this)

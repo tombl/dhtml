@@ -29,7 +29,7 @@ export interface Part {
 }
 
 export type Cleanup = (() => void) | void | undefined | null
-export type Directive<T = unknown> = (node: Element, value: T) => Cleanup
+export type Directive = (node: Element) => Cleanup
 
 export interface CompiledTemplate {
 	_content: DocumentFragment
