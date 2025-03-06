@@ -373,7 +373,7 @@ export function getParentNode(renderable) {
 
 const keys = new WeakMap()
 export function keyed(renderable, key) {
-	if (keys.has(renderable)) throw new Error('renderable already has a key')
+	if (DEV && keys.has(renderable)) throw new Error('renderable already has a key')
 	keys.set(renderable, key)
 	return renderable
 }
