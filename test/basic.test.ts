@@ -110,6 +110,14 @@ describe('basic', () => {
 		expect(el.firstChild).toBeInstanceOf(Text)
 		expect((el.firstChild as Text).data).toBe('abc')
 	})
+
+	it('shifting ChildPart index', () => {
+		const { root, el } = setup()
+
+		root.render(html`${html`A<!--x-->`}B${'C'}`)
+
+		expect(el.innerHTML).toBe('A<!--x-->BC')
+	})
 })
 
 describe('errors', () => {
