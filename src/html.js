@@ -161,7 +161,7 @@ class Root {
 	render(value) {
 		const t = value instanceof BoundTemplateInstance ? value : singlePartTemplate(value)
 
-		if (this._instance?.template === t._template) {
+		if (this._instance?._template === t._template) {
 			this._instance.update(t._dynamics)
 		} else {
 			this.detach()
@@ -184,7 +184,7 @@ class TemplateInstance {
 	 * @param {Span} span
 	 */
 	constructor(template, dynamics, span) {
-		this.template = template
+		this._template = template
 		const doc = /** @type {DocumentFragment} */ (template._content.cloneNode(true))
 
 		const nodeByPart = []
