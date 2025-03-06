@@ -31,18 +31,40 @@ describe('attributes', () => {
 	it('supports property attributes', () => {
 		const { root, el } = setup()
 
-		root.render(html`<h1 class-name=${'foo'}>Hello, world!</h1>`)
-		expect(el.querySelector('h1')).toHaveClass('foo')
-	})
-
-	it('supports booleans', () => {
-		const { root, el } = setup()
-
 		root.render(html`<details open=${true}></details>`)
 		expect(el.querySelector('details')!.open).toBe(true)
 
 		root.render(html`<details open=${false}></details>`)
 		expect(el.querySelector('details')!.open).toBe(false)
+	})
+
+	it('guesses the case of properties', () => {
+		const { root, el } = setup()
+
+		const innerHTML = '<h1>Hello, world!</h1>'
+
+		root.render(html`<div innerhtml=${innerHTML}></div>`)
+		expect(el.querySelector('div')!.innerHTML).toBe(innerHTML)
+
+		root.render(html`<span innerHTML=${innerHTML}></span>`)
+		expect(el.querySelector('span')!.innerHTML).toBe(innerHTML)
+	})
+
+	it('treats class/for specially', () => {
+		const { root, el } = setup()
+
+		root.render(html`<h1 class=${'foo'}>Hello, world!</h1>`)
+		expect(el.querySelector('h1')).toHaveClass('foo')
+
+		root.render(html`<label for=${'foo'}>Hello, world!</label>`)
+		expect(el.querySelector('label')).toHaveAttribute('for', 'foo')
+	})
+
+	it('handles data attributes', () => {
+		const { root, el } = setup()
+
+		root.render(html`<h1 data-foo=${'bar'}>Hello, world!</h1>`)
+		expect(el.querySelector('h1')).toHaveAttribute('data-foo', 'bar')
 	})
 
 	it('supports events', () => {

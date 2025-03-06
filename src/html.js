@@ -221,6 +221,7 @@ class TemplateInstance {
 
 const DYNAMIC_WHOLE = /^dyn-\$(\d+)\$$/i
 const DYNAMIC_GLOBAL = /dyn-\$(\d+)\$/gi
+const FORCE_ATTRIBUTES = /-|^class$|^for$/i
 
 /** @type {Map<TemplateStringsArray, CompiledTemplate>} */
 const templates = new Map()
@@ -301,8 +302,19 @@ function compileTemplate(statics) {
 					match = DYNAMIC_WHOLE.exec(value)
 					if (match !== null) {
 						toRemove.push(name)
-						name = name.replace(/-./g, match => match[1].toUpperCase())
-						patch(node, parseInt(match[1]), () => new PropertyPart(name))
+						if (FORCE_ATTRIBUTES.test(name)) {
+							patch(node, parseInt(match[1]), () => new AttributePart(name))
+						} else {
+							if (!(name in node)) {
+								for (const property in node) {
+									if (property.toLowerCase() === name) {
+										name = property
+										break
+									}
+								}
+							}
+							patch(node, parseInt(match[1]), () => new PropertyPart(name))
+						}
 					} else if (DEV) {
 						assert(!DYNAMIC_GLOBAL.test(value), `expected a whole dynamic value for ${name}, got a partial one`)
 					}
@@ -604,6 +616,28 @@ class PropertyPart {
 
 	detach() {
 		delete this.#node[this.#name]
+	}
+}
+
+/** @implements {Part} */
+class AttributePart {
+	#name
+	constructor(name) {
+		this.#name = name
+	}
+
+	#node
+	create(node, value) {
+		this.#node = node
+		this.update(value)
+	}
+
+	update(value) {
+		this.#node.setAttribute(this.#name, value)
+	}
+
+	detach() {
+		this.#node.removeAttribute(this.#name)
 	}
 }
 
