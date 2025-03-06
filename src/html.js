@@ -204,11 +204,9 @@ class TemplateInstance {
 		span._deleteContents()
 		span._insertNode(doc)
 
-		let prev
 		this._parts = template._parts.map(([dynamicIdx, createPart], elementIdx) => {
-			const part = createPart(prev, span)
+			const part = createPart(span)
 			part.create(nodeByPart[elementIdx], dynamics[dynamicIdx])
-			prev = part
 			return /** @type {const} */ ([dynamicIdx, part])
 		})
 	}
@@ -256,6 +254,9 @@ function compileTemplate(statics) {
 	while ((nextPart < compiled._parts.length || DEV) && walker.nextNode()) {
 		const node = /** @type {Text | Element | Comment} */ (walker.currentNode)
 		if (isText(node)) {
+			// reverse the order because we'll be supplying ChildPart with its index in the parent node.
+			// and if we apply the parts forwards, indicies will be wrong if some prior part renders more than one node.
+			// also reverse it because that's the correct order for splitting.
 			const nodes = [...node.data.matchAll(DYNAMIC_GLOBAL)].reverse().map(match => {
 				node.splitText(match.index + match[0].length)
 				const dyn = new Comment()
@@ -263,16 +264,12 @@ function compileTemplate(statics) {
 				return /** @type {const} */ ([dyn, parseInt(match[1])])
 			})
 
-			// put them back in order, inverting the effect of the reverse above.
-			// not relevant for behavior, but it satisfies the warning when parts are used out of order.
-			nodes.reverse()
-
 			if (nodes.length) {
 				DEV: assert(node.parentNode !== null, 'all text nodes should have a parent node')
 				let siblings = [...node.parentNode.childNodes]
 				for (const [node, idx] of nodes) {
 					const child = siblings.indexOf(node)
-					patch(node.parentNode, idx, (_prev, span) => new ChildPart(child, span))
+					patch(node.parentNode, idx, span => new ChildPart(child, span))
 				}
 			}
 		} else if (DEV && isComment(node)) {
