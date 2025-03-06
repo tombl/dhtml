@@ -1,6 +1,5 @@
 import { defineConfig } from 'vitest/config'
 
-const ci = !!process.env.CI
 const prod = !!process.env.PROD
 
 export default defineConfig({
@@ -13,13 +12,14 @@ export default defineConfig({
 	test: {
 		clearMocks: true,
 		coverage: {
-			enabled: ci,
-			reporter: ['text', 'json-summary', 'json'],
+			enabled: true,
+			reporter: ['text', 'json-summary', 'json', 'html'],
 			reportOnFailure: true,
 			include: ['src/html.js'],
 		},
 		browser: {
 			enabled: true,
+			headless: true,
 			provider: 'playwright',
 			instances: [{ browser: 'chromium' }],
 		},

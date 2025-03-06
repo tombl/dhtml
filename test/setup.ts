@@ -1,5 +1,5 @@
 /// <reference types='vite/client' />
-/// <reference types='@vitest/browser/matchers' />
+/// <reference types='@vitest/browser/providers/playwright' />
 
 import '../reset.css'
 
