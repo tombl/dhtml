@@ -704,3 +704,18 @@ class CustomPartValue extends CustomPartBase {
 		super.update()
 	}
 }
+
+export function attr(name) {
+	return (node, value) => {
+		update(value)
+		return { update, detach }
+		function update(value) {
+			if (typeof value === 'boolean') node.toggleAttribute(name, value)
+			else if (value == null) node.removeAttribute(name)
+			else node.setAttribute(name, value)
+		}
+		function detach() {
+			node.removeAttribute(name)
+		}
+	}
+}

@@ -1,4 +1,4 @@
-import { html, type CustomPart } from 'dhtml'
+import { attr, html, type CustomPart } from 'dhtml'
 import { describe, expect, it } from 'vitest'
 import { setup } from './setup'
 
@@ -192,5 +192,37 @@ describe('custom parts', () => {
 		expect(detached).toBe(false)
 		root.render(null)
 		expect(detached).toBe(true)
+	})
+})
+
+describe('attr', () => {
+	it('works', () => {
+		const { root, el } = setup()
+
+		const template = (value: string | null) => html`
+			<input id="attr-works-input"></input>
+			<label ${attr('for')}=${value}>Hello, world!</label>
+		`
+
+		root.render(template('attr-works-input'))
+		expect(el.querySelector('label')).toHaveProperty('htmlFor', 'attr-works-input')
+
+		root.render(template('updated'))
+		expect(el.querySelector('label')).toHaveProperty('htmlFor', 'updated')
+
+		root.render(template(null))
+		expect(el.querySelector('label')).toHaveProperty('htmlFor', '')
+	})
+
+	it('supports booleans', () => {
+		const { root, el } = setup()
+
+		const template = (value: boolean) => html`<input ${attr('disabled')}=${value} />`
+
+		root.render(template(true))
+		expect(el.querySelector('input')).toHaveProperty('disabled', true)
+
+		root.render(template(false))
+		expect(el.querySelector('input')).toHaveProperty('disabled', false)
 	})
 })
