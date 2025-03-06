@@ -163,6 +163,24 @@ describe('errors', () => {
 		const { root, el } = setup()
 
 		root.render(html`<!-- ${'text'} -->`)
-		expect(el.innerHTML).toMatchInlineSnapshot(`"<!-- dyn-$0 -->"`)
+		expect(el.innerHTML).toMatchInlineSnapshot(`"<!-- dyn-$0$ -->"`)
+	})
+
+	it('throws when manually specifying internal template syntax', { skip: import.meta.env.PROD }, () => {
+		const { root, el } = setup()
+
+		expect(() => {
+			root.render(html`${1} dyn-$0$`)
+		}).toThrowErrorMatchingInlineSnapshot(`[Error: got more parts than expected]`)
+
+		expect(el.innerHTML).toMatchInlineSnapshot(`""`)
+	})
+
+	it('does not throw when syntax is close but not exact', () => {
+		const { root, el } = setup()
+
+		root.render(html`dyn-$${0}1$`)
+
+		expect(el.innerHTML).toMatchInlineSnapshot(`"dyn-$01$"`)
 	})
 })
