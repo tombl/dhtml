@@ -219,8 +219,8 @@ class TemplateInstance {
 	}
 }
 
-const DYNAMIC_WHOLE = /^dyn-\$(\d+)$/i
-const DYNAMIC_GLOBAL = /dyn-\$(\d+)/gi
+const DYNAMIC_WHOLE = /^dyn-\$(\d+)\$$/i
+const DYNAMIC_GLOBAL = /dyn-\$(\d+)\$/gi
 
 /** @type {Map<TemplateStringsArray, CompiledTemplate>} */
 const templates = new Map()
@@ -230,7 +230,7 @@ function compileTemplate(statics) {
 	if (cached) return cached
 
 	const templateElement = document.createElement('template')
-	templateElement.innerHTML = statics.reduce((a, v, i) => a + v + (i === statics.length - 1 ? '' : `dyn-$${i}`), '')
+	templateElement.innerHTML = statics.reduce((a, v, i) => a + v + (i === statics.length - 1 ? '' : `dyn-$${i}$`), '')
 
 	let nextPart = 0
 	/** @type {CompiledTemplate} */
