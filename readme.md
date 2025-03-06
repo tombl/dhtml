@@ -10,7 +10,7 @@ const app = {
 	render() {
 		return html`
 			<button
-				@click=${() => {
+				onclick=${() => {
 					this.i++
 					invalidate(this)
 				}}
