@@ -23,7 +23,7 @@ describe('custom elements', () => {
 	it('correctly instantiates custom elements', () => {
 		const { root, el } = setup()
 
-		root.render(html`<custom-element .thing=${'hello'}></custom-element>`)
+		root.render(html`<custom-element thing=${'hello'}></custom-element>`)
 		expect(el.innerHTML).toBe(`<custom-element>inside custom element</custom-element>`)
 
 		const customElement = el.querySelector('custom-element') as CustomElement

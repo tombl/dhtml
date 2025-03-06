@@ -22,7 +22,7 @@ const app = {
   render() {
     return html\`
       <button
-        @click=\${() => {
+        onclick=\${() => {
           this.i++
           invalidate(this)
         }}
@@ -44,7 +44,7 @@ createRoot(document.body).render(app)`
 							</header>
 							<pre>${codePre}<a href=${url}>${url}</a>${codePost}</pre>
 							<button
-								@click=${() => {
+								onclick=${() => {
 									this.i++
 									invalidate(this)
 								}}

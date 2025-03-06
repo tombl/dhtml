@@ -7,7 +7,7 @@ describe('attributes', () => {
 		const { root, el } = setup()
 
 		root.render(html`<h1 style=${'color: red'}>Hello, world!</h1>`)
-		expect(el.querySelector('h1')).toHaveAttribute('style', 'color: red')
+		expect(el.querySelector('h1')).toHaveAttribute('style', 'color: red;')
 	})
 
 	it('can toggle attributes', () => {
@@ -31,25 +31,18 @@ describe('attributes', () => {
 	it('supports property attributes', () => {
 		const { root, el } = setup()
 
-		root.render(html`<h1 .class-name=${'foo'}>Hello, world!</h1>`)
+		root.render(html`<h1 class-name=${'foo'}>Hello, world!</h1>`)
 		expect(el.querySelector('h1')).toHaveClass('foo')
-	})
-
-	it('throws on property attributes without dynamic values', { skip: import.meta.env.PROD }, () => {
-		const { root } = setup()
-
-		expect(() => {
-			root.render(html`<h1 .class-name="bar">This also</h1>`)
-		}).toThrowErrorMatchingInlineSnapshot(
-			`[Error: static properties are not supported, please wrap the value of .class-name in \${...}]`,
-		)
 	})
 
 	it('supports booleans', () => {
 		const { root, el } = setup()
 
 		root.render(html`<details open=${true}></details>`)
-		expect(el.querySelector('details')?.open).toBe(true)
+		expect(el.querySelector('details')!.open).toBe(true)
+
+		root.render(html`<details open=${false}></details>`)
+		expect(el.querySelector('details')!.open).toBe(false)
 	})
 
 	it('supports events', () => {
@@ -58,7 +51,7 @@ describe('attributes', () => {
 		let clicks = 0
 		root.render(html`
 			<button
-				@click=${() => {
+				onclick=${() => {
 					clicks++
 				}}
 			>
@@ -76,7 +69,7 @@ describe('attributes', () => {
 	it('supports event handlers that change', () => {
 		const { root, el } = setup()
 
-		const template = (handler: (() => void) | null) => html`<input @blur=${handler}>Click me</input>`
+		const template = (handler: (() => void) | null) => html`<input onblur=${handler}>Click me</input>`
 
 		const handler = vi.fn()
 		root.render(template(handler))

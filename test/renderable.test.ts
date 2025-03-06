@@ -484,7 +484,7 @@ describe('getParentNode', () => {
 				const parent = getParentNode(this)
 
 				expect(parent).toBeInstanceOf(HTMLDivElement)
-				expect((parent as HTMLDivElement).className).toBe('the-app')
+				expect((parent as HTMLDivElement).outerHTML).toMatchInlineSnapshot(`"<div class="the-app"><!----></div>"`)
 				expect(parent.parentNode).toBe(el)
 
 				return null

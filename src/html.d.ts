@@ -15,3 +15,5 @@ export interface Root {
 }
 
 export function createRoot(node: Node): Root
+
+export function attr(name: string): CustomPartConstructor<string | boolean | null | undefined>

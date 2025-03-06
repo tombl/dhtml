@@ -303,29 +303,13 @@ function compileTemplate(statics) {
 						DEV: assert(!DYNAMIC_GLOBAL.test(value), `expected a whole dynamic value for ${name}, got a partial one`)
 						patch(node, idx, () => new CustomPartStandalone(value))
 					}
-				} else if (name[0] === '@') {
-					// event:
-					toRemove.push(name)
-					match = DYNAMIC_WHOLE.exec(value)
-					name = name.slice(1)
-					assert(match, `expected a whole dynamic value for ${name}, got a partial one`)
-					patch(node, parseInt(match[1]), () => new EventPart(name))
-				} else if (name[0] === '.') {
-					// property:
-					toRemove.push(name)
-					match = DYNAMIC_WHOLE.exec(value)
-					if (match) {
-						name = name.slice(1).replace(/-./g, match => match[1].toUpperCase())
-						patch(node, parseInt(match[1]), () => new PropertyPart(name))
-					} else if (DEV) {
-						assert(!DYNAMIC_GLOBAL.test(value), `expected a whole dynamic value for ${name}, got a partial one`)
-						throw new Error(`static properties are not supported, please wrap the value of ${name} in \${...}`)
-					}
 				} else {
-					// attribute:
+					// properties:
 					match = DYNAMIC_WHOLE.exec(value)
 					if (match) {
-						patch(node, parseInt(match[1]), () => new AttributePart(name))
+						toRemove.push(name)
+						name = name.replace(/-./g, match => match[1].toUpperCase())
+						patch(node, parseInt(match[1]), () => new PropertyPart(name))
 					} else if (DEV) {
 						assert(!DYNAMIC_GLOBAL.test(value), `expected a whole dynamic value for ${name}, got a partial one`)
 					}
@@ -609,35 +593,6 @@ class ChildPart {
 }
 
 /** @implements {Part} */
-class EventPart {
-	#name
-	constructor(name) {
-		this.#name = name
-	}
-
-	#node
-	create(node, value) {
-		this.#node = node
-		this.update(value)
-	}
-
-	update(value) {
-		this.handleEvent = value
-		if (value === null) {
-			this.detach()
-		} else if (DEV && typeof value !== 'function') {
-			throw new Error(`Expected a function or null, got ${value}`)
-		} else {
-			this.#node.addEventListener(this.#name, this)
-		}
-	}
-
-	detach() {
-		this.#node.removeEventListener(this.#name, this)
-	}
-}
-
-/** @implements {Part} */
 class PropertyPart {
 	#name
 	constructor(name) {
@@ -656,30 +611,6 @@ class PropertyPart {
 
 	detach() {
 		delete this.#node[this.#name]
-	}
-}
-
-/** @implements {Part} */
-class AttributePart {
-	#name
-	constructor(name) {
-		this.#name = name
-	}
-
-	#node
-	create(node, value) {
-		this.#node = node
-		this.update(value)
-	}
-
-	update(value) {
-		if (typeof value === 'boolean') this.#node.toggleAttribute(this.#name, value)
-		else if (value === null) this.#node.removeAttribute(this.#name)
-		else this.#node.setAttribute(this.#name, value)
-	}
-
-	detach() {
-		this.#node.removeAttribute(this.#name)
 	}
 }
 

@@ -37,15 +37,15 @@ class TodoItem {
 					<input
 						class="toggle"
 						type="checkbox"
-						.checked=${this.completed}
-						@change=${e => {
+						checked=${this.completed}
+						onchange=${e => {
 							e.preventDefault()
 							this.completed = e.target.checked
 							invalidate(this.app)
 						}}
 					/>
 					<label
-						@dblclick=${() => {
+						ondblclick=${() => {
 							this.editing = true
 							invalidate(this)
 						}}
@@ -53,7 +53,7 @@ class TodoItem {
 					>
 					<button
 						class="destroy"
-						@click=${() => {
+						onclick=${() => {
 							this.app.remove(this.id)
 							invalidate(this.app)
 						}}
@@ -67,7 +67,7 @@ class TodoItem {
 									value=${this.title}
 									${autofocus}
 									${autoselect}
-									@blur=${e => {
+									onblur=${e => {
 										const value = e.target.value.trim()
 										if (value) {
 											this.title = value
@@ -75,7 +75,7 @@ class TodoItem {
 											invalidate(this)
 										}
 									}}
-									@keydown=${e => {
+									onkeydown=${e => {
 										if (e.key === 'Enter') {
 											const value = e.target.value.trim()
 											if (value) {
@@ -115,7 +115,7 @@ class App {
 					class="new-todo"
 					placeholder="What needs to be done?"
 					autofocus
-					@keydown=${event => {
+					onkeydown=${event => {
 						if (event.key === 'Enter') {
 							const value = event.target.value.trim()
 							if (value) {
@@ -135,8 +135,8 @@ class App {
 									class="toggle-all"
 									id="toggle-all"
 									type="checkbox"
-									.checked=${activeCount === 0}
-									@change=${e => {
+									checked=${activeCount === 0}
+									onchange=${e => {
 										for (const todo of this.todos) todo.completed = e.target.checked
 										invalidate(this)
 									}}
@@ -165,7 +165,7 @@ class App {
 											<a
 												href="#"
 												${classes}=${this.filter === filter && 'selected'}
-												@click=${() => {
+												onclick=${() => {
 													this.filter = filter
 													invalidate(this)
 												}}
