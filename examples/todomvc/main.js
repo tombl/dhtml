@@ -166,7 +166,17 @@ class App {
 										</li>`,
 								)}
 							</ul>
-							${completedCount > 0 ? html`<button class="clear-completed">Clear completed</button>` : null}
+							${completedCount > 0
+								? html`<button
+										class="clear-completed"
+										onclick=${() => {
+											this.todos = this.todos.filter(todo => !todo.completed)
+											invalidate(this)
+										}}
+									>
+										Clear completed
+									</button>`
+								: null}
 						</footer>
 					`
 				: null}
