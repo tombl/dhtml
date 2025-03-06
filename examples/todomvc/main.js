@@ -1,20 +1,10 @@
 import { createRoot, html, invalidate } from 'dhtml'
 
 function classes(node, value) {
-	let prev = new Set()
-	update(value)
-	return { update, detach: update }
-	function update(value = []) {
-		if (!Array.isArray(value)) value = [value]
-		const added = new Set(value.filter(Boolean).flatMap(x => x.split(' ')))
-		for (const name of added) {
-			prev.delete(name)
-			node.classList.add(name)
-		}
-		for (const name of prev) {
-			node.classList.remove(name)
-		}
-		prev = added
+	const values = value.filter(Boolean)
+	node.classList.add(...values)
+	return () => {
+		node.classList.remove(...values)
 	}
 }
 

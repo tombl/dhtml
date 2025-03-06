@@ -1,7 +1,7 @@
 /** @import {
+	Cleanup,
 	CompiledTemplate,
-	CustomPartConstructor,
-	CustomPartInstance,
+	CustomPart,
 	Displayable,
 	Key,
 	Part,
@@ -329,7 +329,7 @@ function compileTemplate(statics) {
   _mounted: boolean 
 	_invalidateQueued: Promise<void> | null
 	_invalidate: () => void
-	_unmountCallbacks: Set<void | (() => void)> | null
+	_unmountCallbacks: Set<Cleanup> | null
 	_parentNode: Node
 }>} */
 const controllers = new WeakMap()
@@ -343,7 +343,7 @@ export function invalidate(renderable) {
 	}))
 }
 
-/** @type {WeakMap<Renderable, Set<() => void | (() => void)>>} */
+/** @type {WeakMap<Renderable, Set<() => Cleanup>>} */
 const mountCallbacks = new WeakMap()
 
 export function onMount(renderable, callback) {
@@ -617,40 +617,24 @@ class PropertyPart {
 /** @implements {Part} */
 class CustomPartBase {
 	#node
-	/** @type {CustomPartInstance | undefined | null} */
-	#instance
-	/** @type {CustomPartConstructor | null | undefined} */
-	#prevClass
+	/** @type {Cleanup} */
+	#cleanup
 	// abstract _value
-	// abstract _class
-
-	#instantiate() {
-		this.#prevClass = this._class
-		this.#instance =
-			this._class == null
-				? null
-				: 'prototype' in this._class
-					? new this._class(this.#node, this._value)
-					: this._class(this.#node, this._value)
-	}
+	// abstract _fn
 
 	create(node) {
 		this.#node = node
-		this.#instantiate()
+		this.#cleanup = this._fn?.(this.#node, this._value)
 	}
 
 	update() {
-		if (this._class === this.#prevClass) {
-			this.#instance?.update?.(this._value)
-		} else {
-			this.#instance?.detach?.()
-			this.#instantiate()
-		}
+		this.#cleanup?.()
+		this.#cleanup = this._fn?.(this.#node, this._value)
 	}
 
 	detach() {
-		this.#instance?.detach?.()
-		this.#instance = this.#prevClass = this._value = this._class = null
+		this.#cleanup?.()
+		this.#cleanup = this._value = this._fn = null
 	}
 }
 
@@ -659,23 +643,23 @@ class CustomPartStandalone extends CustomPartBase {
 		super()
 		this._value = value
 	}
-	create(node, Class) {
-		this._class = Class
+	create(node, fn) {
+		this._fn = fn
 		super.create(node)
 	}
-	update(Class) {
-		this._class = Class
+	update(fn) {
+		this._fn = fn
 		super.update()
 	}
 }
 
 /** @implements {Part} */
 class CustomPartName {
-	create(_node, Class) {
-		this._class = Class
+	create(_node, fn) {
+		this._fn = fn
 	}
-	update(Class) {
-		this._class = Class
+	update(fn) {
+		this._fn = fn
 	}
 	detach() {}
 }
@@ -688,11 +672,11 @@ class CustomPartValue extends CustomPartBase {
 	}
 
 	// @ts-expect-error -- property in parent, accessor in subclass
-	get _class() {
-		return this.#namePart._class
+	get _fn() {
+		return this.#namePart._fn
 	}
-	set _class(Class) {
-		this.#namePart._class = Class
+	set _fn(fn) {
+		this.#namePart._fn = fn
 	}
 
 	create(node, value) {
@@ -707,14 +691,10 @@ class CustomPartValue extends CustomPartBase {
 
 export function attr(name) {
 	return (node, value) => {
-		update(value)
-		return { update, detach }
-		function update(value) {
-			if (typeof value === 'boolean') node.toggleAttribute(name, value)
-			else if (value == null) node.removeAttribute(name)
-			else node.setAttribute(name, value)
-		}
-		function detach() {
+		if (typeof value === 'boolean') node.toggleAttribute(name, value)
+		else if (value == null) node.removeAttribute(name)
+		else node.setAttribute(name, value)
+		return () => {
 			node.removeAttribute(name)
 		}
 	}
