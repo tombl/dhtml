@@ -1,7 +1,6 @@
 /** @import {
 	Cleanup,
 	CompiledTemplate,
-	CustomPart,
 	Displayable,
 	Key,
 	Part,
@@ -292,7 +291,7 @@ function compileTemplate(statics) {
 
 				let match = DYNAMIC_WHOLE.exec(name)
 				if (match !== null) {
-					// custom part:
+					// directive:
 					toRemove.push(name)
 					const idx = parseInt(match[1])
 					match = DYNAMIC_WHOLE.exec(value)

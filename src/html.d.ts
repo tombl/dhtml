@@ -1,6 +1,6 @@
-import type { BoundTemplateInstance, Cleanup, CustomPart, Displayable, Key, Renderable } from './types.ts'
+import type { BoundTemplateInstance, Cleanup, Directive, Displayable, Key, Renderable } from './types.ts'
 
-export { CustomPart, Displayable, Renderable }
+export { Directive, Displayable, Renderable }
 
 export function html(statics: TemplateStringsArray, ...dynamics: unknown[]): BoundTemplateInstance
 export function keyed<T extends Displayable & object>(value: T, key: Key): T
@@ -16,4 +16,4 @@ export interface Root {
 
 export function createRoot(node: Node): Root
 
-export function attr(name: string): CustomPart<string | boolean | null | undefined>
+export function attr(name: string): Directive<string | boolean | null | undefined>

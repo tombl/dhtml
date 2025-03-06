@@ -1,19 +1,19 @@
-import { attr, html, type CustomPart } from 'dhtml'
+import { attr, html, type Directive } from 'dhtml'
 import { describe, expect, it, vi } from 'vitest'
 import { setup } from './setup'
 
-describe('custom parts', () => {
+describe('directives', () => {
 	it('functions', () => {
 		const { root, el } = setup()
 
-		const redifier: CustomPart = node => {
+		const redifier: Directive = node => {
 			if (!(node instanceof HTMLElement)) throw new Error('expected HTMLElement')
 			node.style.color = 'red'
 			return () => {
 				node.style.color = ''
 			}
 		}
-		const flipper: CustomPart = node => {
+		const flipper: Directive = node => {
 			if (!(node instanceof HTMLElement)) throw new Error('expected HTMLElement')
 			node.style.transform = 'scaleX(-1)'
 			return () => {
@@ -21,7 +21,7 @@ describe('custom parts', () => {
 			}
 		}
 
-		const template = (Part: CustomPart | null) => html`<div ${Part}>Hello, world!</div>`
+		const template = (d: Directive | null) => html`<div ${d}>Hello, world!</div>`
 
 		root.render(template(redifier))
 		const div = el.firstChild as HTMLElement
@@ -40,7 +40,7 @@ describe('custom parts', () => {
 	it('functions with values', () => {
 		const { root, el } = setup()
 
-		const classes: CustomPart<string[]> = vi.fn((node, value) => {
+		const classes: Directive<string[]> = vi.fn((node, value) => {
 			const values = value.filter(Boolean)
 			node.classList.add(...values)
 			return () => {
