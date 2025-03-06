@@ -57,12 +57,12 @@ class Span {
 	}
 
 	_deleteContents() {
-		const marker = new Text()
-		this._parentNode.insertBefore(marker, this._start)
+		this._marker = new Text()
+		this._parentNode.insertBefore(this._marker, this._start)
 
 		for (const node of this) this._parentNode.removeChild(node)
 
-		this._start = this._end = marker
+		this._start = this._end = this._marker
 	}
 
 	/** @param {Node} node */
@@ -72,13 +72,12 @@ class Span {
 		this._parentNode.insertBefore(node, this._end.nextSibling)
 		this._end = end
 
-		if (isText(this._start) && this._start.data === '') {
-			const marker = this._start
-
+		if (this._start === this._marker) {
 			DEV: assert(this._start.nextSibling)
 			this._start = this._start.nextSibling
 
-			this._parentNode.removeChild(marker)
+			this._parentNode.removeChild(this._marker)
+			this._marker = null
 		}
 	}
 	*[Symbol.iterator]() {
@@ -92,13 +91,13 @@ class Span {
 		}
 	}
 	_extractContents() {
-		const marker = new Text()
-		this._parentNode.insertBefore(marker, this._start)
+		this._marker = new Text()
+		this._parentNode.insertBefore(this._marker, this._start)
 
 		const fragment = document.createDocumentFragment()
 		for (const node of this) fragment.appendChild(node)
 
-		this._start = this._end = marker
+		this._start = this._end = this._marker
 		return fragment
 	}
 }
