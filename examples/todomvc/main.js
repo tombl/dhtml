@@ -1,20 +1,12 @@
 import { createRoot, html, invalidate } from 'dhtml'
 
-function classes(node, value) {
-	let prev = new Set()
-	update(value)
-	return { update, detach: update }
-	function update(value = []) {
-		if (!Array.isArray(value)) value = [value]
-		const added = new Set(value.filter(Boolean).flatMap(x => x.split(' ')))
-		for (const name of added) {
-			prev.delete(name)
-			node.classList.add(name)
+function classes(...args) {
+	const classes = args.flatMap(a => (a ? a.split(' ') : []))
+	return node => {
+		node.classList.add(...classes)
+		return () => {
+			node.classList.remove(...classes)
 		}
-		for (const name of prev) {
-			node.classList.remove(name)
-		}
-		prev = added
 	}
 }
 
@@ -32,20 +24,20 @@ class TodoItem {
 
 	render() {
 		return html`
-			<li ${classes}=${[this.completed && 'completed', this.editing && 'editing']}>
+			<li ${classes(this.completed && 'completed', this.editing && 'editing')}>
 				<div class="view">
 					<input
 						class="toggle"
 						type="checkbox"
-						.checked=${this.completed}
-						@change=${e => {
+						checked=${this.completed}
+						onchange=${e => {
 							e.preventDefault()
 							this.completed = e.target.checked
 							invalidate(this.app)
 						}}
 					/>
 					<label
-						@dblclick=${() => {
+						ondblclick=${() => {
 							this.editing = true
 							invalidate(this)
 						}}
@@ -53,7 +45,7 @@ class TodoItem {
 					>
 					<button
 						class="destroy"
-						@click=${() => {
+						onclick=${() => {
 							this.app.remove(this.id)
 							invalidate(this.app)
 						}}
@@ -67,7 +59,7 @@ class TodoItem {
 									value=${this.title}
 									${autofocus}
 									${autoselect}
-									@blur=${e => {
+									onblur=${e => {
 										const value = e.target.value.trim()
 										if (value) {
 											this.title = value
@@ -75,7 +67,7 @@ class TodoItem {
 											invalidate(this)
 										}
 									}}
-									@keydown=${e => {
+									onkeydown=${e => {
 										if (e.key === 'Enter') {
 											const value = e.target.value.trim()
 											if (value) {
@@ -115,7 +107,7 @@ class App {
 					class="new-todo"
 					placeholder="What needs to be done?"
 					autofocus
-					@keydown=${event => {
+					onkeydown=${event => {
 						if (event.key === 'Enter') {
 							const value = event.target.value.trim()
 							if (value) {
@@ -135,8 +127,8 @@ class App {
 									class="toggle-all"
 									id="toggle-all"
 									type="checkbox"
-									.checked=${activeCount === 0}
-									@change=${e => {
+									checked=${activeCount === 0}
+									onchange=${e => {
 										for (const todo of this.todos) todo.completed = e.target.checked
 										invalidate(this)
 									}}
@@ -164,8 +156,8 @@ class App {
 										html`<li>
 											<a
 												href="#"
-												${classes}=${this.filter === filter && 'selected'}
-												@click=${() => {
+												${classes(this.filter === filter && 'selected')}
+												onclick=${() => {
 													this.filter = filter
 													invalidate(this)
 												}}

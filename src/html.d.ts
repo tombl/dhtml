@@ -1,11 +1,11 @@
-import type { BoundTemplateInstance, CustomPartConstructor, Displayable, Key, Renderable } from './types.ts'
+import type { BoundTemplateInstance, Cleanup, Directive, Displayable, Key, Renderable } from './types.ts'
 
-export { CustomPartConstructor as CustomPart, Displayable, Renderable }
+export { Directive, Displayable, Renderable }
 
 export function html(statics: TemplateStringsArray, ...dynamics: unknown[]): BoundTemplateInstance
 export function keyed<T extends Displayable & object>(value: T, key: Key): T
 export function invalidate(renderable: Renderable): Promise<void>
-export function onMount(renderable: Renderable, callback: () => void | (() => void)): void
+export function onMount(renderable: Renderable, callback: () => Cleanup): void
 export function onUnmount(renderable: Renderable, callback: () => void): void
 export function getParentNode(renderable: Renderable): Node
 
@@ -15,3 +15,5 @@ export interface Root {
 }
 
 export function createRoot(node: Node): Root
+
+export function attr(name: string, value: string | boolean | null | undefined): Directive

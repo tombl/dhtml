@@ -1,7 +1,7 @@
 /** @import {
+	Cleanup,
 	CompiledTemplate,
-	CustomPartConstructor,
-	CustomPartInstance,
+	Directive,
 	Displayable,
 	Key,
 	Part,
@@ -221,6 +221,7 @@ class TemplateInstance {
 
 const DYNAMIC_WHOLE = /^dyn-\$(\d+)\$$/i
 const DYNAMIC_GLOBAL = /dyn-\$(\d+)\$/gi
+const FORCE_ATTRIBUTES = /-|^class$|^for$/i
 
 /** @type {Map<TemplateStringsArray, CompiledTemplate>} */
 const templates = new Map()
@@ -292,40 +293,28 @@ function compileTemplate(statics) {
 
 				let match = DYNAMIC_WHOLE.exec(name)
 				if (match !== null) {
-					// custom part:
+					// directive:
 					toRemove.push(name)
-					const idx = parseInt(match[1])
-					match = DYNAMIC_WHOLE.exec(value)
-					if (match) {
-						patch(node, idx, () => new CustomPartName())
-						patch(node, parseInt(match[1]), prev => new CustomPartValue(prev))
-					} else {
-						DEV: assert(!DYNAMIC_GLOBAL.test(value), `expected a whole dynamic value for ${name}, got a partial one`)
-						patch(node, idx, () => new CustomPartStandalone(value))
-					}
-				} else if (name[0] === '@') {
-					// event:
-					toRemove.push(name)
-					match = DYNAMIC_WHOLE.exec(value)
-					name = name.slice(1)
-					assert(match, `expected a whole dynamic value for ${name}, got a partial one`)
-					patch(node, parseInt(match[1]), () => new EventPart(name))
-				} else if (name[0] === '.') {
-					// property:
-					toRemove.push(name)
-					match = DYNAMIC_WHOLE.exec(value)
-					if (match) {
-						name = name.slice(1).replace(/-./g, match => match[1].toUpperCase())
-						patch(node, parseInt(match[1]), () => new PropertyPart(name))
-					} else if (DEV) {
-						assert(!DYNAMIC_GLOBAL.test(value), `expected a whole dynamic value for ${name}, got a partial one`)
-						throw new Error(`static properties are not supported, please wrap the value of ${name} in \${...}`)
-					}
+					DEV: assert(value === '', `directives must not have values`)
+					patch(node, parseInt(match[1]), () => new DirectivePart())
 				} else {
-					// attribute:
+					// properties:
 					match = DYNAMIC_WHOLE.exec(value)
-					if (match) {
-						patch(node, parseInt(match[1]), () => new AttributePart(name))
+					if (match !== null) {
+						toRemove.push(name)
+						if (FORCE_ATTRIBUTES.test(name)) {
+							patch(node, parseInt(match[1]), () => new AttributePart(name))
+						} else {
+							if (!(name in node)) {
+								for (const property in node) {
+									if (property.toLowerCase() === name) {
+										name = property
+										break
+									}
+								}
+							}
+							patch(node, parseInt(match[1]), () => new PropertyPart(name))
+						}
 					} else if (DEV) {
 						assert(!DYNAMIC_GLOBAL.test(value), `expected a whole dynamic value for ${name}, got a partial one`)
 					}
@@ -345,7 +334,7 @@ function compileTemplate(statics) {
   _mounted: boolean 
 	_invalidateQueued: Promise<void> | null
 	_invalidate: () => void
-	_unmountCallbacks: Set<void | (() => void)> | null
+	_unmountCallbacks: Set<Cleanup> | null
 	_parentNode: Node
 }>} */
 const controllers = new WeakMap()
@@ -359,7 +348,7 @@ export function invalidate(renderable) {
 	}))
 }
 
-/** @type {WeakMap<Renderable, Set<() => void | (() => void)>>} */
+/** @type {WeakMap<Renderable, Set<() => Cleanup>>} */
 const mountCallbacks = new WeakMap()
 
 export function onMount(renderable, callback) {
@@ -609,35 +598,6 @@ class ChildPart {
 }
 
 /** @implements {Part} */
-class EventPart {
-	#name
-	constructor(name) {
-		this.#name = name
-	}
-
-	#node
-	create(node, value) {
-		this.#node = node
-		this.update(value)
-	}
-
-	update(value) {
-		this.handleEvent = value
-		if (value === null) {
-			this.detach()
-		} else if (DEV && typeof value !== 'function') {
-			throw new Error(`Expected a function or null, got ${value}`)
-		} else {
-			this.#node.addEventListener(this.#name, this)
-		}
-	}
-
-	detach() {
-		this.#node.removeEventListener(this.#name, this)
-	}
-}
-
-/** @implements {Part} */
 class PropertyPart {
 	#name
 	constructor(name) {
@@ -673,9 +633,7 @@ class AttributePart {
 	}
 
 	update(value) {
-		if (typeof value === 'boolean') this.#node.toggleAttribute(this.#name, value)
-		else if (value === null) this.#node.removeAttribute(this.#name)
-		else this.#node.setAttribute(this.#name, value)
+		this.#node.setAttribute(this.#name, value)
 	}
 
 	detach() {
@@ -684,92 +642,35 @@ class AttributePart {
 }
 
 /** @implements {Part} */
-class CustomPartBase {
+class DirectivePart {
 	#node
-	/** @type {CustomPartInstance | undefined | null} */
-	#instance
-	/** @type {CustomPartConstructor | null | undefined} */
-	#prevClass
-	// abstract _value
-	// abstract _class
+	/** @type {Cleanup} */
+	#cleanup
 
-	#instantiate() {
-		this.#prevClass = this._class
-		this.#instance =
-			this._class == null
-				? null
-				: 'prototype' in this._class
-					? new this._class(this.#node, this._value)
-					: this._class(this.#node, this._value)
-	}
-
-	create(node) {
+	create(node, fn) {
 		this.#node = node
-		this.#instantiate()
+		this.#cleanup = fn?.(this.#node)
 	}
 
-	update() {
-		if (this._class === this.#prevClass) {
-			this.#instance?.update?.(this._value)
-		} else {
-			this.#instance?.detach?.()
-			this.#instantiate()
-		}
+	update(fn) {
+		this.#cleanup?.()
+		this.#cleanup = fn?.(this.#node)
 	}
 
 	detach() {
-		this.#instance?.detach?.()
-		this.#instance = this.#prevClass = this._value = this._class = null
+		this.#cleanup?.()
+		this.#cleanup = null
 	}
 }
 
-class CustomPartStandalone extends CustomPartBase {
-	constructor(value) {
-		super()
-		this._value = value
-	}
-	create(node, Class) {
-		this._class = Class
-		super.create(node)
-	}
-	update(Class) {
-		this._class = Class
-		super.update()
-	}
-}
-
-/** @implements {Part} */
-class CustomPartName {
-	create(_node, Class) {
-		this._class = Class
-	}
-	update(Class) {
-		this._class = Class
-	}
-	detach() {}
-}
-
-class CustomPartValue extends CustomPartBase {
-	#namePart
-	constructor(namePart) {
-		super()
-		this.#namePart = namePart
-	}
-
-	// @ts-expect-error -- property in parent, accessor in subclass
-	get _class() {
-		return this.#namePart._class
-	}
-	set _class(Class) {
-		this.#namePart._class = Class
-	}
-
-	create(node, value) {
-		this._value = value
-		super.create(node)
-	}
-	update(value) {
-		this._value = value
-		super.update()
+/** @returns {Directive} */
+export function attr(name, value) {
+	return node => {
+		if (typeof value === 'boolean') node.toggleAttribute(name, value)
+		else if (value == null) node.removeAttribute(name)
+		else node.setAttribute(name, value)
+		return () => {
+			node.removeAttribute(name)
+		}
 	}
 }
