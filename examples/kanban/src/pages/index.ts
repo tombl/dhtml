@@ -1,16 +1,28 @@
-import { html } from 'dhtml'
-import { Counter } from '../counter'
+import { html, type Displayable } from 'dhtml'
+import type { App } from '../app'
 
 export default class IndexPage {
-	#counter = new Counter()
+  #boards
 
-	render() {
-		return html`
-			<p>home</p>
-			${this.#counter}
-			<p>
-				<a href="/greet/foo">greet foo</a>
-			</p>
-		`
-	}
+  constructor({ app }: { app: App }) {
+    this.#boards = app.db.createQuery(this, subscribe => {
+      subscribe('boards')
+      return app.db.getBoards()
+    })
+  }
+
+  render(): Displayable {
+    return html`
+      <h1>Boards</h1>
+      <ul>
+        ${this.#boards()?.map(
+          board => html`
+            <li>
+              <a href=${`/boards/${board.id}`}>${board.title}</a>
+            </li>
+          `,
+        )}
+      </ul>
+    `
+  }
 }

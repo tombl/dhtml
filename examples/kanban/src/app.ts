@@ -1,16 +1,27 @@
-import { html } from 'dhtml'
+import { html, onUnmount } from 'dhtml'
+import { Database } from './db'
 import { Router } from './router'
 
 export class App {
-	#router = new Router({
-		'/': () => import('./pages/index'),
-		'/greet/:name': () => import('./pages/greet'),
-	})
+  #router = new Router({
+    routes: { '/': () => import('./pages/index') },
+    context: { app: this },
+  })
+  db: Database
 
-	render() {
-		return html`
-			<h1>App</h1>
-			<main>${this.#router}</main>
-		`
-	}
+  constructor(db: Database) {
+    this.db = db
+    onUnmount(this, () => db.close())
+  }
+
+  static async create() {
+    const db = await Database.open('app')
+    return new App(db)
+  }
+
+  render() {
+    return html`
+      <main>${this.#router}</main>
+    `
+  }
 }

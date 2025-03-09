@@ -1,38 +1,54 @@
-import { createBrowserRouter, type RouterConfig } from '@tombl/router/browser'
+import { createBrowserRouter, type RouterConfig as BrowserRouterConfig } from '@tombl/router/browser'
 import type { Params } from '@tombl/router/matcher'
-import { invalidate, onMount, type Displayable, type Renderable } from 'dhtml'
+import { html, invalidate, onMount, type Displayable, type Renderable } from 'dhtml'
 
-interface Page<Path extends string> {
-	new (params: Params<Path>): Renderable
+interface PageClass<Path extends string, Context> {
+  new (ctx: Context, params: Params<Path>): Renderable
 }
 
-type PageHandler<Path extends string> = () => Promise<{ default: Page<Path> }>
+type PageHandler<Path extends string, Context> = () => Promise<{ default: PageClass<Path, Context> }>
 
-export class Router<Routes extends { [Path in keyof Routes & string]: PageHandler<Path> }> {
-	#page: Displayable
+interface RouterConfig<Context> {
+  routes: Record<string, PageHandler<string, Context>>
+  context: Context
+}
+interface RouterConfigP<Context, Routes extends { [Path in keyof Routes & string]: PageHandler<Path, Context> }>
+  extends RouterConfig<Context> {
+  routes: Routes
+}
 
-	constructor(routes: Routes) {
-		const routerConfig: RouterConfig['routes'] = {}
+export class Router<Context, Routes extends { [Path in keyof Routes & string]: PageHandler<Path, Context> }> {
+  #page: Displayable = html`loading...`
 
-		for (const [pathname, importPageModule] of Object.entries(routes as Record<string, PageHandler<string>>)) {
-			routerConfig[pathname] = async params => {
-				const module = await importPageModule()
-				this.#page = new module.default(params)
-				invalidate(this)
-			}
-		}
+  constructor(config: RouterConfigP<Context, Routes>) {
+    const routerConfig: BrowserRouterConfig['routes'] = {}
 
-		const router = createBrowserRouter({ routes: routerConfig })
+    for (const [pathname, importPageModule] of Object.entries((config as RouterConfig<Context>).routes)) {
+      routerConfig[pathname] = async params => {
+        const module = await importPageModule()
+        const page = new module.default(config.context, params)
+        this.#page = page
+        invalidate(this)
+      }
+    }
 
-		onMount(this, () => {
-			router.start()
-			return () => {
-				router.stop()
-			}
-		})
-	}
+    const router = createBrowserRouter({
+      routes: routerConfig,
+      notFound: pathname => {
+        this.#page = html`<p>not found: <code>${pathname}</code></p>`
+        invalidate(this)
+      },
+    })
 
-	render() {
-		return this.#page
-	}
+    onMount(this, () => {
+      router.start()
+      return () => {
+        router.stop()
+      }
+    })
+  }
+
+  render() {
+    return this.#page
+  }
 }
