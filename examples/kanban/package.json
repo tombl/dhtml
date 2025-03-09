@@ -14,6 +14,7 @@
 	"dependencies": {
 		"@tombl/router": "npm:@jsr/tombl__router@^0.1.2",
 		"dhtml": "file:../..",
-		"idb": "^8.0.2"
+		"idb": "^8.0.2",
+		"nanoid": "^5.1.3"
 	}
 }
