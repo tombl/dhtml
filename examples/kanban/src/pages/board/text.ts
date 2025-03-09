@@ -16,6 +16,7 @@ export function text({ value, onSubmit }: { value: string; onSubmit: (value: str
       }}
     >
       <input
+        style="background: none; border: none"
         type="text"
         name="title"
         ${attr('value', value)}

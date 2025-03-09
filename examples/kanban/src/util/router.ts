@@ -33,6 +33,7 @@ export class Router<Context, Routes extends { [Path in keyof Routes & string]: P
     for (const [pathname, importPageModule] of Object.entries((config as RouterConfig<Context>).routes)) {
       routes[pathname] = async params => {
         const module = await importPageModule()
+        document.documentElement.dataset.route = pathname
         const page =
           'prototype' in module.default
             ? new (module.default as PageClass<string, Context>)(config.context, params)
@@ -44,6 +45,7 @@ export class Router<Context, Routes extends { [Path in keyof Routes & string]: P
     this.#router = createBrowserRouter({
       routes,
       notFound: pathname => {
+        document.documentElement.dataset.route = 'not-found'
         this.#page = html`<p>not found: <code>${pathname}</code></p>`
       },
     })

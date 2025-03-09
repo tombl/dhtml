@@ -37,8 +37,8 @@ export class Board {
           onSubmit: name => db.boards.updateName(this.#app, this.id, name),
         })}
       </h1>
-      <ul>
-        ${this.#columns().map(column => html`<li>${column}</li>`)}
+      <ul class="columns">
+        ${this.#columns()}
         <li>
           <button
             onclick=${() => {

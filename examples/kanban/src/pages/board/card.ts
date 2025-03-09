@@ -19,13 +19,18 @@ export class Card {
   render() {
     const card = this.#card()
     return html`
-      <div>
-        <button onclick=${() => db.cards.remove(this.#app, this.id)}>x</button>
+      <li class="card">
         ${text({
           value: card.title,
-          onSubmit: name => db.cards.updateTitle(this.#app, this.id, name),
+          onSubmit: name => {
+            if (name.trim() === '') {
+              db.cards.remove(this.#app, this.id)
+            } else {
+              db.cards.updateTitle(this.#app, this.id, name)
+            }
+          },
         })}
-      </div>
+      </li>
     `
   }
 }

@@ -31,18 +31,23 @@ export class Column {
 
   render() {
     return html`
-      <h2>
-        ${text({
-          value: this.#column().name,
-          onSubmit: name => db.columns.updateName(this.#app, this.id, name),
-        })}
-      </h2>
-      <ul>
-        ${this.#cards().map(card => html`<li>${card}</li>`)}
-        <li>
+      <li class="column">
+        <header>
+          <h2>
+            ${text({
+              value: this.#column().name,
+              onSubmit: name => db.columns.updateName(this.#app, this.id, name),
+            })}
+          </h2>
+          <button onclick=${() => db.columns.remove(this.#app, this.id)}>×</button>
+        </header>
+        <ul class="cards">
+          ${this.#cards()}
+        </ul>
+        <footer>
           <button onclick=${() => db.cards.create(this.#app, this.id, 'Card')}>+</button>
-        </li>
-      </ul>
+        </footer>
+      </li>
     `
   }
 }

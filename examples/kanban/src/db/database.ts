@@ -5,7 +5,7 @@ export let unwrap: (database: Database) => SQLocal
 export class Database {
   #db: SQLocal
   constructor() {
-    this.#db = new SQLocal(':memory:')
+    this.#db = new SQLocal('db')
     this.#migrate()
   }
 
@@ -15,13 +15,13 @@ export class Database {
 
   async #migrate() {
     this.#db.sql`
-      create table boards (
+      create table if not exists boards (
         id integer primary key autoincrement,
         name text not null,
         created_at datetime default current_timestamp
       );
 
-      create table columns (
+      create table if not exists columns (
         id integer primary key autoincrement,
         board_id integer not null,
         name text not null,
@@ -30,7 +30,7 @@ export class Database {
         foreign key (board_id) references boards(id) on delete cascade
       );
 
-      create table cards (
+      create table if not exists cards (
         id integer primary key autoincrement,
         column_id integer not null,
         title text not null,
@@ -39,19 +39,6 @@ export class Database {
         created_at datetime default current_timestamp,
         foreign key (column_id) references columns(id) on delete cascade
       );
-
-      insert into boards (id, name) values (1, 'The Board');
-
-      insert into columns (board_id, name, position)
-      values (1, 'Todo', 0),
-             (1, 'In Progress', 1),
-             (1, 'Done', 2);
-
-      insert into cards (column_id, title, position)
-      values (1, 'Card 1', 0),
-             (1, 'Card 2', 1),
-             (2, 'Card 3', 0),
-             (3, 'Card 4', 0);
 
     `
   }

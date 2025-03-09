@@ -1,1 +1,115 @@
 @import '../../../reset.css';
+
+:root {
+  --hue: 180;
+  --lightness: 95%;
+
+  --bg-0: hsl(var(--hue), 25%, 90%);
+  --bg-1: hsl(var(--hue), 25%, 85%);
+  --bg-2: hsl(var(--hue), 25%, 50%);
+
+  --fg-0: hsla(var(--hue), 100%, 15%, 20%);
+  --fg-1: hsla(var(--hue), 100%, 10%, 20%);
+  --fg-2: hsla(var(--hue), 100%, 5%, 20%);
+
+  @media (prefers-color-scheme: dark) {
+    --bg-0: hsl(var(--hue), 25%, 15%);
+    --bg-1: hsl(var(--hue), 25%, 10%);
+    --bg-2: hsl(var(--hue), 25%, 5%);
+
+    --fg-0: hsla(var(--hue), 100%, 90%, 20%);
+    --fg-1: hsla(var(--hue), 100%, 85%, 20%);
+    --fg-2: hsla(var(--hue), 100%, 50%, 20%);
+  }
+}
+
+body {
+  background-color: var(--bg-2);
+}
+
+main {
+  padding: 1rem;
+}
+
+h1,
+h2,
+h3 {
+  font-weight: normal;
+  font-size: 1rem;
+}
+
+input,
+textarea,
+button {
+  background-color: var(--bg-1);
+  border: 2px solid var(--bg-2);
+  border-radius: 4px;
+}
+
+[data-route='/boards'] {
+}
+
+[data-route='/boards/:id'] {
+  h1 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .columns {
+    display: flex;
+    gap: 1rem;
+    flex-direction: row;
+    list-style-type: none;
+    padding: 0;
+    align-items: flex-start;
+
+    .column {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      background-color: var(--bg-1);
+      border-radius: 1rem;
+      padding: 0.5rem;
+      box-shadow: 0 1px 2px var(--fg-1);
+      border: 1px solid var(--fg-1);
+
+      header {
+        padding: 0.25rem;
+        display: flex;
+        button {
+          border: none;
+        }
+      }
+
+      .cards {
+        display: flex;
+        flex-direction: column;
+        list-style-type: none;
+        gap: 0.2rem;
+        padding: 0;
+
+        .card {
+          background-color: var(--bg-0);
+          border-radius: 0.5rem;
+          box-shadow: 0 1px 2px var(--fg-1);
+          border: 1px solid var(--fg-1);
+
+          input {
+            padding: 0.5rem;
+            width: 100%;
+          }
+        }
+      }
+
+      footer {
+        display: flex;
+        button {
+          flex: 1;
+          border: none;
+          border-radius: 0.5rem;
+          padding: 0.5rem;
+        }
+      }
+    }
+  }
+}
