@@ -1,22 +1,19 @@
-import { html, type Displayable } from 'dhtml'
-import { nanoid } from 'nanoid'
-import type { App } from '../app'
+import { html } from 'dhtml'
+import type { App, PageContext } from '~/app'
+import * as db from '~/db'
+import { type Query, createSubscribedQuery } from '~/util/query'
 
-export default class IndexPage {
-  #boards
+export default class Page {
   #app: App
+  #boards: Query<db.Board[]>
 
-  constructor({ app }: { app: App }) {
+  constructor({ app }: PageContext) {
     this.#app = app
-    this.#boards = app.db.createQuery(
-      this,
-      () => ['boards'],
-      () => app.db.boards.getAll(),
-    )
+    this.#boards = createSubscribedQuery(this, app.bus, 'boards', () => db.boards.list(app))
   }
 
-  render(): Displayable {
-    const boards = this.#boards() || []
+  render() {
+    const boards = this.#boards()
 
     return html`
       <div>
@@ -28,16 +25,13 @@ export default class IndexPage {
             const form = e.currentTarget as HTMLFormElement
             const formData = new FormData(form)
 
-            await this.#app.db.boards.add({
-              id: nanoid(),
-              title: String(formData.get('title')).trim(),
-              createdAt: Date.now(),
-            })
+            const name = String(formData.get('name'))
+            await db.boards.create(this.#app, name)
 
             form.reset()
           }}
         >
-          <input type="text" name="title" placeholder="Enter board title" required />
+          <input type="text" name="name" placeholder="Enter board name" required />
           <button type="submit">Create Board</button>
         </form>
 
@@ -48,10 +42,10 @@ export default class IndexPage {
                 ${boards.map(
                   board => html`
                     <li>
-                      <a href=${`/boards/${board.id}`}>${board.title}</a>
+                      <a href=${`/boards/${board.id}`}>${board.name}</a>
                       <button
                         onclick=${() => {
-                          this.#app.db.boards.delete(board.id)
+                          db.boards.remove(this.#app, board.id)
                         }}
                       >
                         Delete

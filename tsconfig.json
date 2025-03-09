@@ -11,5 +11,5 @@
 		"allowUnusedLabels": true, // esbuild drops DEV labeled code in the prod build
 		"moduleResolution": "bundler"
 	},
-	"include": ["src", "examples"]
+	"include": ["src"]
 }
