@@ -4,7 +4,8 @@ import {
   type RouterConfig as BrowserRouterConfig,
 } from '@tombl/router/browser'
 import type { Params } from '@tombl/router/matcher'
-import { html, invalidate, onMount, type Displayable } from 'dhtml'
+import { html, onMount, type Displayable } from 'dhtml'
+import { state } from './decorators'
 
 type PageClass<Path extends string, Context> = new (ctx: Context, params: Params<Path>) => Displayable
 type PageFunction<Path extends string, Context> = (ctx: Context, params: Params<Path>) => Displayable
@@ -23,7 +24,7 @@ interface RouterConfigP<Context, Routes extends { [Path in keyof Routes & string
 }
 
 export class Router<Context, Routes extends { [Path in keyof Routes & string]: PageHandler<Path, Context> }> {
-  #page: Displayable
+  @state accessor #page: Displayable
   #router: BrowserRouter
 
   constructor(config: RouterConfigP<Context, Routes>) {
@@ -37,7 +38,6 @@ export class Router<Context, Routes extends { [Path in keyof Routes & string]: P
             ? new (module.default as PageClass<string, Context>)(config.context, params)
             : (module.default as PageFunction<string, Context>)(config.context, params)
         this.#page = page
-        invalidate(this)
       }
     }
 
@@ -45,7 +45,6 @@ export class Router<Context, Routes extends { [Path in keyof Routes & string]: P
       routes,
       notFound: pathname => {
         this.#page = html`<p>not found: <code>${pathname}</code></p>`
-        invalidate(this)
       },
     })
 

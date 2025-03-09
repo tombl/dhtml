@@ -5,6 +5,7 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['sqlocal'],
   },
+  esbuild: { target: 'es2024' },
   worker: { format: 'es' },
   plugins: [
     tsconfigPaths(),
