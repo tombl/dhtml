@@ -3,7 +3,7 @@ import { html, attr } from 'dhtml'
 export function text({ value, onSubmit }: { value: string; onSubmit: (value: string) => void }) {
   return html`
     <form
-      style="display: inline"
+      style="display: contents"
       onsubmit=${(e: SubmitEvent) => {
         e.preventDefault()
         const form = e.currentTarget as HTMLFormElement
@@ -20,9 +20,16 @@ export function text({ value, onSubmit }: { value: string; onSubmit: (value: str
         type="text"
         name="title"
         ${attr('value', value)}
-        onblur=${(e: FocusEvent) => {
+        onblur=${async (e: FocusEvent) => {
           const input = e.target as HTMLInputElement
-          input.form!.requestSubmit()
+
+          // wait a tick to let the parent be removed
+          await Promise.resolve()
+
+          // don't submit if the blur is because we're removing the card
+            if (input.isConnected) {
+              input.form!.requestSubmit()
+            }
         }}
       />
     </form>

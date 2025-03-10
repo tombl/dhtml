@@ -1,4 +1,4 @@
-export type ID = number
+export type ID = number & { __id: never }
 
 export interface Board {
   id: ID

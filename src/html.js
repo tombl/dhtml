@@ -462,12 +462,11 @@ class ChildPart {
 
 			try {
 				value = renderable.render()
-			} catch (error) {
-				if (error instanceof Promise) {
-					error.finally(() => invalidate(renderable))
-					value = null
+			} catch (thrown) {
+				if (thrown instanceof BoundTemplateInstance) {
+					value = thrown
 				} else {
-					throw error
+					throw thrown
 				}
 			}
 

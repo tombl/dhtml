@@ -1,19 +1,23 @@
+import { html, invalidate, type Renderable } from 'dhtml'
+
 const results = new WeakMap<
   Promise<unknown>,
   { state: 'attached' } | { state: 'resolved'; value: unknown } | { state: 'rejected'; error: unknown }
 >()
 
-export function suspend<T>(promise: Promise<T>): T {
+export function suspend<T>(renderable: Renderable, promise: Promise<T>): T {
   const result = results.get(promise)
   switch (result?.state) {
     case undefined:
       results.set(promise, { state: 'attached' })
-      throw promise.then(
-        value => results.set(promise, { state: 'resolved', value }),
-        error => results.set(promise, { state: 'rejected', error }),
-      )
+      promise
+        .then(
+          value => results.set(promise, { state: 'resolved', value }),
+          error => results.set(promise, { state: 'rejected', error }),
+        )
+        .then(() => invalidate(renderable))
     case 'attached':
-      throw promise
+      throw html`loading...`
     case 'resolved':
       return result.value as T
     case 'rejected':

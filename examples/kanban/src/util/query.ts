@@ -20,7 +20,7 @@ export function createQuery<T>(renderable: Renderable, fn: QueryFn<T>): Query<T>
   }
 
   function query() {
-    return suspend(promise)
+    return suspend(renderable, promise)
   }
 
   query.revalidate = () => {
