@@ -2,6 +2,10 @@
 	"name": "dhtml",
 	"type": "module",
 	"main": "src/html.js",
+	"exports": {
+		".": "./src/html.js",
+		"./server": "./src"
+	},
 	"scripts": {
 		"build": "./build.sh",
 		"format": "prettier --write . --cache",
@@ -29,5 +33,8 @@
 		"singleQuote": true,
 		"trailingComma": "all",
 		"useTabs": true
+	},
+	"dependencies": {
+		"htmlparser2": "^10.0.0"
 	}
 }
