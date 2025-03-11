@@ -33,25 +33,27 @@ export function insert_node(span: Span, node: Node): void {
 	}
 }
 
-function extract_contents(span: Span): DocumentFragment {
+export function swap_contents(span: Span, other: Span): void {
+	other._marker = new Text()
+	other._parent.insertBefore(other._marker, other._start)
 	span._marker = new Text()
 	span._parent.insertBefore(span._marker, span._start)
 
-	const fragment = document.createDocumentFragment()
+	const tmp = document.createDocumentFragment()
+
+	for (let node = other._start, next; (next = node.nextSibling); node = next) {
+		tmp.appendChild(node)
+		if (node === other._end) break
+	}
+	other._start = other._end = other._marker
 
 	for (let node = span._start, next; (next = node.nextSibling); node = next) {
-		fragment.appendChild(node)
+		insert_node(other, node)
 		if (node === span._end) break
 	}
-
 	span._start = span._end = span._marker
-	return fragment
-}
 
-export function swap_contents(span: Span, other: Span): void {
-	const content = extract_contents(span)
-	insert_node(span, extract_contents(other))
-	insert_node(other, content)
+	insert_node(span, tmp)
 }
 
 export function delete_contents(span: Span): void {
