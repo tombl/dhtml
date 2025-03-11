@@ -90,21 +90,21 @@ class Span {
 			node = next
 		}
 	}
-	_extractContents() {
+	/** @param {Span} other  */
+	_swapContent(other) {
+		other._marker = new Text()
+		other._parentNode.insertBefore(other._marker, other._start)
 		this._marker = new Text()
 		this._parentNode.insertBefore(this._marker, this._start)
 
-		const fragment = document.createDocumentFragment()
-		for (const node of this) fragment.appendChild(node)
+		const tmp = document.createDocumentFragment()
 
+		for (const node of other) tmp.appendChild(node)
+		other._start = other._end = other._marker
+		for (const node of this) other._insertNode(node)
 		this._start = this._end = this._marker
-		return fragment
-	}
-	/** @param {Span} other  */
-	_swap(other) {
-		const content = this._extractContents()
-		this._insertNode(other._extractContents())
-		other._insertNode(content)
+
+		this._insertNode(tmp)
 	}
 }
 
@@ -514,7 +514,7 @@ class ChildPart {
 						const root2 = this.#roots[j]
 
 						// swap the contents of the spans
-						root1._span._swap(root2._span)
+						root1._span._swapContent(root2._span)
 
 						// swap the spans back
 						const tmpSpan = root1._span
