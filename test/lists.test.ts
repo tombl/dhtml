@@ -331,7 +331,7 @@ describe('list reordering', () => {
 	})
 })
 
-describe('list with keys', () => {
+describe('list with keys', { skip: import.meta.env.PROD }, () => {
 	it("can't key something twice", () => {
 		expect(() => keyed(html``, 1)).not.toThrow()
 		expect(() => keyed(keyed(html``, 1), 1)).toThrow()
