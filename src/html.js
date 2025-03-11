@@ -100,6 +100,12 @@ class Span {
 		this._start = this._end = this._marker
 		return fragment
 	}
+	/** @param {Span} other  */
+	_swap(other) {
+		const content = this._extractContents()
+		this._insertNode(other._extractContents())
+		other._insertNode(content)
+	}
 }
 
 /* v8 ignore start */
@@ -508,9 +514,7 @@ class ChildPart {
 						const root2 = this.#roots[j]
 
 						// swap the contents of the spans
-						const tmpContent = root1._span._extractContents()
-						root1._span._insertNode(root2._span._extractContents())
-						root2._span._insertNode(tmpContent)
+						root1._span._swap(root2._span)
 
 						// swap the spans back
 						const tmpSpan = root1._span
