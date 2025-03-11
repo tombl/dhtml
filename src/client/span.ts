@@ -33,7 +33,7 @@ export function insert_node(span: Span, node: Node): void {
 	}
 }
 
-export function extract_contents(span: Span): DocumentFragment {
+function extract_contents(span: Span): DocumentFragment {
 	span._marker = new Text()
 	span._parent.insertBefore(span._marker, span._start)
 
@@ -46,6 +46,12 @@ export function extract_contents(span: Span): DocumentFragment {
 
 	span._start = span._end = span._marker
 	return fragment
+}
+
+export function swap_contents(span: Span, other: Span): void {
+	const content = extract_contents(span)
+	insert_node(span, extract_contents(other))
+	insert_node(other, content)
 }
 
 export function delete_contents(span: Span): void {
