@@ -10,7 +10,7 @@ import {
 } from '../shared.ts'
 import { get_controller, get_key } from './controller.ts'
 import { create_root, create_root_after, type Root } from './root.ts'
-import { create_span, delete_contents, extract_contents, insert_node, type Span } from './span.ts'
+import { create_span, delete_contents, swap_contents, insert_node, type Span } from './span.ts'
 import type { Cleanup } from './util.ts'
 
 export type Part = (value: unknown) => void
@@ -126,9 +126,7 @@ export function create_child_part(parent_node: Node | Span, parent_span: Span, c
 						const root2 = roots[j]
 
 						// swap the contents of the spans
-						const tmp_content = extract_contents(root1._span)
-						insert_node(root1._span, extract_contents(root2._span))
-						insert_node(root2._span, tmp_content)
+						swap_contents(root1._span, root2._span)
 
 						// swap the spans back
 						const tmp_span = root1._span
