@@ -460,7 +460,15 @@ class ChildPart {
 					_parentNode: this.#span._parentNode,
 				})
 
-			value = renderable.render()
+			try {
+				value = renderable.render()
+			} catch (thrown) {
+				if (thrown instanceof BoundTemplateInstance) {
+					value = thrown
+				} else {
+					throw thrown
+				}
+			}
 
 			// if render returned another renderable, we want to track/cache both renderables individually.
 			// wrap it in a nested ChildPart so that each can be tracked without ChildPart having to handle multiple renderables.
