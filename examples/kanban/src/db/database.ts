@@ -3,18 +3,18 @@ import { SQLocal } from 'sqlocal'
 export let unwrap: (database: Database) => SQLocal
 
 export class Database {
-  #db: SQLocal
-  constructor() {
-    this.#db = new SQLocal('db')
-    this.#migrate()
-  }
+	#db: SQLocal
+	constructor() {
+		this.#db = new SQLocal('db')
+		this.#migrate()
+	}
 
-  static {
-    unwrap = database => database.#db
-  }
+	static {
+		unwrap = database => database.#db
+	}
 
-  async #migrate() {
-    this.#db.sql`
+	async #migrate() {
+		this.#db.sql`
       create table if not exists boards (
         id integer primary key autoincrement,
         name text not null,
@@ -41,9 +41,9 @@ export class Database {
       );
 
     `
-  }
+	}
 
-  async close() {
-    await this.#db.destroy()
-  }
+	async close() {
+		await this.#db.destroy()
+	}
 }
