@@ -185,7 +185,7 @@ function compileTemplate(statics: TemplateStringsArray): CompiledTemplate {
 		parts: [],
 	}
 
-	compiled.statics.push(html.slice(0, parts[0].start))
+	compiled.statics.push(html.slice(0, parts[0]?.start))
 
 	for (let i = 0; i < parts.length; i++) {
 		const part = parts[i]
@@ -249,7 +249,7 @@ export function renderToReadableStream(value: Displayable) {
 		<script>
 			;<span>z</span>
 		</script>
-		${html`embedded${'a'}z`}
+		${html`embedded`}
 	`
 	const stream = renderToReadableStream(displayable).pipeThrough(new TextEncoderStream())
 
