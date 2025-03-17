@@ -201,39 +201,34 @@ function escape(str: unknown) {
 	return String(str).replace(ESCAPE_RE, c => ESCAPE_SUBSTITUTIONS[c])
 }
 
-export function renderToString(value: Displayable) {
+function* renderToIterable(value: Displayable) {
 	const { template, dynamics } = value instanceof BoundTemplateInstance ? value : singlePartTemplate(value)
-	let str = ''
 
 	for (let i = 0; i < template.statics.length - 1; i++) {
-		str += template.statics[i]
-		str += template.parts[i](dynamics)
+		yield template.statics[i]
+		yield template.parts[i](dynamics)
 	}
-	str += template.statics[template.statics.length - 1]
+	yield template.statics[template.statics.length - 1]
+}
 
+export function renderToString(value: Displayable) {
+	let str = ''
+	for (const part of renderToIterable(value)) str += part
 	return str
 }
 
 export function renderToReadableStream(value: Displayable) {
-	const { readable, writable } = new TextEncoderStream()
-	const writer = writable.getWriter()
-
-	const { template, dynamics } = value instanceof BoundTemplateInstance ? value : singlePartTemplate(value)
-
-	;(async () => {
-		try {
-			for (let i = 0; i < template.statics.length - 1; i++) {
-				await writer.write(template.statics[i])
-				await writer.write(template.parts[i](dynamics))
+	const iter = renderToIterable(value)[Symbol.iterator]()
+	return new ReadableStream({
+		pull(controller) {
+			const { done, value } = iter.next()
+			if (done) {
+				controller.close()
+				return
 			}
-			await writer.write(template.statics[template.statics.length - 1])
-			await writer.close()
-		} catch (error) {
-			await writer.abort(error)
-		}
-	})()
-
-	return readable
+			controller.enqueue(value)
+		},
+	})
 }
 
 {
@@ -246,7 +241,7 @@ export function renderToReadableStream(value: Displayable) {
 			;<span>z</span>
 		</script>
 	`
-	const stream = renderToReadableStream(displayable)
+	const stream = renderToReadableStream(displayable).pipeThrough(new TextEncoderStream())
 
 	new Response(stream).text().then(rendered => {
 		console.log(rendered)
