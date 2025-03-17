@@ -21,9 +21,11 @@ function assert(value: unknown, message = 'assertion failed'): asserts value {
 }
 /* v8 ignore stop */
 
+type PartRenderer = (values: unknown[]) => string | Generator<string, void, void>
+
 interface CompiledTemplate {
 	statics: string[]
-	parts: Array<(values: unknown[]) => string>
+	parts: PartRenderer[]
 }
 
 class BoundTemplateInstance {
@@ -51,7 +53,11 @@ function compileTemplate(statics: TemplateStringsArray): CompiledTemplate {
 	if (cached) return cached
 
 	const html = statics.reduce((a, v, i) => a + v + (i === statics.length - 1 ? '' : `dyn-$${i}$`), '')
-	const parts: { start: number; end: number; render: (values: unknown[]) => string }[] = []
+	const parts: {
+		start: number
+		end: number
+		render: PartRenderer
+	}[] = []
 	let attribname: [start: number, end: number] | null = null
 	function noop() {}
 
@@ -128,10 +134,13 @@ function compileTemplate(statics: TemplateStringsArray): CompiledTemplate {
 					parts.push({
 						start: start + match.index,
 						end: start + match.index + match[0].length,
-						render: values => {
+						*render(values) {
 							const value = values[idx]
-							if (value === null) return ''
-							return escape(value)
+							if (value instanceof BoundTemplateInstance) {
+								yield* renderToIterable(value)
+							} else if (value !== null) {
+								yield escape(value)
+							}
 						},
 					})
 				}
@@ -206,7 +215,7 @@ function* renderToIterable(value: Displayable) {
 
 	for (let i = 0; i < template.statics.length - 1; i++) {
 		yield template.statics[i]
-		yield template.parts[i](dynamics)
+		yield* template.parts[i](dynamics)
 	}
 	yield template.statics[template.statics.length - 1]
 }
@@ -240,6 +249,7 @@ export function renderToReadableStream(value: Displayable) {
 		<script>
 			;<span>z</span>
 		</script>
+		${html`embedded${'a'}z`}
 	`
 	const stream = renderToReadableStream(displayable).pipeThrough(new TextEncoderStream())
 
