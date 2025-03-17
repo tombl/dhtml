@@ -135,7 +135,10 @@ function compileTemplate(statics: TemplateStringsArray): CompiledTemplate {
 						start: start + match.index,
 						end: start + match.index + match[0].length,
 						*render(values) {
-							const value = values[idx]
+							let value = values[idx]
+
+							while (isRenderable(value)) value = value.render()
+
 							if (isIterable(value)) {
 								for (const item of value) yield* renderToIterable(item as Displayable)
 							} else if (value instanceof BoundTemplateInstance) {
@@ -251,9 +254,11 @@ export function renderToReadableStream(value: Displayable) {
 		<script>
 			;<span>z</span>
 		</script>
-		<div>
-			${[1, 2, 3]}
-		</div>
+		${{
+			render() {
+				return html`<div>${[1, 2, 3]}</div>`
+			},
+		}}
 	`
 	const stream = renderToReadableStream(displayable).pipeThrough(new TextEncoderStream())
 
