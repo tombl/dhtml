@@ -129,7 +129,7 @@ function compileTemplate(statics: TemplateStringsArray): CompiledTemplate {
 			ontext(start, end) {
 				const value = html.slice(start, end)
 
-				for (const match of [...value.matchAll(DYNAMIC_GLOBAL)].reverse()) {
+				for (const match of [...value.matchAll(DYNAMIC_GLOBAL)]) {
 					const idx = parseInt(match[1])
 					parts.push({
 						start: start + match.index,
@@ -164,7 +164,7 @@ function compileTemplate(statics: TemplateStringsArray): CompiledTemplate {
 			oncomment(start, end) {
 				const value = html.slice(start, end)
 
-				for (const match of [...value.matchAll(DYNAMIC_GLOBAL)].reverse()) {
+				for (const match of [...value.matchAll(DYNAMIC_GLOBAL)]) {
 					const idx = parseInt(match[1])
 					parts.push({
 						start: start + match.index,
@@ -259,7 +259,9 @@ export function renderToReadableStream(value: Displayable) {
 				return html`<div>${[1, 2, 3]}</div>`
 			},
 		}}
+		${html`[${'A'}|${'B'}]`}
 	`
+
 	const stream = renderToReadableStream(displayable).pipeThrough(new TextEncoderStream())
 
 	new Response(stream).text().then(rendered => {
