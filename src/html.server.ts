@@ -22,8 +22,8 @@ function assert(value: unknown, message = 'assertion failed'): asserts value {
 /* v8 ignore stop */
 
 interface CompiledTemplate {
-	html: string
-	parts: [start: number, end: number, part: (values: unknown[]) => string][]
+	statics: string[]
+	parts: Array<(values: unknown[]) => string>
 }
 
 class BoundTemplateInstance {
@@ -50,11 +50,8 @@ function compileTemplate(statics: TemplateStringsArray): CompiledTemplate {
 	const cached = templates.get(statics)
 	if (cached) return cached
 
-	let nextPart = 0
-	const compiled: CompiledTemplate = {
-		html: statics.reduce((a, v, i) => a + v + (i === statics.length - 1 ? '' : `dyn-$${i}$`), ''),
-		parts: [],
-	}
+	const html = statics.reduce((a, v, i) => a + v + (i === statics.length - 1 ? '' : `dyn-$${i}$`), '')
+	const parts: { start: number; end: number; render: (values: unknown[]) => string }[] = []
 	let attribname: [start: number, end: number] | null = null
 	function noop() {}
 
@@ -62,14 +59,14 @@ function compileTemplate(statics: TemplateStringsArray): CompiledTemplate {
 		{},
 		{
 			onattribname(start, end) {
-				const name = compiled.html.slice(start, end)
+				const name = html.slice(start, end)
 				const match = name.match(DYNAMIC_WHOLE)
 				if (match) {
 					const idx = parseInt(match[1])
-					compiled.parts.push([
+					parts.push({
 						start,
 						end,
-						values => {
+						render: values => {
 							const value = values[idx]
 							if (value === null) return ''
 
@@ -78,7 +75,7 @@ function compileTemplate(statics: TemplateStringsArray): CompiledTemplate {
 
 							return ''
 						},
-					])
+					})
 					return
 				}
 
@@ -90,16 +87,16 @@ function compileTemplate(statics: TemplateStringsArray): CompiledTemplate {
 				assert(attribname)
 
 				const [nameStart, nameEnd] = attribname
-				const name = compiled.html.slice(nameStart, nameEnd)
-				const value = compiled.html.slice(start, end)
+				const name = html.slice(nameStart, nameEnd)
+				const value = html.slice(start, end)
 
 				const match = value.match(DYNAMIC_WHOLE)
 				if (match) {
 					const idx = parseInt(match[1])
-					compiled.parts.push([
-						nameStart,
+					parts.push({
+						start: nameStart,
 						end,
-						values => {
+						render: values => {
 							let value = values[idx]
 							if (value === false || value === null || typeof value === 'function') {
 								return ''
@@ -107,7 +104,7 @@ function compileTemplate(statics: TemplateStringsArray): CompiledTemplate {
 							if (value === true) value = ''
 							return `${name}="${escape(value)}"`
 						},
-					])
+					})
 					return
 				}
 
@@ -124,34 +121,42 @@ function compileTemplate(statics: TemplateStringsArray): CompiledTemplate {
 			onselfclosingtag: noop,
 
 			ontext(start, end) {
-				const value = compiled.html.slice(start, end)
+				const value = html.slice(start, end)
 
 				for (const match of [...value.matchAll(DYNAMIC_GLOBAL)].reverse()) {
 					const idx = parseInt(match[1])
-					compiled.parts.push([
-						start + match.index,
-						start + match.index + match[0].length,
-						values => escape(values[idx]),
-					])
+					parts.push({
+						start: start + match.index,
+						end: start + match.index + match[0].length,
+						render: values => {
+							const value = values[idx]
+							if (value === null) return ''
+							return escape(value)
+						},
+					})
 				}
 
 				if (WHITESPACE_WHOLE.test(value)) {
-					compiled.parts.push([start, end, () => ' '])
+					parts.push({
+						start,
+						end,
+						render: () => ' ',
+					})
 					return
 				}
 			},
 			ontextentity: noop,
 
 			oncomment(start, end) {
-				const value = compiled.html.slice(start, end)
+				const value = html.slice(start, end)
 
 				for (const match of [...value.matchAll(DYNAMIC_GLOBAL)].reverse()) {
 					const idx = parseInt(match[1])
-					compiled.parts.push([
-						start + match.index,
-						start + match.index + match[0].length,
-						values => escape(values[idx]),
-					])
+					parts.push({
+						start: start + match.index,
+						end: start + match.index + match[0].length,
+						render: values => escape(values[idx]),
+					})
 				}
 			},
 
@@ -163,10 +168,22 @@ function compileTemplate(statics: TemplateStringsArray): CompiledTemplate {
 		},
 	)
 
-	tokenizer.write(compiled.html)
+	tokenizer.write(html)
 	tokenizer.end()
 
-	compiled.parts.reverse()
+	const compiled: CompiledTemplate = {
+		statics: [],
+		parts: [],
+	}
+
+	compiled.statics.push(html.slice(0, parts[0].start))
+
+	for (let i = 0; i < parts.length; i++) {
+		const part = parts[i]
+		const nextPart = parts[i + 1]
+		compiled.parts.push(part.render)
+		compiled.statics.push(html.slice(part.end, nextPart?.start))
+	}
 
 	templates.set(statics, compiled)
 	return compiled
@@ -186,11 +203,13 @@ function escape(str: unknown) {
 
 function renderToString(value: Displayable) {
 	const { template, dynamics } = value instanceof BoundTemplateInstance ? value : singlePartTemplate(value)
-	let str = template.html
+	let str = ''
 
-	for (const [start, end, part] of template.parts) {
-		str = str.slice(0, start) + part(dynamics) + str.slice(end)
+	for (let i = 0; i < template.statics.length - 1; i++) {
+		str += template.statics[i]
+		str += template.parts[i](dynamics)
 	}
+	str += template.statics[template.statics.length - 1]
 
 	return str
 }
