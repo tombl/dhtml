@@ -201,7 +201,7 @@ function escape(str: unknown) {
 	return String(str).replace(ESCAPE_RE, c => ESCAPE_SUBSTITUTIONS[c])
 }
 
-function renderToString(value: Displayable) {
+export function renderToString(value: Displayable) {
 	const { template, dynamics } = value instanceof BoundTemplateInstance ? value : singlePartTemplate(value)
 	let str = ''
 
@@ -214,8 +214,30 @@ function renderToString(value: Displayable) {
 	return str
 }
 
-console.log(
-	renderToString(html`
+export function renderToReadableStream(value: Displayable) {
+	const { readable, writable } = new TextEncoderStream()
+	const writer = writable.getWriter()
+
+	const { template, dynamics } = value instanceof BoundTemplateInstance ? value : singlePartTemplate(value)
+
+	;(async () => {
+		try {
+			for (let i = 0; i < template.statics.length - 1; i++) {
+				await writer.write(template.statics[i])
+				await writer.write(template.parts[i](dynamics))
+			}
+			await writer.write(template.statics[template.statics.length - 1])
+			await writer.close()
+		} catch (error) {
+			await writer.abort(error)
+		}
+	})()
+
+	return readable
+}
+
+{
+	const displayable = html`
 		<!-- ${'z'} -->
 		<p>a${'text'}b</p>
 		<a href=${'attr'} onclick=${() => {}}></a>
@@ -223,5 +245,11 @@ console.log(
 		<script>
 			;<span>z</span>
 		</script>
-	`),
-)
+	`
+	const stream = renderToReadableStream(displayable)
+
+	new Response(stream).text().then(rendered => {
+		console.log(rendered)
+		console.log(rendered === renderToString(displayable))
+	})
+}
