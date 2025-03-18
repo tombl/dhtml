@@ -69,19 +69,7 @@ function compileTemplate(statics: TemplateStringsArray): CompiledTemplate {
 				const match = name.match(DYNAMIC_WHOLE)
 				if (match) {
 					const idx = parseInt(match[1])
-					parts.push({
-						start,
-						end,
-						render: values => {
-							const value = values[idx]
-							if (value === null) return ''
-
-							assert(typeof value === 'function')
-							console.log('directive returned:', value())
-
-							return ''
-						},
-					})
+					parts.push({ start, end, render: values => renderDirective(values[idx]) })
 					return
 				}
 
@@ -99,18 +87,7 @@ function compileTemplate(statics: TemplateStringsArray): CompiledTemplate {
 				const match = value.match(DYNAMIC_WHOLE)
 				if (match) {
 					const idx = parseInt(match[1])
-					parts.push({
-						start: nameStart,
-						end,
-						render: values => {
-							let value = values[idx]
-							if (value === false || value === null || typeof value === 'function') {
-								return ''
-							}
-							if (value === true) value = ''
-							return `${name}="${escape(value)}"`
-						},
-					})
+					parts.push({ start: nameStart, end, render: values => renderAttribute(name, values[idx]) })
 					return
 				}
 
@@ -134,40 +111,12 @@ function compileTemplate(statics: TemplateStringsArray): CompiledTemplate {
 					parts.push({
 						start: start + match.index,
 						end: start + match.index + match[0].length,
-						*render(values) {
-							let value = values[idx]
-
-							const seen = new Set()
-							while (isRenderable(value))
-								try {
-									if (seen.has(value)) throw new Error('circular render')
-									seen.add(value)
-									value = value.render()
-								} catch (thrown) {
-									if (thrown instanceof BoundTemplateInstance) {
-										value = thrown
-									} else {
-										throw thrown
-									}
-								}
-
-							if (isIterable(value)) {
-								for (const item of value) yield* renderToIterable(item as Displayable)
-							} else if (value instanceof BoundTemplateInstance) {
-								yield* renderToIterable(value)
-							} else if (value !== null) {
-								yield escape(value)
-							}
-						},
+						render: values => renderChild(values[idx]),
 					})
 				}
 
 				if (WHITESPACE_WHOLE.test(value)) {
-					parts.push({
-						start,
-						end,
-						render: () => ' ',
-					})
+					parts.push({ start, end, render: () => ' ' })
 					return
 				}
 			},
@@ -213,6 +162,48 @@ function compileTemplate(statics: TemplateStringsArray): CompiledTemplate {
 
 	templates.set(statics, compiled)
 	return compiled
+}
+
+function renderDirective(value: unknown) {
+	if (value === null) return ''
+
+	assert(typeof value === 'function')
+	console.log('directive returned:', value())
+
+	return ''
+}
+
+function renderAttribute(name: string, value: unknown) {
+	if (value === false || value === null || typeof value === 'function') {
+		return ''
+	}
+	if (value === true) return name
+	return `${name}="${escape(value)}"`
+}
+
+function* renderChild(value: unknown) {
+	const seen = new Set()
+
+	while (isRenderable(value))
+		try {
+			if (seen.has(value)) throw new Error('circular render')
+			seen.add(value)
+			value = value.render()
+		} catch (thrown) {
+			if (thrown instanceof BoundTemplateInstance) {
+				value = thrown
+			} else {
+				throw thrown
+			}
+		}
+
+	if (isIterable(value)) {
+		for (const item of value) yield* renderToIterable(item as Displayable)
+	} else if (value instanceof BoundTemplateInstance) {
+		yield* renderToIterable(value)
+	} else if (value !== null) {
+		yield escape(value)
+	}
 }
 
 const ESCAPE_RE = /[&<>"']/g
