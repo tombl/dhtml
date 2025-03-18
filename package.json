@@ -2,6 +2,16 @@
 	"name": "dhtml",
 	"type": "module",
 	"main": "src/html.js",
+	"exports": {
+		".": {
+			"production": "./dist/html.min.js",
+			"default": "./src/html.js"
+		},
+		"./server": {
+			"production": "./dist/html.server.min.js",
+			"default": "./src/html.server.js"
+		}
+	},
 	"scripts": {
 		"build": "./build.sh",
 		"format": "prettier --write . --cache",
@@ -16,6 +26,7 @@
 		"@vitest/ui": "^3.0.5",
 		"dhtml": ".",
 		"esbuild": "^0.24.0",
+		"htmlparser2": "^10.0.0",
 		"playwright": "^1.50.1",
 		"prettier": "^3.4.2",
 		"terser": "^5.37.0",
