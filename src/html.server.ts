@@ -137,7 +137,16 @@ function compileTemplate(statics: TemplateStringsArray): CompiledTemplate {
 						*render(values) {
 							let value = values[idx]
 
-							while (isRenderable(value)) value = value.render()
+							while (isRenderable(value))
+								try {
+									value = value.render()
+								} catch (thrown) {
+									if (thrown instanceof BoundTemplateInstance) {
+										value = thrown
+									} else {
+										throw thrown
+									}
+								}
 
 							if (isIterable(value)) {
 								for (const item of value) yield* renderToIterable(item as Displayable)
