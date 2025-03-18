@@ -137,8 +137,11 @@ function compileTemplate(statics: TemplateStringsArray): CompiledTemplate {
 						*render(values) {
 							let value = values[idx]
 
+							const seen = new Set()
 							while (isRenderable(value))
 								try {
+									if (seen.has(value)) throw new Error('circular render')
+									seen.add(value)
 									value = value.render()
 								} catch (thrown) {
 									if (thrown instanceof BoundTemplateInstance) {
