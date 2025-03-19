@@ -2,9 +2,9 @@ import { html } from 'dhtml'
 import { renderToString } from 'dhtml/server'
 import { assert, assert_eq, test } from '../../../scripts/test/test.ts'
 
-test('renderables work correctly', () => {
+test('renderables work correctly', async () => {
 	assert_eq(
-		renderToString(
+		await renderToString(
 			html`${{
 				render() {
 					return html`<h1>Hello, world!</h1>`
@@ -15,10 +15,10 @@ test('renderables work correctly', () => {
 	)
 })
 
-test('thrown errors directly propagate', () => {
+test('thrown errors directly propagate', async () => {
 	const oops = new Error('oops')
 	try {
-		renderToString(
+		await renderToString(
 			html`${{
 				render() {
 					throw oops
@@ -29,9 +29,9 @@ test('thrown errors directly propagate', () => {
 	} catch {}
 })
 
-test('renderables can throw instead of returning', () => {
+test('renderables can throw instead of returning', async () => {
 	assert_eq(
-		renderToString({
+		await renderToString({
 			render() {
 				throw html`this was thrown`
 			},

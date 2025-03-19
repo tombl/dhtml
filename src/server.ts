@@ -1,9 +1,19 @@
-import { assert, is_html, is_iterable, is_renderable, lexer, single_part_template, type Displayable } from './shared.ts'
+import type { HTML } from './index.ts'
+import {
+	assert,
+	is_html,
+	is_iterable,
+	is_renderable,
+	lexer,
+	single_part_template,
+	type Displayable,
+	type Renderable,
+} from './shared.ts'
 
 interface PartRenderer {
 	replace_start: number
 	replace_end: number
-	render: (values: unknown[]) => string | Generator<string, void, void>
+	render: (values: unknown[], controller: Controller) => string | Generator<string, void, void>
 }
 
 interface CompiledTemplate {
@@ -69,7 +79,7 @@ function compile_template(statics: TemplateStringsArray): CompiledTemplate {
 					compiled.parts.push({
 						replace_start: offset,
 						replace_end: offset + 1,
-						render: values => render_child(values[i]),
+						render: (values, controller) => render_child(values[i], controller),
 					})
 					break
 
@@ -116,6 +126,18 @@ function compile_template(statics: TemplateStringsArray): CompiledTemplate {
 	return compiled
 }
 
+interface Controller {
+	injections: Promise<HTML>[]
+}
+
+const controllers = new WeakMap<Renderable, Controller>()
+
+export function injectToStream(renderable: Renderable, markup: HTML | Promise<HTML>): void {
+	const controller = controllers.get(renderable)
+	assert(controller, 'the renderable has not been rendered')
+	controller.injections.push(Promise.resolve(markup))
+}
+
 function render_directive(value: unknown) {
 	if (value === null) return ''
 
@@ -133,16 +155,19 @@ function render_attribute(name: string, value: unknown) {
 	return `${name}="${escape(value)}"`
 }
 
-function* render_child(value: unknown) {
-	const seen = new Map<object, number>()
+function* render_child(value: unknown, controller: Controller) {
+	const seen = new WeakMap<object, number>()
 
 	while (is_renderable(value))
 		try {
-			const times = seen.get(value) ?? 0
-			if (times > 100) throw new Error('circular render')
-			seen.set(value, times + 1)
+			const renderable = value
 
-			value = value.render()
+			const times = seen.get(renderable) ?? 0
+			if (times > 100) throw new Error('circular render')
+			seen.set(renderable, times + 1)
+
+			controllers.set(renderable, controller)
+			value = renderable.render()
 		} catch (thrown) {
 			if (is_html(thrown)) {
 				value = thrown
@@ -152,9 +177,9 @@ function* render_child(value: unknown) {
 		}
 
 	if (is_iterable(value)) {
-		for (const item of value) yield* render_to_iterable(item as Displayable)
+		for (const item of value) yield* render_to_iterable(item as Displayable, controller)
 	} else if (is_html(value)) {
-		yield* render_to_iterable(value)
+		yield* render_to_iterable(value, controller)
 	} else if (value !== null) {
 		yield escape(value)
 	}
@@ -172,7 +197,7 @@ function escape(str: unknown) {
 	return String(str).replace(ESCAPE_RE, c => ESCAPE_SUBSTITUTIONS[c as keyof typeof ESCAPE_SUBSTITUTIONS])
 }
 
-function* render_to_iterable(value: Displayable) {
+function* render_to_iterable(value: Displayable, controller: Controller) {
 	const { _statics: statics, _dynamics: dynamics } = is_html(value) ? value : single_part_template(value)
 	const template = compile_template(statics)
 
@@ -185,36 +210,106 @@ function* render_to_iterable(value: Displayable) {
 	let prev_end = 0
 	for (const { replace_start, replace_end, render } of template.parts) {
 		yield str.slice(prev_end, replace_start)
-		yield* render(dynamics)
+		yield* render(dynamics, controller)
 		prev_end = replace_end
 	}
 	yield str.slice(prev_end)
 }
 
-export function renderToString(value: Displayable): string {
+async function* read_all_promises<T>(promises: Promise<T>[]): AsyncGenerator<T> {
+	type RecursivePromise<T> = Promise<{
+		value: T
+		promise: RecursivePromise<T>
+	}>
+
+	const pending = new Set(
+		promises.map(p => {
+			const promise: RecursivePromise<T> = p.then(value => ({ value, promise }))
+			return promise
+		}),
+	)
+
+	while (pending.size) {
+		const { value, promise } = await Promise.race(pending)
+		pending.delete(promise)
+		yield value
+	}
+}
+
+export async function renderToString(value: Displayable): Promise<string> {
+	const render_controller: Controller = { injections: [] }
 	let str = ''
-	for (const part of render_to_iterable(value)) str += part
+
+	for (const part of render_to_iterable(value, render_controller)) {
+		str += part
+	}
+
+	const count = render_controller.injections.length
+	for await (const injection of read_all_promises(render_controller.injections)) {
+		for (const part of render_to_iterable(injection, render_controller)) {
+			str += part
+		}
+	}
+	assert(
+		count === render_controller.injections.length,
+		'calling injectToStream from an injection is currently not supported',
+	)
+
 	return str
 }
 
 export function renderToReadableStream(value: Displayable): ReadableStream<Uint8Array> {
-	const iter = render_to_iterable(value)
+	const render_controller: Controller = { injections: [] }
+	const iter = render_to_iterable(value, render_controller)
+
 	return new ReadableStream<string>({
-		pull(controller) {
+		async pull(controller) {
 			const { done, value } = iter.next()
+
 			if (done) {
+				const count = render_controller.injections.length
+				for await (const injection of read_all_promises(render_controller.injections)) {
+					for (const part of render_to_iterable(injection, render_controller)) {
+						controller.enqueue(part)
+					}
+				}
+				assert(
+					count === render_controller.injections.length,
+					'calling injectToStream from an injection is currently not supported',
+				)
 				controller.close()
 				return
 			}
+
 			controller.enqueue(value)
 		},
 	}).pipeThrough(new TextEncoderStream())
 }
 
 // {
+// 	const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+// 	const suspends = {
+// 		render() {
+// 			const id = 'abcd'
+// 			injectToStream(
+// 				this,
+// 				sleep(250).then(
+// 					() =>
+// 						html`<script>
+// 							document.getElementById('${id}').replaceWith('${'the value'}')
+// 						</script>`,
+// 				),
+// 			)
+// 			throw html`<span id=${id}></span>`
+// 		},
+// 	}
+
 // 	const displayable = html`
+// 		<!doctype html>
+// 		<p>a${'text'.repeat(1000)}b</p>
 // 		<!-- ${'z'} -->
-// 		<p>a${'text'}b</p>
+// 		<div>this suspends: ${suspends}</div>
 // 		<a href=${'attr'} onclick=${() => {}}></a>
 // 		<button ${() => 'directive'}>but</button>
 // 		<script>
@@ -228,10 +323,16 @@ export function renderToReadableStream(value: Displayable): ReadableStream<Uint8
 // 		${html`[${'A'}|${'B'}]`}
 // 	`
 
+// 	globalThis.Deno?.serve(() => {
+// 		return new Response(renderToReadableStream(displayable).pipeThrough(new TextEncoderStream()), {
+// 			headers: { 'content-type': 'text/html' },
+// 		})
+// 	})
+
 // 	const stream = renderToReadableStream(displayable).pipeThrough(new TextEncoderStream())
 
-// 	new Response(stream).text().then(rendered => {
+// 	new Response(stream).text().then(async rendered => {
 // 		console.log(rendered)
-// 		console.log(rendered === renderToString(displayable))
+// 		console.log(rendered === (await renderToString(displayable)))
 // 	})
 // }
