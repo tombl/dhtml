@@ -33,7 +33,27 @@ const isRenderable = value => typeof value === 'object' && value !== null && 're
 /** @return {value is Iterable<unknown>} */
 const isIterable = value => typeof value === 'object' && value !== null && Symbol.iterator in value
 
-export const html = (statics, ...dynamics) => new BoundTemplateInstance(statics, dynamics)
+/** @return {value is ReturnType<typeof html>} */
+const isHtml = value => value?.$ === html
+
+export function html(/** @type {TemplateStringsArray} */ statics, /** @type {unknown[]} */ ...dynamics) {
+	let template
+
+	if (DEV) {
+		assert(
+			compileTemplate(statics)._parts.length === dynamics.length,
+			'expected the same number of dynamics as parts. do you have a ${...} in an unsupported place?'
+		)
+	}
+
+	return {
+		$: html,
+		_dynamics: dynamics,
+		get _template() {
+			return (template ??= compileTemplate(statics))
+		},
+	}
+}
 
 const singlePartTemplate = part => html`${part}`
 
@@ -115,26 +135,6 @@ if (DEV) {
 }
 /* v8 ignore stop */
 
-class BoundTemplateInstance {
-	/** @type {CompiledTemplate | undefined} */ #template
-	/** @type {TemplateStringsArray} */ #statics
-
-	get _template() {
-		return (this.#template ??= compileTemplate(this.#statics))
-	}
-
-	constructor(statics, dynamics) {
-		this.#statics = statics
-		this._dynamics = dynamics
-
-		// eagerly compile the template in DEV, plus some extra checks.
-		DEV: assert(
-			this._template._parts.length === dynamics.length,
-			'expected the same number of dynamics as parts. do you have a ${...} in an unsupported place?',
-		)
-	}
-}
-
 /** @param {ParentNode} parent */
 function createRootInto(parent) {
 	const marker = new Text()
@@ -166,7 +166,7 @@ function createRoot(/** @type {Span} */ span) {
 		/** @type {Key | undefined} */ _key: undefined,
 
 		render(value) {
-			const t = value instanceof BoundTemplateInstance ? value : singlePartTemplate(value)
+			const t = isHtml(value) ? value : singlePartTemplate(value)
 
 			if (instance?._template === t._template) {
 				instance.update(t._dynamics)
@@ -183,7 +183,7 @@ function createRoot(/** @type {Span} */ span) {
 class TemplateInstance {
 	/**
 	 * @param {CompiledTemplate} template
-	 * @param {Displayable[]} dynamics
+	 * @param {unknown[]} dynamics
 	 * @param {Span} span
 	 */
 	constructor(template, dynamics, span) {
@@ -466,7 +466,7 @@ class ChildPart {
 			try {
 				value = renderable.render()
 			} catch (thrown) {
-				if (thrown instanceof BoundTemplateInstance) {
+				if (isHtml(thrown)) {
 					value = thrown
 				} else {
 					throw thrown
@@ -563,7 +563,7 @@ class ChildPart {
 		// now early return if the value hasn't changed.
 		if (Object.is(value, this.#value)) return
 
-		if (value instanceof BoundTemplateInstance) {
+		if (isHtml(value)) {
 			this.#root ??= createRoot(this.#span)
 			this.#root.render(value) // root.render will detach the previous tree if the template has changed.
 		} else {
