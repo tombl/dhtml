@@ -167,9 +167,7 @@ function createRoot(/** @type {Span} */ span) {
 		render(value) {
 			const html = isHtml(value) ? value : singlePartTemplate(value)
 
-			if (template === html._template) {
-				for (const [idx, part] of parts) part.update(html._dynamics[idx])
-			} else {
+			if (template !== html._template) {
 				detach()
 
 				template = html._template
@@ -193,12 +191,13 @@ function createRoot(/** @type {Span} */ span) {
 				span._deleteContents()
 				span._insertNode(doc)
 
-				parts = html._template._parts.map(([dynamicIdx, createPart], elementIdx) => {
-					const part = createPart(nodeByPart[elementIdx], span)
-					part.update(html._dynamics[dynamicIdx])
-					return /** @type {const} */ ([dynamicIdx, part])
-				})
+				parts = html._template._parts.map(([dynamicIdx, createPart], elementIdx) => [
+					dynamicIdx,
+					createPart(nodeByPart[elementIdx], span),
+				])
 			}
+
+			for (const [idx, part] of parts) part.update(html._dynamics[idx])
 		},
 
 		detach,
