@@ -5,7 +5,7 @@
 	Displayable,
 	Key,
 	Renderable,
-	Span as SpanInstance
+	Span,
 } from './types' */
 
 const DEV = typeof DHTML_PROD === 'undefined' || !DHTML_PROD
@@ -64,81 +64,68 @@ const assert = (value, message = 'assertion failed') => {
 }
 /* v8 ignore stop */
 
-/** @implements {SpanInstance} */
-class Span {
-	/**
-	 * @param {Node} node the only node in the span
-	 */
-	constructor(node) {
-		DEV: assert(node.parentNode !== null)
-		this._parentNode = node.parentNode
-		this._start = this._end = node
-	}
-
-	_deleteContents() {
-		this._marker = new Text()
-		this._parentNode.insertBefore(this._marker, this._start)
-
-		for (const node of this) this._parentNode.removeChild(node)
-
-		this._start = this._end = this._marker
-	}
-
-	/** @param {Node} node */
-	_insertNode(node) {
-		const end = isDocumentFragment(node) ? node.lastChild : node
-		if (end === null) return // empty fragment
-		this._parentNode.insertBefore(node, this._end.nextSibling)
-		this._end = end
-
-		if (this._start === this._marker) {
-			DEV: assert(this._start.nextSibling)
-			this._start = this._start.nextSibling
-
-			this._parentNode.removeChild(this._marker)
-			this._marker = null
-		}
-	}
-	*[Symbol.iterator]() {
-		let node = this._start
-		for (;;) {
-			const next = node.nextSibling
-			yield node
-			if (node === this._end) return
-			assert(next, 'expected more siblings')
-			node = next
-		}
-	}
-	_extractContents() {
-		this._marker = new Text()
-		this._parentNode.insertBefore(this._marker, this._start)
-
-		const fragment = document.createDocumentFragment()
-		for (const node of this) fragment.appendChild(node)
-
-		this._start = this._end = this._marker
-		return fragment
+/** @returns {Span} */
+function createSpan(node) {
+	DEV: assert(node.parentNode !== null)
+	return {
+		_parentNode: node.parentNode,
+		_start: node,
+		_end: node,
+		_marker: null,
 	}
 }
 
-/* v8 ignore start */
-if (DEV) {
-	Span.prototype.toString = function () {
-		let result = ''
-		for (const node of this)
-			result += isElement(node)
-				? node.outerHTML
-				: `${node.constructor.name}(${'data' in node ? JSON.stringify(node.data) : node})`
-		return result
+function spanInsertNode(/** @type {Span} */ span, /** @type {Node} */ node) {
+	const end = isDocumentFragment(node) ? node.lastChild : node
+	if (end === null) return // empty fragment
+	span._parentNode.insertBefore(node, span._end.nextSibling)
+	span._end = end
+
+	if (span._start === span._marker) {
+		DEV: assert(span._start.nextSibling)
+		span._start = span._start.nextSibling
+
+		span._parentNode.removeChild(span._marker)
+		span._marker = null
 	}
 }
-/* v8 ignore stop */
+
+function* spanIterator(/** @type {Span} */ span) {
+	let node = span._start
+	for (;;) {
+		const next = node.nextSibling
+		yield node
+		if (node === span._end) return
+		assert(next, 'expected more siblings')
+		node = next
+	}
+}
+
+function spanExtractContents(/** @type {Span} */ span) {
+	span._marker = new Text()
+	span._parentNode.insertBefore(span._marker, span._start)
+
+	const fragment = document.createDocumentFragment()
+	for (const node of spanIterator(span)) fragment.appendChild(node)
+
+	span._start = span._end = span._marker
+	return fragment
+}
+
+function spanDeleteContents(/** @type {Span} */ span) {
+	span._marker = new Text()
+	span._parentNode.insertBefore(span._marker, span._start)
+
+	for (const node of spanIterator(span)) span._parentNode.removeChild(node)
+
+	span._start = span._end = span._marker
+}
 
 /** @param {ParentNode} parent */
 function createRootInto(parent) {
 	const marker = new Text()
 	parent.appendChild(marker)
-	return createRoot(new Span(marker))
+	return createRoot(createSpan(marker))
 }
 export { createRootInto as createRoot }
 
@@ -147,7 +134,7 @@ function createRootAfter(node) {
 	DEV: assert(node.parentNode, 'expected a parent node')
 	const marker = new Text()
 	node.parentNode.insertBefore(marker, node.nextSibling)
-	return createRoot(new Span(marker))
+	return createRoot(createSpan(marker))
 }
 
 function createRoot(/** @type {Span} */ span) {
@@ -188,8 +175,8 @@ function createRoot(/** @type {Span} */ span) {
 				// because they need to know their final location.
 				// this also ensures that custom elements are upgraded before we do things
 				// to them, like setting properties or attributes.
-				span._deleteContents()
-				span._insertNode(doc)
+				spanDeleteContents(span)
+				spanInsertNode(span, doc)
 
 				parts = html._template._parts.map(([dynamicIdx, createPart], elementIdx) => [
 					dynamicIdx,
@@ -450,7 +437,7 @@ function createChildPart(
 			if (!roots) {
 				// we previously rendered a single value, so we need to clear it.
 				disconnectRoot()
-				span._deleteContents()
+				spanDeleteContents(span)
 
 				roots = []
 			}
@@ -471,9 +458,9 @@ function createChildPart(
 						const root2 = roots[j]
 
 						// swap the contents of the spans
-						const tmpContent = root1._span._extractContents()
-						root1._span._insertNode(root2._span._extractContents())
-						root2._span._insertNode(tmpContent)
+						const tmpContent = spanExtractContents(root1._span)
+						spanInsertNode(root1._span, spanExtractContents(root2._span))
+						spanInsertNode(root2._span, tmpContent)
 
 						// swap the spans back
 						const tmpSpan = root1._span
@@ -496,7 +483,7 @@ function createChildPart(
 				const root = roots.pop()
 				assert(root)
 				root.detach()
-				root._span._deleteContents()
+				spanDeleteContents(root._span)
 			}
 
 			span._end = end
@@ -537,8 +524,8 @@ function createChildPart(
 				DEV: assert(span._start === span._end && span._start instanceof Text)
 				span._start.data = '' + value
 			} else {
-				span._deleteContents()
-				if (value !== null) span._insertNode(value instanceof Node ? value : new Text('' + value))
+				spanDeleteContents(span)
+				if (value !== null) spanInsertNode(span, value instanceof Node ? value : new Text('' + value))
 			}
 		}
 
@@ -558,7 +545,10 @@ function createChildPart(
 		if (endsWereEqual) parentSpan._end = span._end
 	}
 
-	if (parentNode instanceof Span) {
+	if (parentNode instanceof Node) {
+		const child = parentNode.childNodes[childIndex]
+		span = createSpan(child)
+	} else {
 		let child = parentNode._start
 		for (let i = 0; i < childIndex; i++) {
 			DEV: {
@@ -567,10 +557,7 @@ function createChildPart(
 			}
 			child = child.nextSibling
 		}
-		span = new Span(child)
-	} else {
-		const child = parentNode.childNodes[childIndex]
-		span = new Span(child)
+		span = createSpan(child)
 	}
 
 	return {
