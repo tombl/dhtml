@@ -194,7 +194,7 @@ function createRoot(/** @type {Span} */ span) {
 				span._insertNode(doc)
 
 				parts = html._template._parts.map(([dynamicIdx, createPart], elementIdx) => {
-					const part = createPart(span)(nodeByPart[elementIdx])
+					const part = createPart(nodeByPart[elementIdx], span)
 					part.update(html._dynamics[dynamicIdx])
 					return /** @type {const} */ ([dynamicIdx, part])
 				})
@@ -258,7 +258,7 @@ function compileTemplate(statics) {
 				let siblings = [...node.parentNode.childNodes]
 				for (const [node, idx] of nodes) {
 					const child = siblings.indexOf(node)
-					patch(node.parentNode, idx, span => createChildPart(child, span))
+					patch(node.parentNode, idx, (node, span) => createChildPart(node, span, child))
 				}
 			}
 		} else if (DEV && isComment(node)) {
@@ -267,7 +267,7 @@ function compileTemplate(statics) {
 			// issues with incorrect part counts.
 			// in production the check is skipped, so we can also skip this.
 			for (const _match of node.data.matchAll(DYNAMIC_GLOBAL)) {
-				compiled._parts[nextPart++] = [parseInt(_match[1]), () => () => ({ update() {}, detach() {} })]
+				compiled._parts[nextPart++] = [parseInt(_match[1]), () => ({ update() {}, detach() {} })]
 			}
 		} else {
 			assert(isElement(node))
@@ -281,14 +281,14 @@ function compileTemplate(statics) {
 					// directive:
 					toRemove.push(name)
 					DEV: assert(value === '', `directives must not have values`)
-					patch(node, parseInt(match[1]), () => createDirectivePart())
+					patch(node, parseInt(match[1]), node => createDirectivePart(node))
 				} else {
 					// properties:
 					match = DYNAMIC_WHOLE.exec(value)
 					if (match !== null) {
 						toRemove.push(name)
 						if (FORCE_ATTRIBUTES.test(name)) {
-							patch(node, parseInt(match[1]), () => createAttributePart(name))
+							patch(node, parseInt(match[1]), node => createAttributePart(node, name))
 						} else {
 							if (!(name in node)) {
 								for (const property in node) {
@@ -298,7 +298,7 @@ function compileTemplate(statics) {
 									}
 								}
 							}
-							patch(node, parseInt(match[1]), () => createPropertyPart(name))
+							patch(node, parseInt(match[1]), node => createPropertyPart(node, name))
 						}
 					} else if (DEV) {
 						assert(!DYNAMIC_GLOBAL.test(value), `expected a whole dynamic value for ${name}, got a partial one`)
@@ -367,7 +367,11 @@ export function keyed(renderable, key) {
 	return renderable
 }
 
-function createChildPart(childIndex, parentSpan) {
+function createChildPart(
+	/** @type {Node | Span} */ parentNode,
+	/** @type {Span} */ parentSpan,
+	/** @type {number} */ childIndex,
+) {
 	let span
 
 	// for when we're rendering a renderable:
@@ -401,7 +405,7 @@ function createChildPart(childIndex, parentSpan) {
 
 	function update(/** @type {Displayable} */ value) {
 		DEV: assert(span)
-		const endsWereEqual = span._parentNode === parentSpan.parentNode && span._end === parentSpan._end
+		const endsWereEqual = span._parentNode === parentSpan._parentNode && span._end === parentSpan._end
 
 		if (isRenderable(value)) {
 			switchRenderable(value)
@@ -555,53 +559,51 @@ function createChildPart(childIndex, parentSpan) {
 		if (endsWereEqual) parentSpan._end = span._end
 	}
 
-	return parentNode => {
-		if (parentNode instanceof Span) {
-			let child = parentNode._start
-			for (let i = 0; i < childIndex; i++) {
-				DEV: {
-					assert(child.nextSibling !== null, 'expected more siblings')
-					assert(child.nextSibling !== parentNode._end, 'ran out of siblings before the end')
-				}
-				child = child.nextSibling
+	if (parentNode instanceof Span) {
+		let child = parentNode._start
+		for (let i = 0; i < childIndex; i++) {
+			DEV: {
+				assert(child.nextSibling !== null, 'expected more siblings')
+				assert(child.nextSibling !== parentNode._end, 'ran out of siblings before the end')
 			}
-			span = new Span(child)
-		} else {
-			const child = parentNode.childNodes[childIndex]
-			span = new Span(child)
+			child = child.nextSibling
 		}
+		span = new Span(child)
+	} else {
+		const child = parentNode.childNodes[childIndex]
+		span = new Span(child)
+	}
 
-		return {
-			update,
-			detach: () => {
-				switchRenderable(null)
-				disconnectRoot()
-			},
-		}
+	return {
+		update,
+		detach: () => {
+			switchRenderable(null)
+			disconnectRoot()
+		},
 	}
 }
 
-function createPropertyPart(name) {
-	return node => ({
+function createPropertyPart(node, name) {
+	return {
 		update: value => {
 			node[name] = value
 		},
 		detach: () => {
 			delete node[name]
 		},
-	})
+	}
 }
 
-function createAttributePart(name) {
-	return node => ({
+function createAttributePart(node, name) {
+	return {
 		update: value => node.setAttribute(name, value),
 		detach: () => node.removeAttribute(name),
-	})
+	}
 }
 
-function createDirectivePart() {
+function createDirectivePart(node) {
 	/** @type {Cleanup} */ let cleanup
-	return node => ({
+	return {
 		update: fn => {
 			cleanup?.()
 			cleanup = fn?.(node)
@@ -611,7 +613,7 @@ function createDirectivePart() {
 			cleanup?.()
 			cleanup = null
 		},
-	})
+	}
 }
 
 /** @returns {Directive} */
