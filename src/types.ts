@@ -23,7 +23,6 @@ export declare class Span {
 }
 
 interface Part {
-	create(node: Node | Span, value: unknown): void
 	update(value: unknown): void
 	detach(): void
 }
@@ -33,6 +32,6 @@ export type Directive = (node: Element) => Cleanup
 
 export interface CompiledTemplate {
 	_content: DocumentFragment
-	_parts: [idx: number, createPart: (span: Span) => Part][]
+	_parts: [idx: number, createPart: (span: Span) => (node: Node | Span) => Part][]
 	_rootParts: number[]
 }

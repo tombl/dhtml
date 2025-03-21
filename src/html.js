@@ -36,7 +36,7 @@ const isIterable = value => typeof value === 'object' && value !== null && Symbo
 const isHtml = value => value?.$ === html
 
 export function html(/** @type {TemplateStringsArray} */ statics, /** @type {unknown[]} */ ...dynamics) {
-	let template
+	/** @type {CompiledTemplate} */ let template
 
 	if (DEV) {
 		assert(
@@ -194,8 +194,8 @@ function createRoot(/** @type {Span} */ span) {
 				span._insertNode(doc)
 
 				parts = html._template._parts.map(([dynamicIdx, createPart], elementIdx) => {
-					const part = createPart(span)
-					part.create(nodeByPart[elementIdx], html._dynamics[dynamicIdx])
+					const part = createPart(span)(nodeByPart[elementIdx])
+					part.update(html._dynamics[dynamicIdx])
 					return /** @type {const} */ ([dynamicIdx, part])
 				})
 			}
@@ -267,7 +267,7 @@ function compileTemplate(statics) {
 			// issues with incorrect part counts.
 			// in production the check is skipped, so we can also skip this.
 			for (const _match of node.data.matchAll(DYNAMIC_GLOBAL)) {
-				compiled._parts[nextPart++] = [parseInt(_match[1]), () => ({ create() {}, update() {}, detach() {} })]
+				compiled._parts[nextPart++] = [parseInt(_match[1]), () => () => ({ update() {}, detach() {} })]
 			}
 		} else {
 			assert(isElement(node))
@@ -555,75 +555,53 @@ function createChildPart(childIndex, parentSpan) {
 		if (endsWereEqual) parentSpan._end = span._end
 	}
 
-	return {
-		create: (node, value) => {
-			if (node instanceof Span) {
-				let child = node._start
-				for (let i = 0; i < childIndex; i++) {
-					DEV: {
-						assert(child.nextSibling !== null, 'expected more siblings')
-						assert(child.nextSibling !== node._end, 'ran out of siblings before the end')
-					}
-					child = child.nextSibling
+	return parentNode => {
+		if (parentNode instanceof Span) {
+			let child = parentNode._start
+			for (let i = 0; i < childIndex; i++) {
+				DEV: {
+					assert(child.nextSibling !== null, 'expected more siblings')
+					assert(child.nextSibling !== parentNode._end, 'ran out of siblings before the end')
 				}
-				span = new Span(child)
-			} else {
-				const child = node.childNodes[childIndex]
-				span = new Span(child)
+				child = child.nextSibling
 			}
+			span = new Span(child)
+		} else {
+			const child = parentNode.childNodes[childIndex]
+			span = new Span(child)
+		}
 
-			update(value)
-		},
-
-		update,
-
-		detach: () => {
-			switchRenderable(null)
-			disconnectRoot()
-		},
+		return {
+			update,
+			detach: () => {
+				switchRenderable(null)
+				disconnectRoot()
+			},
+		}
 	}
 }
 
 function createPropertyPart(name) {
-	let node
-
-	return {
-		create: (n, value) => {
-			node = n
-			node[name] = value
-		},
+	return node => ({
 		update: value => {
 			node[name] = value
 		},
 		detach: () => {
 			delete node[name]
 		},
-	}
+	})
 }
 
 function createAttributePart(name) {
-	let node
-
-	return {
-		create: (n, value) => {
-			node = n
-			node.setAttribute(name, value)
-		},
+	return node => ({
 		update: value => node.setAttribute(name, value),
 		detach: () => node.removeAttribute(name),
-	}
+	})
 }
 
 function createDirectivePart() {
-	let node
 	/** @type {Cleanup} */ let cleanup
-
-	return {
-		create: (n, fn) => {
-			node = n
-			cleanup = fn?.(node)
-		},
-
+	return node => ({
 		update: fn => {
 			cleanup?.()
 			cleanup = fn?.(node)
@@ -633,7 +611,7 @@ function createDirectivePart() {
 			cleanup?.()
 			cleanup = null
 		},
-	}
+	})
 }
 
 /** @returns {Directive} */
