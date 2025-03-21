@@ -136,44 +136,47 @@ class BoundTemplateInstance {
 }
 
 /** @param {ParentNode} parent */
-export function createRoot(parent) {
+function createRootInto(parent) {
 	const marker = new Text()
 	parent.appendChild(marker)
-	return new Root(new Span(marker))
+	return createRoot(new Span(marker))
 }
+export { createRootInto as createRoot }
 
 /** @param {Node} node */
-function insertRootAfter(node) {
+function createRootAfter(node) {
 	DEV: assert(node.parentNode, 'expected a parent node')
 	const marker = new Text()
 	node.parentNode.insertBefore(marker, node.nextSibling)
-	return new Root(new Span(marker))
+	return createRoot(new Span(marker))
 }
 
-class Root {
-	/** @type {Key | undefined} */ _key
+function createRoot(/** @type {Span} */ span) {
+	let instance
 
-	/** @param {Span} span */
-	constructor(span) {
-		this._span = span
-	}
-
-	render(value) {
-		const t = value instanceof BoundTemplateInstance ? value : singlePartTemplate(value)
-
-		if (this._instance?._template === t._template) {
-			this._instance.update(t._dynamics)
-		} else {
-			this.detach()
-			this._instance = new TemplateInstance(t._template, t._dynamics, this._span)
-		}
-	}
-
-	detach() {
-		if (!this._instance) return
+	function detach() {
+		if (!instance) return
 		// scan through all the parts of the previous tree, and clear any renderables.
-		for (const [_idx, part] of this._instance._parts) part.detach()
-		delete this._instance
+		for (const [_idx, part] of instance._parts) part.detach()
+		instance = undefined
+	}
+
+	return {
+		_span: span,
+		/** @type {Key | undefined} */ _key: undefined,
+
+		render(value) {
+			const t = value instanceof BoundTemplateInstance ? value : singlePartTemplate(value)
+
+			if (instance?._template === t._template) {
+				instance.update(t._dynamics)
+			} else {
+				detach()
+				instance = new TemplateInstance(t._template, t._dynamics, this._span)
+			}
+		},
+
+		detach,
 	}
 }
 
@@ -412,10 +415,10 @@ class ChildPart {
 	/** @type {Renderable | null} */ #renderable = null
 
 	// for when we're rendering a template:
-	/** @type {Root | undefined} */ #root
+	/** @type {ReturnType<typeof createRoot> | undefined} */ #root
 
 	// for when we're rendering multiple values:
-	/** @type {Root[] | undefined} */ #roots
+	/** @type {ReturnType<typeof createRoot>[] | undefined} */ #roots
 
 	// for when we're rendering a string/single dom node:
 	/** undefined means no previous value, because a user-specified undefined is remapped to null */
@@ -498,7 +501,7 @@ class ChildPart {
 			for (const item of value) {
 				// @ts-expect-error -- WeakMap lookups of non-objects always return undefined, which is fine
 				const key = keys.get(item) ?? item
-				let root = (this.#roots[i] ??= insertRootAfter(end))
+				let root = (this.#roots[i] ??= createRootAfter(end))
 
 				if (key !== undefined && root._key !== key) {
 					const j = this.#roots.findIndex(r => r._key === key)
@@ -561,7 +564,7 @@ class ChildPart {
 		if (Object.is(value, this.#value)) return
 
 		if (value instanceof BoundTemplateInstance) {
-			this.#root ??= new Root(this.#span)
+			this.#root ??= createRoot(this.#span)
 			this.#root.render(value) // root.render will detach the previous tree if the template has changed.
 		} else {
 			// if we previously rendered a tree that might contain renderables,

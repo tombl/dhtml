@@ -1,4 +1,4 @@
-import type { BoundTemplateInstance, Cleanup, Directive, Displayable, Key, Renderable } from './types.ts'
+import type { BoundTemplateInstance, Cleanup, Directive, Displayable, Key, Renderable, Span } from './types.ts'
 
 export { Directive, Displayable, Renderable }
 
@@ -10,6 +10,8 @@ export function onUnmount(renderable: Renderable, callback: () => void): void
 export function getParentNode(renderable: Renderable): Node
 
 export interface Root {
+	/* @internal */ _span: Span
+	/* @internal */ _key: unknown
 	render(value: Displayable): void
 	detach(): void
 }
