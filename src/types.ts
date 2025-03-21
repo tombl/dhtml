@@ -24,7 +24,7 @@ export interface Span {
 	_marker: Node | null
 }
 
-interface Part {
+export interface Part {
 	update(value: unknown): void
 	detach(): void
 }
