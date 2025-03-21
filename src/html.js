@@ -58,9 +58,9 @@ const singlePartTemplate = part => html`${part}`
 
 /* v8 ignore start */
 /** @return {asserts value} */
-const assert = (value, message = 'assertion failed') => {
+function assert(value, message) {
 	if (!DEV) return
-	if (!value) throw new Error(message)
+	if (!value) throw new Error(message ?? 'assertion failed')
 }
 /* v8 ignore stop */
 
@@ -151,7 +151,7 @@ function createRoot(/** @type {Span} */ span) {
 		_span: span,
 		/** @type {Key | undefined} */ _key: undefined,
 
-		render(value) {
+		render: value => {
 			const html = isHtml(value) ? value : singlePartTemplate(value)
 
 			if (template !== html._template) {
