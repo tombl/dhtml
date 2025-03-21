@@ -121,16 +121,14 @@ function spanDeleteContents(/** @type {Span} */ span) {
 	span._start = span._end = span._marker
 }
 
-/** @param {ParentNode} parent */
-function createRootInto(parent) {
+function createRootInto(/** @type {ParentNode} */ parent) {
 	const marker = new Text()
 	parent.appendChild(marker)
 	return createRoot(createSpan(marker))
 }
 export { createRootInto as createRoot }
 
-/** @param {Node} node */
-function createRootAfter(node) {
+function createRootAfter(/** @type {Node} */ node) {
 	DEV: assert(node.parentNode, 'expected a parent node')
 	const marker = new Text()
 	node.parentNode.insertBefore(marker, node.nextSibling)
@@ -197,8 +195,7 @@ const FORCE_ATTRIBUTES = /-|^class$|^for$/i
 
 /** @type {Map<TemplateStringsArray, CompiledTemplate>} */
 const templates = new Map()
-/** @param {TemplateStringsArray} statics */
-function compileTemplate(statics) {
+function compileTemplate(/** @type {TemplateStringsArray} */ statics) {
 	const cached = templates.get(statics)
 	if (cached) return cached
 
@@ -373,8 +370,7 @@ function createChildPart(
 	/** undefined means no previous value, because a user-specified undefined is remapped to null */
 	let prevValue
 
-	/** @param {Renderable | null} next */
-	function switchRenderable(next) {
+	function switchRenderable(/** @type {Renderable | null} */ next) {
 		if (renderable && renderable !== next) {
 			const controller = controllers.get(renderable)
 			if (controller?._unmountCallbacks) for (const callback of controller._unmountCallbacks) callback?.()
