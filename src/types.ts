@@ -22,7 +22,7 @@ export declare class Span {
 	_end: Node | null
 }
 
-export interface Part {
+interface Part {
 	create(node: Node | Span, value: unknown): void
 	update(value: unknown): void
 	detach(): void
