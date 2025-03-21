@@ -42,7 +42,7 @@ export function html(/** @type {TemplateStringsArray} */ statics, /** @type {unk
 	if (DEV) {
 		assert(
 			compileTemplate(statics)._parts.length === dynamics.length,
-			'expected the same number of dynamics as parts. do you have a ${...} in an unsupported place?'
+			'expected the same number of dynamics as parts. do you have a ${...} in an unsupported place?',
 		)
 	}
 
@@ -152,13 +152,13 @@ function createRootAfter(node) {
 }
 
 function createRoot(/** @type {Span} */ span) {
-	let instance
+	let template, parts
 
 	function detach() {
-		if (!instance) return
+		if (!parts) return
 		// scan through all the parts of the previous tree, and clear any renderables.
-		for (const [_idx, part] of instance._parts) part.detach()
-		instance = undefined
+		for (const [_idx, part] of parts) part.detach()
+		parts = undefined
 	}
 
 	return {
@@ -166,56 +166,43 @@ function createRoot(/** @type {Span} */ span) {
 		/** @type {Key | undefined} */ _key: undefined,
 
 		render(value) {
-			const t = isHtml(value) ? value : singlePartTemplate(value)
+			const html = isHtml(value) ? value : singlePartTemplate(value)
 
-			if (instance?._template === t._template) {
-				instance.update(t._dynamics)
+			if (template === html._template) {
+				for (const [idx, part] of parts) part.update(html._dynamics[idx])
 			} else {
 				detach()
-				instance = new TemplateInstance(t._template, t._dynamics, this._span)
+
+				template = html._template
+
+				const doc = /** @type {DocumentFragment} */ (template._content.cloneNode(true))
+
+				const nodeByPart = []
+				for (const node of doc.querySelectorAll('[data-dynparts]')) {
+					const parts = node.getAttribute('data-dynparts')
+					assert(parts)
+					node.removeAttribute('data-dynparts')
+					for (const part of parts.split(' ')) nodeByPart[part] = node
+				}
+
+				for (const part of template._rootParts) nodeByPart[part] = span
+
+				// the fragment must be inserted before the parts are constructed,
+				// because they need to know their final location.
+				// this also ensures that custom elements are upgraded before we do things
+				// to them, like setting properties or attributes.
+				span._deleteContents()
+				span._insertNode(doc)
+
+				parts = html._template._parts.map(([dynamicIdx, createPart], elementIdx) => {
+					const part = createPart(span)
+					part.create(nodeByPart[elementIdx], html._dynamics[dynamicIdx])
+					return /** @type {const} */ ([dynamicIdx, part])
+				})
 			}
 		},
 
 		detach,
-	}
-}
-
-class TemplateInstance {
-	/**
-	 * @param {CompiledTemplate} template
-	 * @param {unknown[]} dynamics
-	 * @param {Span} span
-	 */
-	constructor(template, dynamics, span) {
-		this._template = template
-		const doc = /** @type {DocumentFragment} */ (template._content.cloneNode(true))
-
-		const nodeByPart = []
-		for (const node of doc.querySelectorAll('[data-dynparts]')) {
-			const parts = node.getAttribute('data-dynparts')
-			assert(parts)
-			node.removeAttribute('data-dynparts')
-			for (const part of parts.split(' ')) nodeByPart[part] = node
-		}
-
-		for (const part of template._rootParts) nodeByPart[part] = span
-
-		// the fragment must be inserted before the parts are constructed,
-		// because they need to know their final location.
-		// this also ensures that custom elements are upgraded before we do things
-		// to them, like setting properties or attributes.
-		span._deleteContents()
-		span._insertNode(doc)
-
-		this._parts = template._parts.map(([dynamicIdx, createPart], elementIdx) => {
-			const part = createPart(span)
-			part.create(nodeByPart[elementIdx], dynamics[dynamicIdx])
-			return /** @type {const} */ ([dynamicIdx, part])
-		})
-	}
-
-	update(dynamics) {
-		for (const [idx, part] of this._parts) part.update(dynamics[idx])
 	}
 }
 
