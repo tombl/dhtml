@@ -1,45 +1,50 @@
-/** @import {
-	Cleanup,
-	CompiledTemplate,
-	Directive,
-	Displayable,
-	Key,
-	Part,
-	Renderable,
-	Span,
-} from './types' */
+declare global {
+	const DHTML_PROD: unknown
+}
+
+interface ToString {
+	toString(): string
+}
+
+export type Displayable = null | undefined | ToString | Node | Renderable | Iterable<Displayable>
+export interface Renderable {
+	render(): Displayable
+}
+
+type Cleanup = (() => void) | void | undefined | null
+export type Directive = (node: Element) => Cleanup
+
+interface CompiledTemplate {
+	_content: DocumentFragment
+	_parts: [idx: number, createPart: (node: Node | Span, span: Span) => Part][]
+	_rootParts: number[]
+}
 
 const DEV = typeof DHTML_PROD === 'undefined' || !DHTML_PROD
 
-/** @type {typeof NodeFilter.SHOW_ELEMENT} */ const NODE_FILTER_ELEMENT = 1
-/** @type {typeof NodeFilter.SHOW_TEXT} */ const NODE_FILTER_TEXT = 4
-/** @type {typeof NodeFilter.SHOW_COMMENT} */ const NODE_FILTER_COMMENT = 128
+const NODE_FILTER_ELEMENT: typeof NodeFilter.SHOW_ELEMENT = 1
+const NODE_FILTER_TEXT: typeof NodeFilter.SHOW_TEXT = 4
+const NODE_FILTER_COMMENT: typeof NodeFilter.SHOW_COMMENT = 128
 
-/** @return {node is Element} */
-const isElement = (/** @type {Node} */ node) => node.nodeType === /** @satisfies {typeof Node.ELEMENT_NODE} */ (1)
+const isElement = (node: Node): node is Element => node.nodeType === (1 satisfies typeof Node.ELEMENT_NODE)
 
-/** @return {node is Text} */
-const isText = (/** @type {Node} */ node) => node.nodeType === /** @satisfies {typeof Node.TEXT_NODE} */ (3)
+const isText = (node: Node): node is Text => node.nodeType === (3 satisfies typeof Node.TEXT_NODE)
 
-/** @return {node is Comment} */
-const isComment = (/** @type {Node} */ node) => node.nodeType === /** @satisfies {typeof Node.COMMENT_NODE} */ (8)
+const isComment = (node: Node): node is Comment => node.nodeType === (8 satisfies typeof Node.COMMENT_NODE)
 
-/** @return {node is DocumentFragment} */
-const isDocumentFragment = (/** @type {Node} */ node) =>
-	node.nodeType === /** @satisfies {typeof Node.DOCUMENT_FRAGMENT_NODE} */ (11)
+const isDocumentFragment = (node: Node): node is DocumentFragment =>
+	node.nodeType === (11 satisfies typeof Node.DOCUMENT_FRAGMENT_NODE)
 
-/** @return {value is Renderable} */
-const isRenderable = (/** @type {unknown} */ value) => typeof value === 'object' && value !== null && 'render' in value
+const isRenderable = (value: unknown): value is Renderable =>
+	typeof value === 'object' && value !== null && 'render' in value
 
-/** @return {value is Iterable<unknown>} */
-const isIterable = (/** @type {unknown} */ value) =>
+const isIterable = (value: unknown): value is Iterable<unknown> =>
 	typeof value === 'object' && value !== null && Symbol.iterator in value
 
-/** @return {value is ReturnType<typeof html>} */
-const isHtml = (/** @type {any} */ value) => value?.$ === html
+const isHtml = (value: any): value is ReturnType<typeof html> => value?.$ === html
 
-export function html(/** @type {TemplateStringsArray} */ statics, /** @type {unknown[]} */ ...dynamics) {
-	/** @type {CompiledTemplate} */ let template
+export function html(statics: TemplateStringsArray, ...dynamics: unknown[]) {
+	let template: CompiledTemplate
 
 	if (DEV) {
 		assert(
@@ -57,18 +62,24 @@ export function html(/** @type {TemplateStringsArray} */ statics, /** @type {unk
 	}
 }
 
-const singlePartTemplate = (/** @type {Displayable} */ part) => html`${part}`
+const singlePartTemplate = (part: Displayable) => html`${part}`
 
 /* v8 ignore start */
-/** @return {asserts value} */
-function assert(/** @type {unknown} */ value, /** @type {string?} */ message) {
+
+function assert(value: unknown, message?: string): asserts value {
 	if (!DEV) return
 	if (!value) throw new Error(message ?? 'assertion failed')
 }
 /* v8 ignore stop */
 
-/** @returns {Span} */
-function createSpan(/** @type {Node} */ node) {
+interface Span {
+	_parentNode: Node
+	_start: Node
+	_end: Node
+	_marker: Node | null
+}
+
+function createSpan(node: Node): Span {
 	DEV: assert(node.parentNode !== null)
 	return {
 		_parentNode: node.parentNode,
@@ -78,7 +89,7 @@ function createSpan(/** @type {Node} */ node) {
 	}
 }
 
-function spanInsertNode(/** @type {Span} */ span, /** @type {Node} */ node) {
+function spanInsertNode(span: Span, node: Node) {
 	const end = isDocumentFragment(node) ? node.lastChild : node
 	if (end === null) return // empty fragment
 	span._parentNode.insertBefore(node, span._end.nextSibling)
@@ -93,7 +104,7 @@ function spanInsertNode(/** @type {Span} */ span, /** @type {Node} */ node) {
 	}
 }
 
-function* spanIterator(/** @type {Span} */ span) {
+function* spanIterator(span: Span) {
 	let node = span._start
 	for (;;) {
 		const next = node.nextSibling
@@ -104,7 +115,7 @@ function* spanIterator(/** @type {Span} */ span) {
 	}
 }
 
-function spanExtractContents(/** @type {Span} */ span) {
+function spanExtractContents(span: Span) {
 	span._marker = new Text()
 	span._parentNode.insertBefore(span._marker, span._start)
 
@@ -115,7 +126,7 @@ function spanExtractContents(/** @type {Span} */ span) {
 	return fragment
 }
 
-function spanDeleteContents(/** @type {Span} */ span) {
+function spanDeleteContents(span: Span) {
 	span._marker = new Text()
 	span._parentNode.insertBefore(span._marker, span._start)
 
@@ -124,26 +135,34 @@ function spanDeleteContents(/** @type {Span} */ span) {
 	span._start = span._end = span._marker
 }
 
-function createRootInto(/** @type {ParentNode} */ parent) {
+interface Root {
+	render(value: Displayable): void
+	detach(): void
+}
+interface RootInternal extends Root {
+	_span: Span
+	_key: Key | undefined
+}
+
+export type { Root }
+export { createRootInto as createRoot }
+
+function createRootInto(parent: Node): Root {
 	const marker = new Text()
 	parent.appendChild(marker)
 	return createRoot(createSpan(marker))
 }
-export { createRootInto as createRoot }
 
-function createRootAfter(/** @type {Node} */ node) {
+function createRootAfter(node: Node) {
 	DEV: assert(node.parentNode, 'expected a parent node')
 	const marker = new Text()
 	node.parentNode.insertBefore(marker, node.nextSibling)
 	return createRoot(createSpan(marker))
 }
 
-function createRoot(/** @type {Span} */ span) {
-	/** @type {CompiledTemplate} */
-	let template
-
-	/** @type {[number, Part][] | undefined} */
-	let parts
+function createRoot(span: Span): RootInternal {
+	let template: CompiledTemplate
+	let parts: [number, Part][] | undefined
 
 	function detach() {
 		if (!parts) return
@@ -154,9 +173,9 @@ function createRoot(/** @type {Span} */ span) {
 
 	return {
 		_span: span,
-		/** @type {Key | undefined} */ _key: undefined,
+		_key: undefined,
 
-		render: (/** @type {Displayable} */ value) => {
+		render: (value: Displayable) => {
 			const html = isHtml(value) ? value : singlePartTemplate(value)
 
 			if (template !== html._template) {
@@ -164,10 +183,9 @@ function createRoot(/** @type {Span} */ span) {
 
 				template = html._template
 
-				const doc = /** @type {DocumentFragment} */ (template._content.cloneNode(true))
+				const doc = template._content.cloneNode(true) as DocumentFragment
 
-				/** @type {Array<Node | Span>} */
-				const nodeByPart = []
+				const nodeByPart: Array<Node | Span> = []
 
 				for (const node of doc.querySelectorAll('[data-dynparts]')) {
 					const parts = node.getAttribute('data-dynparts')
@@ -186,10 +204,10 @@ function createRoot(/** @type {Span} */ span) {
 				spanDeleteContents(span)
 				spanInsertNode(span, doc)
 
-				parts = html._template._parts.map(
-					([dynamicIdx, createPart], elementIdx) =>
-						/** @type {const} */ ([dynamicIdx, createPart(nodeByPart[elementIdx], span)]),
-				)
+				parts = html._template._parts.map(([dynamicIdx, createPart], elementIdx) => [
+					dynamicIdx,
+					createPart(nodeByPart[elementIdx], span),
+				])
 			}
 
 			assert(parts)
@@ -204,9 +222,8 @@ const DYNAMIC_WHOLE = /^dyn-\$(\d+)\$$/i
 const DYNAMIC_GLOBAL = /dyn-\$(\d+)\$/gi
 const FORCE_ATTRIBUTES = /-|^class$|^for$/i
 
-/** @type {Map<TemplateStringsArray, CompiledTemplate>} */
-const templates = new Map()
-function compileTemplate(/** @type {TemplateStringsArray} */ statics) {
+const templates: Map<TemplateStringsArray, CompiledTemplate> = new Map()
+function compileTemplate(statics: TemplateStringsArray) {
 	const cached = templates.get(statics)
 	if (cached) return cached
 
@@ -214,19 +231,18 @@ function compileTemplate(/** @type {TemplateStringsArray} */ statics) {
 	templateElement.innerHTML = statics.reduce((a, v, i) => a + v + (i === statics.length - 1 ? '' : `dyn-$${i}$`), '')
 
 	let nextPart = 0
-	/** @type {CompiledTemplate} */
-	const compiled = {
+
+	const compiled: CompiledTemplate = {
 		_content: templateElement.content,
 		_parts: Array(statics.length - 1),
 		_rootParts: [],
 	}
 
-	/**
-	 * @param {DocumentFragment | HTMLElement | SVGElement} node
-	 * @param {number} idx
-	 * @param {(node: Node | Span, span: Span) => Part} createPart
-	 */
-	function patch(node, idx, createPart) {
+	function patch(
+		node: DocumentFragment | HTMLElement | SVGElement,
+		idx: number,
+		createPart: (node: Node | Span, span: Span) => Part,
+	) {
 		DEV: assert(nextPart < compiled._parts.length, 'got more parts than expected')
 		if (isDocumentFragment(node)) compiled._rootParts.push(nextPart)
 		else if ('dynparts' in node.dataset) node.dataset.dynparts += ' ' + nextPart
@@ -241,7 +257,7 @@ function compileTemplate(/** @type {TemplateStringsArray} */ statics) {
 	)
 	// stop iterating once we've hit the last part, but if we're in dev mode, keep going to check for mistakes.
 	while ((nextPart < compiled._parts.length || DEV) && walker.nextNode()) {
-		const node = /** @type {Text | Element | Comment} */ (walker.currentNode)
+		const node = walker.currentNode
 		if (isText(node)) {
 			// reverse the order because we'll be supplying ChildPart with its index in the parent node.
 			// and if we apply the parts forwards, indicies will be wrong if some prior part renders more than one node.
@@ -250,7 +266,7 @@ function compileTemplate(/** @type {TemplateStringsArray} */ statics) {
 				node.splitText(match.index + match[0].length)
 				const dyn = new Comment()
 				node.splitText(match.index).replaceWith(dyn)
-				return /** @type {const} */ ([dyn, parseInt(match[1])])
+				return [dyn, parseInt(match[1])] as const
 			})
 
 			if (nodes.length) {
@@ -332,16 +348,18 @@ function compileTemplate(/** @type {TemplateStringsArray} */ statics) {
 	return compiled
 }
 
-/** @type {WeakMap<object, {
-  _mounted: boolean 
-	_invalidateQueued: Promise<void> | null
-	_invalidate: () => void
-	_unmountCallbacks: Set<Cleanup> | null
-	_parentNode: Node
-}>} */
-const controllers = new WeakMap()
+const controllers = new WeakMap<
+	object,
+	{
+		_mounted: boolean
+		_invalidateQueued: Promise<void> | null
+		_invalidate: () => void
+		_unmountCallbacks: Set<Cleanup> | null
+		_parentNode: Node
+	}
+>()
 
-export function invalidate(/** @type {Renderable} */ renderable) {
+export function invalidate(renderable: Renderable): Promise<void> {
 	const controller = controllers.get(renderable)
 	assert(controller, 'the renderable has not been rendered')
 	return (controller._invalidateQueued ??= Promise.resolve().then(() => {
@@ -350,10 +368,9 @@ export function invalidate(/** @type {Renderable} */ renderable) {
 	}))
 }
 
-/** @type {WeakMap<Renderable, Set<() => Cleanup>>} */
-const mountCallbacks = new WeakMap()
+const mountCallbacks = new WeakMap<Renderable, Set<() => Cleanup>>()
 
-export function onMount(/** @type {Renderable} */ renderable, /** @type {() => Cleanup} */ callback) {
+export function onMount(renderable: Renderable, callback: () => Cleanup) {
 	DEV: assert(isRenderable(renderable), 'expected a renderable')
 
 	const controller = controllers.get(renderable)
@@ -367,46 +384,49 @@ export function onMount(/** @type {Renderable} */ renderable, /** @type {() => C
 	cb.add(callback)
 }
 
-export function onUnmount(/** @type {Renderable} */ renderable, /** @type {() => void} */ callback) {
+export function onUnmount(renderable: Renderable, callback: () => void) {
 	onMount(renderable, () => callback)
 }
 
-export function getParentNode(/** @type {Renderable} */ renderable) {
+export function getParentNode(renderable: Renderable) {
 	const controller = controllers.get(renderable)
 	assert(controller, 'the renderable has not been rendered')
 	return controller._parentNode
 }
 
-const keys = new WeakMap()
-export function keyed(/** @type {Renderable} */ renderable, /** @type {unknown} */ key) {
+type Key = string | number | bigint | boolean | symbol | object | null
+
+const keys = new WeakMap<Displayable & object, Key>()
+
+export function keyed<T extends Displayable & object>(renderable: T, key: Key): T {
 	if (DEV && keys.has(renderable)) throw new Error('renderable already has a key')
 	keys.set(renderable, key)
 	return renderable
 }
 
-/** @returns {Part} */
-function createChildPart(
-	/** @type {Node | Span} */ parentNode,
-	/** @type {Span} */ parentSpan,
-	/** @type {number} */ childIndex,
-) {
+interface Part {
+	update(value: unknown): void
+	detach(): void
+}
+
+function createChildPart(parentNode: Node | Span, parentSpan: Span, childIndex: number): Part {
 	let span
 
 	// for when we're rendering a renderable:
-	/** @type {Renderable | null} */ let renderable = null
+	let renderable: Renderable | null = null
 
 	// for when we're rendering a template:
-	/** @type {ReturnType<typeof createRoot> | undefined} */ let root
+	let root: RootInternal | undefined
 
 	// for when we're rendering multiple values:
-	/** @type {ReturnType<typeof createRoot>[] | undefined} */ let roots
+	let roots: RootInternal[] | undefined
 
 	// for when we're rendering a string/single dom node:
 	// undefined means no previous value, because a user-specified undefined is remapped to null
-	/** @type {Displayable | null | undefined} */
-	let prevValue
 
-	function switchRenderable(/** @type {Renderable | null} */ next) {
+	let prevValue: Displayable | null | undefined
+
+	function switchRenderable(next: Renderable | null) {
 		if (renderable && renderable !== next) {
 			const controller = controllers.get(renderable)
 			if (controller?._unmountCallbacks) for (const callback of controller._unmountCallbacks) callback?.()
@@ -437,7 +457,7 @@ function createChildPart(
 	}
 
 	return {
-		update: function update(/** @type {Displayable} */ value) {
+		update: function update(value: Displayable) {
 			DEV: assert(span)
 			const endsWereEqual = span._parentNode === parentSpan._parentNode && span._end === parentSpan._end
 
@@ -521,7 +541,7 @@ function createChildPart(
 						}
 					}
 
-					root.render(/** @type {Displayable} */ (item))
+					root.render(item as Displayable)
 					end = root._span._end
 					i++
 				}
@@ -601,8 +621,7 @@ function createChildPart(
 	}
 }
 
-/** @returns {Part} */
-function createPropertyPart(/** @type {Node} */ node, /** @type {string} */ name) {
+function createPropertyPart(node: Node, name: string): Part {
 	return {
 		update: value => {
 			// @ts-expect-error
@@ -615,8 +634,7 @@ function createPropertyPart(/** @type {Node} */ node, /** @type {string} */ name
 	}
 }
 
-/** @returns {Part} */
-function createAttributePart(/** @type {Element} */ node, /** @type {string} */ name) {
+function createAttributePart(node: Element, name: string): Part {
 	return {
 		// @ts-expect-error -- setAttribute implicitly casts the value to a string
 		update: value => node.setAttribute(name, value),
@@ -624,9 +642,8 @@ function createAttributePart(/** @type {Element} */ node, /** @type {string} */ 
 	}
 }
 
-/** @returns {Part} */
-function createDirectivePart(/** @type {Node} */ node) {
-	/** @type {Cleanup} */ let cleanup
+function createDirectivePart(node: Node): Part {
+	let cleanup: Cleanup
 	return {
 		update: fn => {
 			DEV: assert(typeof fn === 'function' || fn == null)
@@ -641,8 +658,7 @@ function createDirectivePart(/** @type {Node} */ node) {
 	}
 }
 
-/** @returns {Directive} */
-export function attr(/** @type {string} */ name, /** @type {string | boolean | null | undefined} */ value) {
+export function attr(name: string, value: string | boolean | null | undefined): Directive {
 	return node => {
 		if (typeof value === 'boolean') node.toggleAttribute(name, value)
 		else if (value == null) node.removeAttribute(name)

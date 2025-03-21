@@ -14,5 +14,5 @@ build() {
     printf "brotli: %d bytes\n" "$(wc -c <dist/$1.min.js.br)"
 }
 
-build html js
+build html ts
 build html.server ts
