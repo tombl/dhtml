@@ -1,6 +1,5 @@
-import type { Displayable } from '../shared.ts'
+import { assert, DEV, type Displayable } from '../shared.ts'
 import { compile_template, type CompiledTemplate } from './compiler.ts'
-import { assert, DEV } from './internal.ts'
 
 const tag: unique symbol = Symbol()
 

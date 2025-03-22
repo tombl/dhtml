@@ -1,8 +1,7 @@
-import type { Displayable } from '../shared.ts'
+import { assert, type Displayable } from '../shared.ts'
 import type { CompiledTemplate } from './compiler.ts'
 import type { Key } from './controller.ts'
 import { is_html, single_part_template } from './html.ts'
-import { assert } from './internal.ts'
 import type { Part } from './parts.ts'
 import { create_span, span_delete_contents, span_insert_node, type Span } from './span.ts'
 

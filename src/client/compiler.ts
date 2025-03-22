@@ -1,4 +1,4 @@
-import { assert, DEV } from './internal.ts'
+import { assert, DEV } from '../shared.ts'
 import {
 	create_attribute_part,
 	create_child_part,

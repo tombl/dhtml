@@ -2,7 +2,7 @@ import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
 	define: {
-		DHTML_PROD: !!process.env.PROD,
+		DHTML_DEV: !process.env.PROD,
 	},
 	test: {
 		clearMocks: true,
