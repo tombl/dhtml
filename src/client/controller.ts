@@ -1,5 +1,6 @@
+import type { Displayable, Renderable } from '../shared.ts'
 import { assert, DEV } from './internal.ts'
-import { is_renderable, type Cleanup, type Displayable, type Renderable } from './util.ts'
+import { is_renderable, type Cleanup } from './util.ts'
 
 export type Key = string | number | bigint | boolean | symbol | object | null
 

@@ -1,8 +1,0 @@
-{
-	"extends": "../../../tsconfig.json",
-	"compilerOptions": {
-		"customConditions": ["dhtml-source", "browser"],
-		"target": "esnext"
-	},
-	"include": ["."]
-}

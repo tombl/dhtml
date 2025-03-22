@@ -217,7 +217,7 @@ const ESCAPE_SUBSTITUTIONS = {
 	"'": '&#39;',
 }
 function escape(str: unknown) {
-	return String(str).replace(ESCAPE_RE, c => ESCAPE_SUBSTITUTIONS[c])
+	return String(str).replace(ESCAPE_RE, c => ESCAPE_SUBSTITUTIONS[c as keyof typeof ESCAPE_SUBSTITUTIONS])
 }
 
 function* renderToIterable(value: Displayable) {

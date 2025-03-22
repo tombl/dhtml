@@ -1,9 +1,10 @@
+import type { Displayable, Renderable } from '../shared.ts'
 import { controllers, keys, mount_callbacks } from './controller.ts'
 import { is_html, single_part_template } from './html.ts'
 import { assert } from './internal.ts'
 import { create_root, create_root_after, type Root } from './root.ts'
 import { create_span, span_delete_contents, span_extract_contents, span_insert_node, type Span } from './span.ts'
-import { is_iterable, is_renderable, type Cleanup, type Displayable, type Renderable } from './util.ts'
+import { is_iterable, is_renderable, type Cleanup } from './util.ts'
 
 export interface Part {
 	update(value: unknown): void

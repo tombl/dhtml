@@ -1,6 +1,6 @@
+import type { Displayable } from '../shared.ts'
 import { compile_template, type CompiledTemplate } from './compiler.ts'
 import { assert, DEV } from './internal.ts'
-import type { Displayable } from './util.ts'
 
 interface HTML {
 	$: typeof html

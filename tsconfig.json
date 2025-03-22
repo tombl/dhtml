@@ -10,7 +10,8 @@
 		"verbatimModuleSyntax": true,
 		"allowUnusedLabels": true, // esbuild drops DEV labeled code in the prod build
 		"moduleResolution": "bundler",
-		"allowImportingTsExtensions": true
+		"allowImportingTsExtensions": true,
+		"customConditions": ["dhtml-source"]
 	},
 	"include": ["src"]
 }
