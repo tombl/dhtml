@@ -8,7 +8,7 @@ import { afterEach, expect } from 'vitest'
 
 const roots: Root[] = []
 
-export function setup(initialHtml = '') {
+export function setup(initialHtml = ''): { root: Root; el: HTMLDivElement } {
 	const state = expect.getState()
 	const parentEl = document.createElement('div')
 	Object.assign(parentEl.style, {

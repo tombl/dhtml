@@ -2,7 +2,7 @@ declare global {
 	const DHTML_PROD: unknown
 }
 
-export const DEV = typeof DHTML_PROD === 'undefined' || !DHTML_PROD
+export const DEV: boolean = typeof DHTML_PROD === 'undefined' || !DHTML_PROD
 
 /* v8 ignore start */
 export function assert(value: unknown, message?: string): asserts value {

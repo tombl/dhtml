@@ -24,7 +24,7 @@ const DYNAMIC_GLOBAL = /dyn-\$(\d+)\$/gi
 const FORCE_ATTRIBUTES = /-|^class$|^for$/i
 
 const templates: Map<TemplateStringsArray, CompiledTemplate> = new Map()
-export function compile_template(statics: TemplateStringsArray) {
+export function compile_template(statics: TemplateStringsArray): CompiledTemplate {
 	const cached = templates.get(statics)
 	if (cached) return cached
 

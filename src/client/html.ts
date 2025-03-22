@@ -2,7 +2,7 @@ import type { Displayable } from '../shared.ts'
 import { compile_template, type CompiledTemplate } from './compiler.ts'
 import { assert, DEV } from './internal.ts'
 
-const tag = Symbol()
+const tag: unique symbol = Symbol()
 
 interface HTML {
 	[tag]: true
@@ -31,4 +31,4 @@ export function html(statics: TemplateStringsArray, ...dynamics: unknown[]): HTM
 	}
 }
 
-export const single_part_template = (part: Displayable) => html`${part}`
+export const single_part_template = (part: Displayable): HTML => html`${part}`

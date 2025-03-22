@@ -2,7 +2,6 @@
 	"compilerOptions": {
 		"strict": true,
 		"noImplicitAny": true,
-		"checkJs": true,
 		"skipLibCheck": true,
 		"noEmit": true,
 		"module": "es2020",
@@ -10,7 +9,9 @@
 		"verbatimModuleSyntax": true,
 		"moduleResolution": "bundler",
 		"allowImportingTsExtensions": true,
-		"stripInternal": true
+		"stripInternal": true,
+		"isolatedDeclarations": true,
+		"declaration": true
 	},
 	"include": ["src"]
 }
