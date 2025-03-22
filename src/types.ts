@@ -17,13 +17,14 @@ export declare class BoundTemplateInstance {
 
 export type Key = string | number | bigint | boolean | symbol | object | null
 
-export declare class Span {
-	_start: Node | null
-	_end: Node | null
+export interface Span {
+	_parentNode: Node
+	_start: Node
+	_end: Node
+	_marker: Node | null
 }
 
-export interface Part {
-	create(node: Node | Span, value: unknown): void
+interface Part {
 	update(value: unknown): void
 	detach(): void
 }
@@ -33,6 +34,6 @@ export type Directive = (node: Element) => Cleanup
 
 export interface CompiledTemplate {
 	_content: DocumentFragment
-	_parts: [idx: number, createPart: (span: Span) => Part][]
+	_parts: [idx: number, createPart: (node: Node | Span, span: Span) => Part][]
 	_rootParts: number[]
 }

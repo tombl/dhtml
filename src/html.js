@@ -4,9 +4,8 @@
 	Directive,
 	Displayable,
 	Key,
-	Part,
 	Renderable,
-	Span as SpanInstance
+	Span,
 } from './types' */
 
 const DEV = typeof DHTML_PROD === 'undefined' || !DHTML_PROD
@@ -33,186 +32,160 @@ const isRenderable = value => typeof value === 'object' && value !== null && 're
 /** @return {value is Iterable<unknown>} */
 const isIterable = value => typeof value === 'object' && value !== null && Symbol.iterator in value
 
-export const html = (statics, ...dynamics) => new BoundTemplateInstance(statics, dynamics)
+/** @return {value is ReturnType<typeof html>} */
+const isHtml = value => value?.$ === html
+
+export function html(/** @type {TemplateStringsArray} */ statics, /** @type {unknown[]} */ ...dynamics) {
+	/** @type {CompiledTemplate} */ let template
+
+	if (DEV) {
+		assert(
+			compileTemplate(statics)._parts.length === dynamics.length,
+			'expected the same number of dynamics as parts. do you have a ${...} in an unsupported place?',
+		)
+	}
+
+	return {
+		$: html,
+		_dynamics: dynamics,
+		get _template() {
+			return (template ??= compileTemplate(statics))
+		},
+	}
+}
 
 const singlePartTemplate = part => html`${part}`
 
 /* v8 ignore start */
 /** @return {asserts value} */
-const assert = (value, message = 'assertion failed') => {
+function assert(value, message) {
 	if (!DEV) return
-	if (!value) throw new Error(message)
+	if (!value) throw new Error(message ?? 'assertion failed')
 }
 /* v8 ignore stop */
 
-/** @implements {SpanInstance} */
-class Span {
-	/**
-	 * @param {Node} node the only node in the span
-	 */
-	constructor(node) {
-		DEV: assert(node.parentNode !== null)
-		this._parentNode = node.parentNode
-		this._start = this._end = node
-	}
-
-	_deleteContents() {
-		this._marker = new Text()
-		this._parentNode.insertBefore(this._marker, this._start)
-
-		for (const node of this) this._parentNode.removeChild(node)
-
-		this._start = this._end = this._marker
-	}
-
-	/** @param {Node} node */
-	_insertNode(node) {
-		const end = isDocumentFragment(node) ? node.lastChild : node
-		if (end === null) return // empty fragment
-		this._parentNode.insertBefore(node, this._end.nextSibling)
-		this._end = end
-
-		if (this._start === this._marker) {
-			DEV: assert(this._start.nextSibling)
-			this._start = this._start.nextSibling
-
-			this._parentNode.removeChild(this._marker)
-			this._marker = null
-		}
-	}
-	*[Symbol.iterator]() {
-		let node = this._start
-		for (;;) {
-			const next = node.nextSibling
-			yield node
-			if (node === this._end) return
-			assert(next, 'expected more siblings')
-			node = next
-		}
-	}
-	_extractContents() {
-		this._marker = new Text()
-		this._parentNode.insertBefore(this._marker, this._start)
-
-		const fragment = document.createDocumentFragment()
-		for (const node of this) fragment.appendChild(node)
-
-		this._start = this._end = this._marker
-		return fragment
+/** @returns {Span} */
+function createSpan(node) {
+	DEV: assert(node.parentNode !== null)
+	return {
+		_parentNode: node.parentNode,
+		_start: node,
+		_end: node,
+		_marker: null,
 	}
 }
 
-/* v8 ignore start */
-if (DEV) {
-	Span.prototype.toString = function () {
-		let result = ''
-		for (const node of this)
-			result += isElement(node)
-				? node.outerHTML
-				: `${node.constructor.name}(${'data' in node ? JSON.stringify(node.data) : node})`
-		return result
-	}
-}
-/* v8 ignore stop */
+function spanInsertNode(/** @type {Span} */ span, /** @type {Node} */ node) {
+	const end = isDocumentFragment(node) ? node.lastChild : node
+	if (end === null) return // empty fragment
+	span._parentNode.insertBefore(node, span._end.nextSibling)
+	span._end = end
 
-class BoundTemplateInstance {
-	/** @type {CompiledTemplate | undefined} */ #template
-	/** @type {TemplateStringsArray} */ #statics
+	if (span._start === span._marker) {
+		DEV: assert(span._start.nextSibling)
+		span._start = span._start.nextSibling
 
-	get _template() {
-		return (this.#template ??= compileTemplate(this.#statics))
-	}
-
-	constructor(statics, dynamics) {
-		this.#statics = statics
-		this._dynamics = dynamics
-
-		// eagerly compile the template in DEV, plus some extra checks.
-		DEV: assert(
-			this._template._parts.length === dynamics.length,
-			'expected the same number of dynamics as parts. do you have a ${...} in an unsupported place?',
-		)
+		span._parentNode.removeChild(span._marker)
+		span._marker = null
 	}
 }
 
-/** @param {ParentNode} parent */
-export function createRoot(parent) {
+function* spanIterator(/** @type {Span} */ span) {
+	let node = span._start
+	for (;;) {
+		const next = node.nextSibling
+		yield node
+		if (node === span._end) return
+		assert(next, 'expected more siblings')
+		node = next
+	}
+}
+
+function spanExtractContents(/** @type {Span} */ span) {
+	span._marker = new Text()
+	span._parentNode.insertBefore(span._marker, span._start)
+
+	const fragment = document.createDocumentFragment()
+	for (const node of spanIterator(span)) fragment.appendChild(node)
+
+	span._start = span._end = span._marker
+	return fragment
+}
+
+function spanDeleteContents(/** @type {Span} */ span) {
+	span._marker = new Text()
+	span._parentNode.insertBefore(span._marker, span._start)
+
+	for (const node of spanIterator(span)) span._parentNode.removeChild(node)
+
+	span._start = span._end = span._marker
+}
+
+function createRootInto(/** @type {ParentNode} */ parent) {
 	const marker = new Text()
 	parent.appendChild(marker)
-	return new Root(new Span(marker))
+	return createRoot(createSpan(marker))
 }
+export { createRootInto as createRoot }
 
-/** @param {Node} node */
-function insertRootAfter(node) {
+function createRootAfter(/** @type {Node} */ node) {
 	DEV: assert(node.parentNode, 'expected a parent node')
 	const marker = new Text()
 	node.parentNode.insertBefore(marker, node.nextSibling)
-	return new Root(new Span(marker))
+	return createRoot(createSpan(marker))
 }
 
-class Root {
-	/** @type {Key | undefined} */ _key
+function createRoot(/** @type {Span} */ span) {
+	let template, parts
 
-	/** @param {Span} span */
-	constructor(span) {
-		this._span = span
-	}
-
-	render(value) {
-		const t = value instanceof BoundTemplateInstance ? value : singlePartTemplate(value)
-
-		if (this._instance?._template === t._template) {
-			this._instance.update(t._dynamics)
-		} else {
-			this.detach()
-			this._instance = new TemplateInstance(t._template, t._dynamics, this._span)
-		}
-	}
-
-	detach() {
-		if (!this._instance) return
+	function detach() {
+		if (!parts) return
 		// scan through all the parts of the previous tree, and clear any renderables.
-		for (const [_idx, part] of this._instance._parts) part.detach()
-		delete this._instance
-	}
-}
-
-class TemplateInstance {
-	/**
-	 * @param {CompiledTemplate} template
-	 * @param {Displayable[]} dynamics
-	 * @param {Span} span
-	 */
-	constructor(template, dynamics, span) {
-		this._template = template
-		const doc = /** @type {DocumentFragment} */ (template._content.cloneNode(true))
-
-		const nodeByPart = []
-		for (const node of doc.querySelectorAll('[data-dynparts]')) {
-			const parts = node.getAttribute('data-dynparts')
-			assert(parts)
-			node.removeAttribute('data-dynparts')
-			for (const part of parts.split(' ')) nodeByPart[part] = node
-		}
-
-		for (const part of template._rootParts) nodeByPart[part] = span
-
-		// the fragment must be inserted before the parts are constructed,
-		// because they need to know their final location.
-		// this also ensures that custom elements are upgraded before we do things
-		// to them, like setting properties or attributes.
-		span._deleteContents()
-		span._insertNode(doc)
-
-		this._parts = template._parts.map(([dynamicIdx, createPart], elementIdx) => {
-			const part = createPart(span)
-			part.create(nodeByPart[elementIdx], dynamics[dynamicIdx])
-			return /** @type {const} */ ([dynamicIdx, part])
-		})
+		for (const [_idx, part] of parts) part.detach()
+		parts = undefined
 	}
 
-	update(dynamics) {
-		for (const [idx, part] of this._parts) part.update(dynamics[idx])
+	return {
+		_span: span,
+		/** @type {Key | undefined} */ _key: undefined,
+
+		render: value => {
+			const html = isHtml(value) ? value : singlePartTemplate(value)
+
+			if (template !== html._template) {
+				detach()
+
+				template = html._template
+
+				const doc = /** @type {DocumentFragment} */ (template._content.cloneNode(true))
+
+				const nodeByPart = []
+				for (const node of doc.querySelectorAll('[data-dynparts]')) {
+					const parts = node.getAttribute('data-dynparts')
+					assert(parts)
+					node.removeAttribute('data-dynparts')
+					for (const part of parts.split(' ')) nodeByPart[part] = node
+				}
+
+				for (const part of template._rootParts) nodeByPart[part] = span
+
+				// the fragment must be inserted before the parts are constructed,
+				// because they need to know their final location.
+				// this also ensures that custom elements are upgraded before we do things
+				// to them, like setting properties or attributes.
+				spanDeleteContents(span)
+				spanInsertNode(span, doc)
+
+				parts = html._template._parts.map(([dynamicIdx, createPart], elementIdx) => [
+					dynamicIdx,
+					createPart(nodeByPart[elementIdx], span),
+				])
+			}
+
+			for (const [idx, part] of parts) part.update(html._dynamics[idx])
+		},
+
+		detach,
 	}
 }
 
@@ -222,8 +195,7 @@ const FORCE_ATTRIBUTES = /-|^class$|^for$/i
 
 /** @type {Map<TemplateStringsArray, CompiledTemplate>} */
 const templates = new Map()
-/** @param {TemplateStringsArray} statics */
-function compileTemplate(statics) {
+function compileTemplate(/** @type {TemplateStringsArray} */ statics) {
 	const cached = templates.get(statics)
 	if (cached) return cached
 
@@ -269,7 +241,7 @@ function compileTemplate(statics) {
 				let siblings = [...node.parentNode.childNodes]
 				for (const [node, idx] of nodes) {
 					const child = siblings.indexOf(node)
-					patch(node.parentNode, idx, span => new ChildPart(child, span))
+					patch(node.parentNode, idx, (node, span) => createChildPart(node, span, child))
 				}
 			}
 		} else if (DEV && isComment(node)) {
@@ -278,7 +250,7 @@ function compileTemplate(statics) {
 			// issues with incorrect part counts.
 			// in production the check is skipped, so we can also skip this.
 			for (const _match of node.data.matchAll(DYNAMIC_GLOBAL)) {
-				compiled._parts[nextPart++] = [parseInt(_match[1]), () => ({ create() {}, update() {}, detach() {} })]
+				compiled._parts[nextPart++] = [parseInt(_match[1]), () => ({ update() {}, detach() {} })]
 			}
 		} else {
 			assert(isElement(node))
@@ -292,14 +264,14 @@ function compileTemplate(statics) {
 					// directive:
 					toRemove.push(name)
 					DEV: assert(value === '', `directives must not have values`)
-					patch(node, parseInt(match[1]), () => new DirectivePart())
+					patch(node, parseInt(match[1]), node => createDirectivePart(node))
 				} else {
 					// properties:
 					match = DYNAMIC_WHOLE.exec(value)
 					if (match !== null) {
 						toRemove.push(name)
 						if (FORCE_ATTRIBUTES.test(name)) {
-							patch(node, parseInt(match[1]), () => new AttributePart(name))
+							patch(node, parseInt(match[1]), node => createAttributePart(node, name))
 						} else {
 							if (!(name in node)) {
 								for (const property in node) {
@@ -309,7 +281,7 @@ function compileTemplate(statics) {
 									}
 								}
 							}
-							patch(node, parseInt(match[1]), () => new PropertyPart(name))
+							patch(node, parseInt(match[1]), node => createPropertyPart(node, name))
 						}
 					} else if (DEV) {
 						assert(!DYNAMIC_GLOBAL.test(value), `expected a whole dynamic value for ${name}, got a partial one`)
@@ -378,292 +350,249 @@ export function keyed(renderable, key) {
 	return renderable
 }
 
-/** @implements {Part} */
-class ChildPart {
-	#childIndex
-	#parentSpan
-	constructor(idx, span) {
-		this.#childIndex = idx
-		this.#parentSpan = span
-	}
-
-	/** @type {Span | undefined} */
-	#span
-	create(node, value) {
-		if (node instanceof Span) {
-			let child = node._start
-			for (let i = 0; i < this.#childIndex; i++) {
-				DEV: {
-					assert(child.nextSibling !== null, 'expected more siblings')
-					assert(child.nextSibling !== node._end, 'ran out of siblings before the end')
-				}
-				child = child.nextSibling
-			}
-			this.#span = new Span(child)
-		} else {
-			const child = node.childNodes[this.#childIndex]
-			this.#span = new Span(child)
-		}
-
-		this.update(value)
-	}
+function createChildPart(
+	/** @type {Node | Span} */ parentNode,
+	/** @type {Span} */ parentSpan,
+	/** @type {number} */ childIndex,
+) {
+	let span
 
 	// for when we're rendering a renderable:
-	/** @type {Renderable | null} */ #renderable = null
+	/** @type {Renderable | null} */ let renderable = null
 
 	// for when we're rendering a template:
-	/** @type {Root | undefined} */ #root
+	/** @type {ReturnType<typeof createRoot> | undefined} */ let root
 
 	// for when we're rendering multiple values:
-	/** @type {Root[] | undefined} */ #roots
+	/** @type {ReturnType<typeof createRoot>[] | undefined} */ let roots
 
 	// for when we're rendering a string/single dom node:
 	/** undefined means no previous value, because a user-specified undefined is remapped to null */
-	#value
+	let prevValue
 
-	/** @param {Renderable | null} next */
-	#switchRenderable(next) {
-		if (this.#renderable && this.#renderable !== next) {
-			const controller = controllers.get(this.#renderable)
+	function switchRenderable(/** @type {Renderable | null} */ next) {
+		if (renderable && renderable !== next) {
+			const controller = controllers.get(renderable)
 			if (controller?._unmountCallbacks) for (const callback of controller._unmountCallbacks) callback?.()
-			controllers.delete(this.#renderable)
+			controllers.delete(renderable)
 		}
-		this.#renderable = next
+		renderable = next
 	}
 
-	#disconnectRoot() {
+	function disconnectRoot() {
 		// root.detach and part.detach are mutually recursive, so this detaches children too.
-		this.#root?.detach()
-		this.#root = undefined
+		root?.detach()
+		root = undefined
 	}
 
-	/** @param {Displayable} value */
-	update(value) {
-		DEV: assert(this.#span)
-		const endsWereEqual =
-			this.#span._parentNode === this.#parentSpan.parentNode && this.#span._end === this.#parentSpan._end
-
-		if (isRenderable(value)) {
-			this.#switchRenderable(value)
-
-			const renderable = value
-
-			if (!controllers.has(renderable))
-				controllers.set(renderable, {
-					_mounted: false,
-					_invalidateQueued: null,
-					_invalidate: () => {
-						DEV: assert(this.#renderable === renderable, 'could not invalidate an outdated renderable')
-						this.update(renderable)
-					},
-					_unmountCallbacks: null, // will be upgraded to a Set if needed.
-					_parentNode: this.#span._parentNode,
-				})
-
-			try {
-				value = renderable.render()
-			} catch (thrown) {
-				if (thrown instanceof BoundTemplateInstance) {
-					value = thrown
-				} else {
-					throw thrown
-				}
+	if (parentNode instanceof Node) {
+		const child = parentNode.childNodes[childIndex]
+		span = createSpan(child)
+	} else {
+		let child = parentNode._start
+		for (let i = 0; i < childIndex; i++) {
+			DEV: {
+				assert(child.nextSibling !== null, 'expected more siblings')
+				assert(child.nextSibling !== parentNode._end, 'ran out of siblings before the end')
 			}
+			child = child.nextSibling
+		}
+		span = createSpan(child)
+	}
 
-			// if render returned another renderable, we want to track/cache both renderables individually.
-			// wrap it in a nested ChildPart so that each can be tracked without ChildPart having to handle multiple renderables.
-			if (isRenderable(value)) value = singlePartTemplate(value)
-		} else this.#switchRenderable(null)
+	return {
+		update: function update(/** @type {Displayable} */ value) {
+			DEV: assert(span)
+			const endsWereEqual = span._parentNode === parentSpan._parentNode && span._end === parentSpan._end
 
-		// if it's undefined, swap the value for null.
-		// this means if the initial value is undefined,
-		// it won't conflict with this.#value's default of undefined,
-		// so it'll still render.
-		if (value === undefined) value = null
+			if (isRenderable(value)) {
+				switchRenderable(value)
 
-		// NOTE: we're explicitly not caching/diffing the value when it's an iterable,
-		// given it can yield different values but have the same identity. (e.g. arrays)
-		if (isIterable(value)) {
-			if (!this.#roots) {
-				// we previously rendered a single value, so we need to clear it.
-				this.#disconnectRoot()
-				this.#span._deleteContents()
+				const renderable = value
 
-				this.#roots = []
-			}
+				if (!controllers.has(renderable))
+					controllers.set(renderable, {
+						_mounted: false,
+						_invalidateQueued: null,
+						_invalidate: () => {
+							DEV: assert(renderable === renderable, 'could not invalidate an outdated renderable')
+							update(renderable)
+						},
+						_unmountCallbacks: null, // will be upgraded to a Set if needed.
+						_parentNode: span._parentNode,
+					})
 
-			// create or update a root for every item.
-			let i = 0
-			let end = this.#span._start
-			for (const item of value) {
-				// @ts-expect-error -- WeakMap lookups of non-objects always return undefined, which is fine
-				const key = keys.get(item) ?? item
-				let root = (this.#roots[i] ??= insertRootAfter(end))
-
-				if (key !== undefined && root._key !== key) {
-					const j = this.#roots.findIndex(r => r._key === key)
-					root._key = key
-					if (j !== -1) {
-						const root1 = root
-						const root2 = this.#roots[j]
-
-						// swap the contents of the spans
-						const tmpContent = root1._span._extractContents()
-						root1._span._insertNode(root2._span._extractContents())
-						root2._span._insertNode(tmpContent)
-
-						// swap the spans back
-						const tmpSpan = root1._span
-						root1._span = root2._span
-						root2._span = tmpSpan
-
-						// swap the roots
-						this.#roots[j] = root1
-						root = this.#roots[i] = root2
+				try {
+					value = renderable.render()
+				} catch (thrown) {
+					if (isHtml(thrown)) {
+						value = thrown
+					} else {
+						throw thrown
 					}
 				}
 
-				root.render(item)
-				end = root._span._end
-				i++
+				// if render returned another renderable, we want to track/cache both renderables individually.
+				// wrap it in a nested ChildPart so that each can be tracked without ChildPart having to handle multiple renderables.
+				if (isRenderable(value)) value = singlePartTemplate(value)
+			} else switchRenderable(null)
+
+			// if it's undefined, swap the value for null.
+			// this means if the initial value is undefined,
+			// it won't conflict with prevValue's default of undefined,
+			// so it'll still render.
+			if (value === undefined) value = null
+
+			// NOTE: we're explicitly not caching/diffing the value when it's an iterable,
+			// given it can yield different values but have the same identity. (e.g. arrays)
+			if (isIterable(value)) {
+				if (!roots) {
+					// we previously rendered a single value, so we need to clear it.
+					disconnectRoot()
+					spanDeleteContents(span)
+
+					roots = []
+				}
+
+				// create or update a root for every item.
+				let i = 0
+				let end = span._start
+				for (const item of value) {
+					// @ts-expect-error -- WeakMap lookups of non-objects always return undefined, which is fine
+					const key = keys.get(item) ?? item
+					let root = (roots[i] ??= createRootAfter(end))
+
+					if (key !== undefined && root._key !== key) {
+						const j = roots.findIndex(r => r._key === key)
+						root._key = key
+						if (j !== -1) {
+							const root1 = root
+							const root2 = roots[j]
+
+							// swap the contents of the spans
+							const tmpContent = spanExtractContents(root1._span)
+							spanInsertNode(root1._span, spanExtractContents(root2._span))
+							spanInsertNode(root2._span, tmpContent)
+
+							// swap the spans back
+							const tmpSpan = root1._span
+							root1._span = root2._span
+							root2._span = tmpSpan
+
+							// swap the roots
+							roots[j] = root1
+							root = roots[i] = root2
+						}
+					}
+
+					root.render(item)
+					end = root._span._end
+					i++
+				}
+
+				// and now remove excess roots if the iterable has shrunk.
+				while (roots.length > i) {
+					const root = roots.pop()
+					assert(root)
+					root.detach()
+					spanDeleteContents(root._span)
+				}
+
+				span._end = end
+
+				const controller = controllers.get(renderable)
+				if (controller) {
+					controller._mounted = true
+					// @ts-expect-error -- WeakMap lookups of null always return undefined, which is fine
+					for (const callback of mountCallbacks.get(renderable) ?? []) {
+						;(controller._unmountCallbacks ??= new Set()).add(callback())
+					}
+					// @ts-expect-error -- WeakMap lookups of null always return undefined, which is fine
+					mountCallbacks.delete(renderable)
+				}
+
+				if (endsWereEqual) parentSpan._end = span._end
+
+				return
+			} else if (roots) {
+				for (const root of roots) root.detach()
+				roots = undefined
 			}
 
-			// and now remove excess roots if the iterable has shrunk.
-			while (this.#roots.length > i) {
-				const root = this.#roots.pop()
-				assert(root)
-				root.detach()
-				root._span._deleteContents()
+			// now early return if the value hasn't changed.
+			if (Object.is(prevValue, value)) return
+
+			if (isHtml(value)) {
+				root ??= createRoot(span)
+				root.render(value) // root.render will detach the previous tree if the template has changed.
+			} else {
+				// if we previously rendered a tree that might contain renderables,
+				// and the template has changed (or we're not even rendering a template anymore),
+				// we need to clear the old renderables.
+				disconnectRoot()
+
+				if (prevValue != null && value !== null && !(prevValue instanceof Node) && !(value instanceof Node)) {
+					// we previously rendered a string, and we're rendering a string again.
+					DEV: assert(span._start === span._end && span._start instanceof Text)
+					span._start.data = '' + value
+				} else {
+					spanDeleteContents(span)
+					if (value !== null) spanInsertNode(span, value instanceof Node ? value : new Text('' + value))
+				}
 			}
 
-			this.#span._end = end
+			prevValue = value
 
-			const controller = controllers.get(this.#renderable)
+			const controller = controllers.get(renderable)
 			if (controller) {
 				controller._mounted = true
 				// @ts-expect-error -- WeakMap lookups of null always return undefined, which is fine
-				for (const callback of mountCallbacks.get(this.#renderable) ?? []) {
+				for (const callback of mountCallbacks.get(renderable) ?? []) {
 					;(controller._unmountCallbacks ??= new Set()).add(callback())
 				}
 				// @ts-expect-error -- WeakMap lookups of null always return undefined, which is fine
-				mountCallbacks.delete(this.#renderable)
+				mountCallbacks.delete(renderable)
 			}
 
-			if (endsWereEqual) this.#parentSpan._end = this.#span._end
-
-			return
-		} else if (this.#roots) {
-			for (const root of this.#roots) root.detach()
-			this.#roots = undefined
-		}
-
-		// now early return if the value hasn't changed.
-		if (Object.is(value, this.#value)) return
-
-		if (value instanceof BoundTemplateInstance) {
-			this.#root ??= new Root(this.#span)
-			this.#root.render(value) // root.render will detach the previous tree if the template has changed.
-		} else {
-			// if we previously rendered a tree that might contain renderables,
-			// and the template has changed (or we're not even rendering a template anymore),
-			// we need to clear the old renderables.
-			this.#disconnectRoot()
-
-			if (this.#value != null && value !== null && !(this.#value instanceof Node) && !(value instanceof Node)) {
-				// we previously rendered a string, and we're rendering a string again.
-				DEV: assert(this.#span._start === this.#span._end && this.#span._start instanceof Text)
-				this.#span._start.data = '' + value
-			} else {
-				this.#span._deleteContents()
-				if (value !== null) this.#span._insertNode(value instanceof Node ? value : new Text('' + value))
-			}
-		}
-
-		this.#value = value
-
-		const controller = controllers.get(this.#renderable)
-		if (controller) {
-			controller._mounted = true
-			// @ts-expect-error -- WeakMap lookups of null always return undefined, which is fine
-			for (const callback of mountCallbacks.get(this.#renderable) ?? []) {
-				;(controller._unmountCallbacks ??= new Set()).add(callback())
-			}
-			// @ts-expect-error -- WeakMap lookups of null always return undefined, which is fine
-			mountCallbacks.delete(this.#renderable)
-		}
-
-		if (endsWereEqual) this.#parentSpan._end = this.#span._end
-	}
-
-	detach() {
-		this.#switchRenderable(null)
-		this.#disconnectRoot()
+			if (endsWereEqual) parentSpan._end = span._end
+		},
+		detach: () => {
+			switchRenderable(null)
+			disconnectRoot()
+		},
 	}
 }
 
-/** @implements {Part} */
-class PropertyPart {
-	#name
-	constructor(name) {
-		this.#name = name
-	}
-
-	#node
-	create(node, value) {
-		this.#node = node
-		this.update(value)
-	}
-
-	update(value) {
-		this.#node[this.#name] = value
-	}
-
-	detach() {
-		delete this.#node[this.#name]
+function createPropertyPart(node, name) {
+	return {
+		update: value => {
+			node[name] = value
+		},
+		detach: () => {
+			delete node[name]
+		},
 	}
 }
 
-/** @implements {Part} */
-class AttributePart {
-	#name
-	constructor(name) {
-		this.#name = name
-	}
-
-	#node
-	create(node, value) {
-		this.#node = node
-		this.update(value)
-	}
-
-	update(value) {
-		this.#node.setAttribute(this.#name, value)
-	}
-
-	detach() {
-		this.#node.removeAttribute(this.#name)
+function createAttributePart(node, name) {
+	return {
+		update: value => node.setAttribute(name, value),
+		detach: () => node.removeAttribute(name),
 	}
 }
 
-/** @implements {Part} */
-class DirectivePart {
-	#node
-	/** @type {Cleanup} */
-	#cleanup
+function createDirectivePart(node) {
+	/** @type {Cleanup} */ let cleanup
+	return {
+		update: fn => {
+			cleanup?.()
+			cleanup = fn?.(node)
+		},
 
-	create(node, fn) {
-		this.#node = node
-		this.#cleanup = fn?.(this.#node)
-	}
-
-	update(fn) {
-		this.#cleanup?.()
-		this.#cleanup = fn?.(this.#node)
-	}
-
-	detach() {
-		this.#cleanup?.()
-		this.#cleanup = null
+		detach: () => {
+			cleanup?.()
+			cleanup = null
+		},
 	}
 }
 
