@@ -1,108 +1,107 @@
 import { html } from 'dhtml'
-import { describe, expect, it, vi } from 'vitest'
-import { setup } from './setup'
+import test, { type TestContext } from 'node:test'
+import { setup } from './setup.ts'
 
-describe('attributes', () => {
-	it('supports regular attributes', () => {
-		const { root, el } = setup()
+test('regular attributes', (t: TestContext) => {
+	const { root, el } = setup()
 
-		root.render(html`<h1 style=${'color: red'}>Hello, world!</h1>`)
-		expect(el.querySelector('h1')).toHaveAttribute('style', 'color: red;')
-	})
+	root.render(html`<h1 style=${'color: red'}>Hello, world!</h1>`)
+	t.assert.strictEqual(el.querySelector('h1')!.getAttribute('style'), 'color: red;')
+})
 
-	it('can toggle attributes', () => {
-		const { root, el } = setup()
+test('can toggle attributes', (t: TestContext) => {
+	const { root, el } = setup()
 
-		let hidden: unknown = false
-		const template = () => html`<h1 hidden=${hidden}>Hello, world!</h1>`
+	let hidden: unknown = false
+	const template = () => html`<h1 hidden=${hidden}>Hello, world!</h1>`
 
-		root.render(template())
-		expect(el.querySelector('h1')).not.toHaveAttribute('hidden')
+	root.render(template())
+	t.assert.ok(!el.querySelector('h1')!.hasAttribute('hidden'))
 
-		hidden = true
-		root.render(template())
-		expect(el.querySelector('h1')).toHaveAttribute('hidden')
+	hidden = true
+	root.render(template())
+	t.assert.ok(el.querySelector('h1')!.hasAttribute('hidden'))
 
-		hidden = null
-		root.render(template())
-		expect(el.querySelector('h1')).not.toHaveAttribute('hidden')
-	})
+	hidden = null
+	root.render(template())
+	t.assert.ok(!el.querySelector('h1')!.hasAttribute('hidden'))
+})
 
-	it('supports property attributes', () => {
-		const { root, el } = setup()
+test('supports property attributes', (t: TestContext) => {
+	const { root, el } = setup()
 
-		root.render(html`<details open=${true}></details>`)
-		expect(el.querySelector('details')!.open).toBe(true)
+	root.render(html`<details open=${true}></details>`)
+	t.assert.ok(el.querySelector('details')!.open)
 
-		root.render(html`<details open=${false}></details>`)
-		expect(el.querySelector('details')!.open).toBe(false)
-	})
+	root.render(html`<details open=${false}></details>`)
+	t.assert.ok(!el.querySelector('details')!.open)
+})
 
-	it('guesses the case of properties', () => {
-		const { root, el } = setup()
+test('infers the case of properties', (t: TestContext) => {
+	const { root, el } = setup()
 
-		const innerHTML = '<h1>Hello, world!</h1>'
+	const innerHTML = '<h1>Hello, world!</h1>'
 
-		root.render(html`<div innerhtml=${innerHTML}></div>`)
-		expect(el.querySelector('div')!.innerHTML).toBe(innerHTML)
+	root.render(html`<div innerhtml=${innerHTML}></div>`)
+	t.assert.strictEqual(el.querySelector('div')!.innerHTML, innerHTML)
 
-		root.render(html`<span innerHTML=${innerHTML}></span>`)
-		expect(el.querySelector('span')!.innerHTML).toBe(innerHTML)
-	})
+	root.render(html`<span innerHTML=${innerHTML}></span>`)
+	t.assert.strictEqual(el.querySelector('span')!.innerHTML, innerHTML)
+})
 
-	it('treats class/for specially', () => {
-		const { root, el } = setup()
+test('treats class/for specially', (t: TestContext) => {
+	const { root, el } = setup()
 
-		root.render(html`<h1 class=${'foo'}>Hello, world!</h1>`)
-		expect(el.querySelector('h1')).toHaveClass('foo')
+	root.render(html`<h1 class=${'foo'}>Hello, world!</h1>`)
+	t.assert.strictEqual(el.querySelector('h1')!.className, 'foo')
 
-		root.render(html`<label for=${'foo'}>Hello, world!</label>`)
-		expect(el.querySelector('label')).toHaveAttribute('for', 'foo')
-	})
+	root.render(html`<label for=${'foo'}>Hello, world!</label>`)
+	t.assert.strictEqual(el.querySelector('label')!.htmlFor, 'foo')
+})
 
-	it('handles data attributes', () => {
-		const { root, el } = setup()
+test('handles data attributes', (t: TestContext) => {
+	const { root, el } = setup()
 
-		root.render(html`<h1 data-foo=${'bar'}>Hello, world!</h1>`)
-		expect(el.querySelector('h1')).toHaveAttribute('data-foo', 'bar')
-	})
+	root.render(html`<h1 data-foo=${'bar'}>Hello, world!</h1>`)
+	t.assert.strictEqual(el.querySelector('h1')!.dataset.foo, 'bar')
+})
 
-	it('supports events', () => {
-		const { root, el } = setup()
+test('supports events', (t: TestContext) => {
+	const { root, el } = setup()
 
-		let clicks = 0
-		root.render(html`
-			<button
-				onclick=${() => {
-					clicks++
-				}}
-			>
-				Click me
-			</button>
-		`)
+	let clicks = 0
+	root.render(html`
+		<button
+			onclick=${() => {
+				clicks++
+			}}
+		>
+			Click me
+		</button>
+	`)
 
-		expect(clicks).toBe(0)
-		el.querySelector('button')!.click()
-		expect(clicks).toBe(1)
-		el.querySelector('button')!.click()
-		expect(clicks).toBe(2)
-	})
+	t.assert.strictEqual(clicks, 0)
+	el.querySelector('button')!.click()
+	t.assert.strictEqual(clicks, 1)
+	el.querySelector('button')!.click()
+	t.assert.strictEqual(clicks, 2)
+})
 
-	it('supports event handlers that change', () => {
-		const { root, el } = setup()
+test('supports event handlers that change', (t: TestContext) => {
+	const { root, el } = setup()
 
-		const template = (handler: (() => void) | null) => html`<input onblur=${handler}>Click me</input>`
+	const template = (handler: (() => void) | null) => html`<input onblur=${handler}>Click me</input>`
 
-		const handler = vi.fn()
-		root.render(template(handler))
-		expect(handler).not.toBeCalled()
+	const handler = t.mock.fn()
+	root.render(template(handler))
+	t.assert.strictEqual(handler.mock.callCount(), 0)
 
-		const event = new Event('blur')
-		el.querySelector('input')!.dispatchEvent(event)
-		expect(handler).toHaveBeenCalledExactlyOnceWith(event)
+	const event = new Event('blur')
+	el.querySelector('input')!.dispatchEvent(event)
+	t.assert.strictEqual(handler.mock.callCount(), 1)
+	t.assert.strictEqual(handler.mock.calls[0].arguments[0], event)
 
-		root.render(template(null))
-		el.querySelector('input')!.dispatchEvent(new Event('blur'))
-		expect(handler).toHaveBeenCalledOnce()
-	})
+	root.render(template(null))
+	el.querySelector('input')!.dispatchEvent(new Event('blur'))
+	t.assert.strictEqual(handler.mock.callCount(), 1)
 })

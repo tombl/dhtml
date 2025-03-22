@@ -1,5 +1,3 @@
-import type { Renderable } from '../shared.ts'
-
 export type Cleanup = (() => void) | void | undefined | null
 
 export const is_element = (node: Node): node is Element => node.nodeType === (1 satisfies typeof Node.ELEMENT_NODE)

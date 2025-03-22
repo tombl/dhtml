@@ -14,15 +14,13 @@ export const is_iterable = (value: unknown): value is Iterable<unknown> =>
 	typeof value === 'object' && value !== null && Symbol.iterator in value
 
 declare global {
-	const __DEV__: boolean
+	var __DEV__: boolean
 }
 
-/* v8 ignore start */
 export function assert(value: unknown, message?: string): asserts value {
 	if (!__DEV__) return
 	if (!value) throw new Error(message ?? 'assertion failed')
 }
-/* v8 ignore stop */
 
 const tag: unique symbol = Symbol()
 
