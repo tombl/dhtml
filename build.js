@@ -21,6 +21,7 @@ await build({
 	input,
 	output: {
 		dir: 'dist/dev',
+		chunkFileNames: '[name].js',
 		banner: '// @ts-nocheck',
 	},
 	define: {
@@ -55,6 +56,7 @@ const bundle = await build({
 	],
 	output: {
 		dir: 'dist/prod',
+		chunkFileNames: '[name].js',
 		plugins: [
 			terser({
 				mangle: { properties: { regex: /^_/ } },
