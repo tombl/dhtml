@@ -1,13 +1,11 @@
-import type { Displayable, Renderable } from './shared.ts'
 import { Tokenizer } from 'htmlparser2'
+import { assert, type Displayable, type Renderable } from './shared.ts'
 
-export type { Displayable, Renderable }
-
-function isRenderable(value: unknown): value is Renderable {
+function is_renderable(value: unknown): value is Renderable {
 	return typeof value === 'object' && value !== null && 'render' in value
 }
 
-function isIterable(value: unknown): value is Iterable<unknown> {
+function is_iterable(value: unknown): value is Iterable<unknown> {
 	return typeof value === 'object' && value !== null && Symbol.iterator in value
 }
 
@@ -15,13 +13,7 @@ export function html(statics: TemplateStringsArray, ...dynamics: unknown[]): Bou
 	return new BoundTemplateInstance(statics, dynamics)
 }
 
-const singlePartTemplate = (part: Displayable) => html`${part}`
-
-/* v8 ignore start */
-function assert(value: unknown, message = 'assertion failed'): asserts value {
-	if (!value) throw new Error(message)
-}
-/* v8 ignore stop */
+const single_part_template = (part: Displayable) => html`${part}`
 
 type PartRenderer = (values: unknown[]) => string | Generator<string, void, void>
 
@@ -33,10 +25,10 @@ interface CompiledTemplate {
 class BoundTemplateInstance {
 	#template: CompiledTemplate | undefined
 	#statics: TemplateStringsArray
-	dynamics: unknown[]
+	/* @internal */ dynamics: unknown[]
 
 	get template(): CompiledTemplate {
-		return (this.#template ??= compileTemplate(this.#statics))
+		return (this.#template ??= compile_template(this.#statics))
 	}
 
 	constructor(statics: TemplateStringsArray, dynamics: unknown[]) {
@@ -50,7 +42,7 @@ const DYNAMIC_WHOLE = /^dyn-\$(\d+)\$$/i
 const DYNAMIC_GLOBAL = /dyn-\$(\d+)\$/gi
 
 const templates = new WeakMap<TemplateStringsArray, CompiledTemplate>()
-function compileTemplate(statics: TemplateStringsArray): CompiledTemplate {
+function compile_template(statics: TemplateStringsArray): CompiledTemplate {
 	const cached = templates.get(statics)
 	if (cached) return cached
 
@@ -71,7 +63,7 @@ function compileTemplate(statics: TemplateStringsArray): CompiledTemplate {
 				const match = name.match(DYNAMIC_WHOLE)
 				if (match) {
 					const idx = parseInt(match[1])
-					parts.push({ start, end, render: values => renderDirective(values[idx]) })
+					parts.push({ start, end, render: values => render_directive(values[idx]) })
 					return
 				}
 
@@ -89,7 +81,7 @@ function compileTemplate(statics: TemplateStringsArray): CompiledTemplate {
 				const match = value.match(DYNAMIC_WHOLE)
 				if (match) {
 					const idx = parseInt(match[1])
-					parts.push({ start: nameStart, end, render: values => renderAttribute(name, values[idx]) })
+					parts.push({ start: nameStart, end, render: values => render_attribute(name, values[idx]) })
 					return
 				}
 
@@ -113,7 +105,7 @@ function compileTemplate(statics: TemplateStringsArray): CompiledTemplate {
 					parts.push({
 						start: start + match.index,
 						end: start + match.index + match[0].length,
-						render: values => renderChild(values[idx]),
+						render: values => render_child(values[idx]),
 					})
 				}
 
@@ -157,16 +149,16 @@ function compileTemplate(statics: TemplateStringsArray): CompiledTemplate {
 
 	for (let i = 0; i < parts.length; i++) {
 		const part = parts[i]
-		const nextPart = parts[i + 1]
+		const next_part = parts[i + 1]
 		compiled.parts.push(part.render)
-		compiled.statics.push(html.slice(part.end, nextPart?.start))
+		compiled.statics.push(html.slice(part.end, next_part?.start))
 	}
 
 	templates.set(statics, compiled)
 	return compiled
 }
 
-function renderDirective(value: unknown) {
+function render_directive(value: unknown) {
 	if (value === null) return ''
 
 	assert(typeof value === 'function')
@@ -175,7 +167,7 @@ function renderDirective(value: unknown) {
 	return ''
 }
 
-function renderAttribute(name: string, value: unknown) {
+function render_attribute(name: string, value: unknown) {
 	if (value === false || value === null || typeof value === 'function') {
 		return ''
 	}
@@ -183,10 +175,10 @@ function renderAttribute(name: string, value: unknown) {
 	return `${name}="${escape(value)}"`
 }
 
-function* renderChild(value: unknown) {
+function* render_child(value: unknown) {
 	const seen = new Set()
 
-	while (isRenderable(value))
+	while (is_renderable(value))
 		try {
 			if (seen.has(value)) throw new Error('circular render')
 			seen.add(value)
@@ -199,10 +191,10 @@ function* renderChild(value: unknown) {
 			}
 		}
 
-	if (isIterable(value)) {
-		for (const item of value) yield* renderToIterable(item as Displayable)
+	if (is_iterable(value)) {
+		for (const item of value) yield* render_to_iterable(item as Displayable)
 	} else if (value instanceof BoundTemplateInstance) {
-		yield* renderToIterable(value)
+		yield* render_to_iterable(value)
 	} else if (value !== null) {
 		yield escape(value)
 	}
@@ -220,8 +212,8 @@ function escape(str: unknown) {
 	return String(str).replace(ESCAPE_RE, c => ESCAPE_SUBSTITUTIONS[c as keyof typeof ESCAPE_SUBSTITUTIONS])
 }
 
-function* renderToIterable(value: Displayable) {
-	const { template, dynamics } = value instanceof BoundTemplateInstance ? value : singlePartTemplate(value)
+function* render_to_iterable(value: Displayable) {
+	const { template, dynamics } = value instanceof BoundTemplateInstance ? value : single_part_template(value)
 
 	for (let i = 0; i < template.statics.length - 1; i++) {
 		yield template.statics[i]
@@ -232,12 +224,12 @@ function* renderToIterable(value: Displayable) {
 
 export function renderToString(value: Displayable): string {
 	let str = ''
-	for (const part of renderToIterable(value)) str += part
+	for (const part of render_to_iterable(value)) str += part
 	return str
 }
 
 export function renderToReadableStream(value: Displayable): ReadableStream {
-	const iter = renderToIterable(value)[Symbol.iterator]()
+	const iter = render_to_iterable(value)[Symbol.iterator]()
 	return new ReadableStream({
 		pull(controller) {
 			const { done, value } = iter.next()
