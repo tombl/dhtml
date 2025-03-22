@@ -3,25 +3,11 @@
 	"type": "module",
 	"exports": {
 		".": {
-			"browser": {
-				"dhtml-source": "./src/index.client.ts",
-				"production": "./dist/prod/index.client.js",
-				"default": "./dist/dev/index.client.js"
-			},
-			"dhtml-source": "./src/index.server.ts",
-			"production": "./dist/prod/index.server.js",
-			"default": "./dist/dev/index.server.js"
+			"browser": "./src/index.client.ts",
+			"default": "./src/index.server.ts"
 		},
-		"./client": {
-			"dhtml-source": "./src/client.ts",
-			"production": "./dist/prod/client.js",
-			"default": "./dist/dev/client.js"
-		},
-		"./server": {
-			"dhtml-source": "./src/server.ts",
-			"production": "./dist/prod/server.js",
-			"default": "./dist/dev/server.js"
-		}
+		"./client": "./src/client.ts",
+		"./server": "./src/server.ts"
 	},
 	"scripts": {
 		"build": "node build.js",

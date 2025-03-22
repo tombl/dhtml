@@ -1,6 +1,6 @@
 import terser from '@rollup/plugin-terser'
 import MagicString from 'magic-string'
-import { rm } from 'node:fs/promises'
+import { rm, readFile, writeFile } from 'node:fs/promises'
 import { brotliCompressSync, gzipSync } from 'node:zlib'
 import { build } from 'rolldown'
 import { walk } from 'zimmerframe'
@@ -69,9 +69,31 @@ const bundles = await build([
 	define_bundle('prod', 'server'),
 ])
 
-for (const bundle of bundles) {
-	console.table(
-		Object.fromEntries(
+const pkg = JSON.parse(await readFile('package.json', 'utf8'))
+
+delete pkg.scripts
+delete pkg.devDependencies
+delete pkg.prettier
+;(function walk(exports) {
+	if (typeof exports === 'string') {
+		if (exports.startsWith('./src/')) exports = exports.slice('./src/'.length)
+		exports = exports.replace(/\.ts$/, '')
+		return {
+			production: `./${exports}.min.js`,
+			default: `./${exports}.js`,
+		}
+	}
+	for (const key in exports) {
+		exports[key] = walk(exports[key])
+	}
+	return exports
+})(pkg.exports)
+
+await writeFile('dist/package.json', JSON.stringify(pkg, null, 2))
+
+console.table(
+	Object.fromEntries(
+		bundles.flatMap(bundle =>
 			bundle.output.map(file => [
 				file.fileName,
 				{
@@ -81,5 +103,5 @@ for (const bundle of bundles) {
 				},
 			]),
 		),
-	)
-}
+	),
+)
