@@ -1,15 +1,15 @@
 {
 	"name": "dhtml",
 	"type": "module",
-	"main": "src/html.js",
+	"main": "src/client.ts",
 	"exports": {
 		".": {
-			"production": "./dist/html.min.js",
-			"default": "./src/html.js"
+			"production": "./dist/client.min.js",
+			"default": "./src/client.ts"
 		},
 		"./server": {
-			"production": "./dist/html.server.min.js",
-			"default": "./src/html.server.js"
+			"production": "./dist/server.min.js",
+			"default": "./src/server.ts"
 		}
 	},
 	"scripts": {

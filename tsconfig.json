@@ -9,7 +9,8 @@
 		"target": "es2020",
 		"verbatimModuleSyntax": true,
 		"allowUnusedLabels": true, // esbuild drops DEV labeled code in the prod build
-		"moduleResolution": "bundler"
+		"moduleResolution": "bundler",
+		"allowImportingTsExtensions": true
 	},
 	"include": ["src"]
 }

@@ -4,7 +4,7 @@ const prod = !!process.env.PROD
 
 export default defineConfig({
 	resolve: {
-		alias: { dhtml: new URL(prod ? 'dist/html.min.js' : 'src/html.js', import.meta.url) },
+		alias: { dhtml: new URL(prod ? 'dist/client.min.js' : 'src/client.ts', import.meta.url) },
 	},
 	define: {
 		DHTML_PROD: prod,
@@ -15,7 +15,7 @@ export default defineConfig({
 			enabled: true,
 			reporter: ['text', 'json-summary', 'json', 'html'],
 			reportOnFailure: true,
-			include: ['src/html.js'],
+			include: ['src/**/*.ts'],
 		},
 		browser: {
 			enabled: true,

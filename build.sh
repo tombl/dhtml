@@ -2,8 +2,12 @@
 
 mkdir -p dist
 
-build() {
-    esbuild src/$1.$2 --bundle --minify --format=esm --define:DHTML_PROD=true --mangle-props=^_ --drop:console --drop-labels=DEV |
+dev() {
+    esbuild src/$1.ts --bundle --format=esm --define:DHTML_PROD=false --outfile=dist/$1.js
+}
+
+prod() {
+    esbuild src/$1.ts --bundle --minify --format=esm --define:DHTML_PROD=true --mangle-props=^_ --drop:console --drop-labels=DEV |
     terser --mangle --compress --module --output dist/$1.min.js
     printf "min:    %d bytes\n" "$(wc -c <dist/$1.min.js)"
 
@@ -14,5 +18,8 @@ build() {
     printf "brotli: %d bytes\n" "$(wc -c <dist/$1.min.js.br)"
 }
 
-build html ts
-build html.server ts
+dev client
+dev server
+
+prod client
+prod server
