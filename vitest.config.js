@@ -1,9 +1,6 @@
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
-	resolve: {
-		conditions: ['dhtml-source', 'browser'], // use the source directly
-	},
 	define: {
 		DHTML_PROD: !!process.env.PROD,
 	},
