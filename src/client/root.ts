@@ -15,13 +15,13 @@ export interface Root extends RootPublic {
 	_key: Key | undefined
 }
 
-export function create_root_into(parent: Node) {
+export function create_root_into(parent: Node): Root {
 	const marker = new Text()
 	parent.appendChild(marker)
 	return create_root(create_span(marker))
 }
 
-export function create_root_after(node: Node) {
+export function create_root_after(node: Node): Root {
 	assert(node.parentNode, 'expected a parent node')
 	const marker = new Text()
 	node.parentNode.insertBefore(marker, node.nextSibling)

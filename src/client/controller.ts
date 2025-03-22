@@ -4,7 +4,7 @@ import { is_renderable, type Cleanup } from './util.ts'
 
 export type Key = string | number | bigint | boolean | symbol | object | null
 
-export const controllers = new WeakMap<
+export const controllers: WeakMap<
 	object,
 	{
 		_mounted: boolean
@@ -13,9 +13,10 @@ export const controllers = new WeakMap<
 		_unmount_callbacks: Set<Cleanup> | null
 		_parent_node: Node
 	}
->()
-export const keys = new WeakMap<Displayable & object, Key>()
-export const mount_callbacks = new WeakMap<Renderable, Set<() => Cleanup>>()
+> = new WeakMap()
+
+export const keys: WeakMap<Displayable & object, Key> = new WeakMap()
+export const mount_callbacks: WeakMap<Renderable, Set<() => Cleanup>> = new WeakMap()
 
 export function invalidate(renderable: Renderable): Promise<void> {
 	const controller = controllers.get(renderable)
@@ -26,7 +27,7 @@ export function invalidate(renderable: Renderable): Promise<void> {
 	}))
 }
 
-export function onMount(renderable: Renderable, callback: () => Cleanup) {
+export function onMount(renderable: Renderable, callback: () => Cleanup): void {
 	assert(is_renderable(renderable), 'expected a renderable')
 
 	const controller = controllers.get(renderable)
@@ -40,11 +41,11 @@ export function onMount(renderable: Renderable, callback: () => Cleanup) {
 	cb.add(callback)
 }
 
-export function onUnmount(renderable: Renderable, callback: () => void) {
+export function onUnmount(renderable: Renderable, callback: () => void): void {
 	onMount(renderable, () => callback)
 }
 
-export function getParentNode(renderable: Renderable) {
+export function getParentNode(renderable: Renderable): Node {
 	const controller = controllers.get(renderable)
 	assert(controller, 'the renderable has not been rendered')
 	return controller._parent_node

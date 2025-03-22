@@ -18,7 +18,7 @@ export function create_span(node: Node): Span {
 	}
 }
 
-export function span_insert_node(span: Span, node: Node) {
+export function span_insert_node(span: Span, node: Node): void {
 	const end = is_document_fragment(node) ? node.lastChild : node
 	if (end === null) return // empty fragment
 	span._parent.insertBefore(node, span._end.nextSibling)
@@ -33,7 +33,7 @@ export function span_insert_node(span: Span, node: Node) {
 	}
 }
 
-export function* span_iterator(span: Span) {
+export function* span_iterator(span: Span): Generator<Node, void, unknown> {
 	let node = span._start
 	for (;;) {
 		const next = node.nextSibling
@@ -44,7 +44,7 @@ export function* span_iterator(span: Span) {
 	}
 }
 
-export function span_extract_contents(span: Span) {
+export function span_extract_contents(span: Span): DocumentFragment {
 	span._marker = new Text()
 	span._parent.insertBefore(span._marker, span._start)
 
@@ -55,7 +55,7 @@ export function span_extract_contents(span: Span) {
 	return fragment
 }
 
-export function span_delete_contents(span: Span) {
+export function span_delete_contents(span: Span): void {
 	span._marker = new Text()
 	span._parent.insertBefore(span._marker, span._start)
 
