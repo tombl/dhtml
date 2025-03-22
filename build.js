@@ -9,75 +9,77 @@ try {
 	await rm('dist', { recursive: true })
 } catch {}
 
-const input = {
-	client: './src/client.ts',
-	'index.client': './src/index.client.ts',
+/** @type {import('rolldown').Plugin} */
+const strip_asserts_plugin = {
+	name: 'strip-asserts',
+	transform(code, id, { moduleType }) {
+		if (id.includes('node_modules')) return
 
-	server: './src/server.ts',
-	'index.server': './src/index.server.ts',
+		const ast = this.parse(code, { lang: moduleType })
+		const source = new MagicString(code, { filename: id })
+
+		walk(/** @type {import('@oxc-project/types').Node} */ (ast), null, {
+			CallExpression(node, { next }) {
+				if (node.callee.type === 'Identifier' && node.callee.name === 'assert') {
+					source.update(node.start, node.end, ';')
+					return
+				}
+
+				next()
+			},
+		})
+
+		return { code: source.toString(), map: source.generateMap() }
+	},
 }
 
-await build({
-	input,
-	output: {
-		dir: 'dist/dev',
-		chunkFileNames: '[name].js',
-		banner: '// @ts-nocheck',
-	},
-	define: {
-		DHTML_PROD: 'false',
-	},
-})
+/** @returns {import('rolldown').BuildOptions} */
+function define_bundle(env, runtime) {
+	const is_dev = env === 'dev'
 
-const bundle = await build({
-	input,
-	plugins: [
-		{
-			transform(code, id, { moduleType }) {
-				if (id.includes('node_modules')) return
-
-				const ast = this.parse(code, { lang: moduleType })
-				const source = new MagicString(code, { filename: id })
-
-				walk(/** @type {import('@oxc-project/types').Node} */ (ast), null, {
-					CallExpression(node, { next }) {
-						if (node.callee.type === 'Identifier' && node.callee.name === 'assert') {
-							source.update(node.start, node.end, ';')
-							return
-						}
-
-						next()
-					},
-				})
-
-				return { code: source.toString(), map: source.generateMap() }
-			},
+	return {
+		input: {
+			[runtime]: `./src/${runtime}.ts`,
+			[`index.${runtime}`]: `./src/index.${runtime}.ts`,
 		},
-	],
-	output: {
-		dir: 'dist/prod',
-		chunkFileNames: '[name].js',
-		plugins: [
-			terser({
-				mangle: { properties: { regex: /^_/ } },
-			}),
-		],
-		minify: true,
-	},
-	define: {
-		DHTML_PROD: 'true',
-	},
-})
+		plugins: [!is_dev && strip_asserts_plugin],
+		output: {
+			dir: 'dist',
+			entryFileNames: is_dev ? '[name].js' : '[name].min.js',
+			chunkFileNames: is_dev ? '[name].js' : '[name].min.js',
+			banner: is_dev ? '// @ts-nocheck' : undefined,
+			minify: !is_dev,
+			plugins: [
+				!is_dev &&
+					terser({
+						mangle: { properties: { regex: /^_/ } },
+					}),
+			],
+		},
+		define: {
+			DHTML_PROD: JSON.stringify(!is_dev),
+		},
+	}
+}
 
-console.table(
-	Object.fromEntries(
-		bundle.output.map(file => [
-			file.name,
-			{
-				normal: file.code.length,
-				gzip: gzipSync(file.code).length,
-				brotli: brotliCompressSync(file.code).length,
-			},
-		]),
-	),
-)
+const bundles = await build([
+	define_bundle('dev', 'client'),
+	define_bundle('dev', 'server'),
+	define_bundle('prod', 'client'),
+	define_bundle('prod', 'server'),
+])
+
+for (const bundle of bundles) {
+	console.table(
+		Object.fromEntries(
+			bundle.output.map(file => [
+				file.fileName,
+				{
+					normal: file.code.length,
+					gzip: gzipSync(file.code).length,
+					brotli: brotliCompressSync(file.code).length,
+				},
+			]),
+		),
+	)
+}
