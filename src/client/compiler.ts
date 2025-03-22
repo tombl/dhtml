@@ -1,7 +1,13 @@
 import { assert, DEV } from './internal.ts'
-import { createAttributePart, createChildPart, createDirectivePart, createPropertyPart, type Part } from './parts.ts'
+import {
+	create_attribute_part,
+	create_child_part,
+	create_directive_part,
+	createPropertyPart,
+	type Part,
+} from './parts.ts'
 import type { Span } from './span.ts'
-import { isComment, isDocumentFragment, isElement, isText } from './util.ts'
+import { is_comment, is_document_fragment, is_element, is_text } from './util.ts'
 
 const NODE_FILTER_ELEMENT: typeof NodeFilter.SHOW_ELEMENT = 1
 const NODE_FILTER_TEXT: typeof NodeFilter.SHOW_TEXT = 4
@@ -10,7 +16,7 @@ const NODE_FILTER_COMMENT: typeof NodeFilter.SHOW_COMMENT = 128
 export interface CompiledTemplate {
 	_content: DocumentFragment
 	_parts: [idx: number, createPart: (node: Node | Span, span: Span) => Part][]
-	_rootParts: number[]
+	_root_parts: number[]
 }
 
 const DYNAMIC_WHOLE = /^dyn-\$(\d+)\$$/i
@@ -18,19 +24,19 @@ const DYNAMIC_GLOBAL = /dyn-\$(\d+)\$/gi
 const FORCE_ATTRIBUTES = /-|^class$|^for$/i
 
 const templates: Map<TemplateStringsArray, CompiledTemplate> = new Map()
-export function compileTemplate(statics: TemplateStringsArray) {
+export function compile_template(statics: TemplateStringsArray) {
 	const cached = templates.get(statics)
 	if (cached) return cached
 
-	const templateElement = document.createElement('template')
-	templateElement.innerHTML = statics.reduce((a, v, i) => a + v + (i === statics.length - 1 ? '' : `dyn-$${i}$`), '')
+	const template_element = document.createElement('template')
+	template_element.innerHTML = statics.reduce((a, v, i) => a + v + (i === statics.length - 1 ? '' : `dyn-$${i}$`), '')
 
-	let nextPart = 0
+	let next_part = 0
 
 	const compiled: CompiledTemplate = {
-		_content: templateElement.content,
+		_content: template_element.content,
 		_parts: Array(statics.length - 1),
-		_rootParts: [],
+		_root_parts: [],
 	}
 
 	function patch(
@@ -38,22 +44,22 @@ export function compileTemplate(statics: TemplateStringsArray) {
 		idx: number,
 		createPart: (node: Node | Span, span: Span) => Part,
 	) {
-		DEV: assert(nextPart < compiled._parts.length, 'got more parts than expected')
-		if (isDocumentFragment(node)) compiled._rootParts.push(nextPart)
-		else if ('dynparts' in node.dataset) node.dataset.dynparts += ' ' + nextPart
+		DEV: assert(next_part < compiled._parts.length, 'got more parts than expected')
+		if (is_document_fragment(node)) compiled._root_parts.push(next_part)
+		else if ('dynparts' in node.dataset) node.dataset.dynparts += ' ' + next_part
 		// @ts-expect-error -- this assigment will cast nextPart to a string
-		else node.dataset.dynparts = nextPart
-		compiled._parts[nextPart++] = [idx, createPart]
+		else node.dataset.dynparts = next_part
+		compiled._parts[next_part++] = [idx, createPart]
 	}
 
 	const walker = document.createTreeWalker(
-		templateElement.content,
+		template_element.content,
 		NODE_FILTER_TEXT | NODE_FILTER_ELEMENT | (DEV ? NODE_FILTER_COMMENT : 0),
 	)
 	// stop iterating once we've hit the last part, but if we're in dev mode, keep going to check for mistakes.
-	while ((nextPart < compiled._parts.length || DEV) && walker.nextNode()) {
+	while ((next_part < compiled._parts.length || DEV) && walker.nextNode()) {
 		const node = walker.currentNode
-		if (isText(node)) {
+		if (is_text(node)) {
 			// reverse the order because we'll be supplying ChildPart with its index in the parent node.
 			// and if we apply the parts forwards, indicies will be wrong if some prior part renders more than one node.
 			// also reverse it because that's the correct order for splitting.
@@ -65,32 +71,32 @@ export function compileTemplate(statics: TemplateStringsArray) {
 			})
 
 			if (nodes.length) {
-				const parentNode = node.parentNode
-				DEV: assert(parentNode !== null, 'all text nodes should have a parent node')
+				const parent_node = node.parentNode
+				DEV: assert(parent_node !== null, 'all text nodes should have a parent node')
 				DEV: assert(
-					parentNode instanceof DocumentFragment ||
-						parentNode instanceof HTMLElement ||
-						parentNode instanceof SVGElement,
+					parent_node instanceof DocumentFragment ||
+						parent_node instanceof HTMLElement ||
+						parent_node instanceof SVGElement,
 				)
-				let siblings = [...parentNode.childNodes]
+				let siblings = [...parent_node.childNodes]
 				for (const [node, idx] of nodes) {
 					const child = siblings.indexOf(node)
-					patch(parentNode, idx, (node, span) => createChildPart(node, span, child))
+					patch(parent_node, idx, (node, span) => create_child_part(node, span, child))
 				}
 			}
-		} else if (DEV && isComment(node)) {
+		} else if (DEV && is_comment(node)) {
 			// just in dev, stub out a fake part for every interpolation in a comment.
 			// this means you can comment out code inside a template and not run into
 			// issues with incorrect part counts.
 			// in production the check is skipped, so we can also skip this.
 			for (const _match of node.data.matchAll(DYNAMIC_GLOBAL)) {
-				compiled._parts[nextPart++] = [parseInt(_match[1]), () => ({ update() {}, detach() {} })]
+				compiled._parts[next_part++] = [parseInt(_match[1]), () => ({ update() {}, detach() {} })]
 			}
 		} else {
-			assert(isElement(node))
+			assert(is_element(node))
 			DEV: assert(node instanceof HTMLElement || node instanceof SVGElement)
 
-			const toRemove = []
+			const to_remove = []
 			for (let name of node.getAttributeNames()) {
 				const value = node.getAttribute(name)
 				assert(value !== null)
@@ -98,21 +104,21 @@ export function compileTemplate(statics: TemplateStringsArray) {
 				let match = DYNAMIC_WHOLE.exec(name)
 				if (match !== null) {
 					// directive:
-					toRemove.push(name)
+					to_remove.push(name)
 					DEV: assert(value === '', `directives must not have values`)
 					patch(node, parseInt(match[1]), node => {
 						DEV: assert(node instanceof Node)
-						return createDirectivePart(node)
+						return create_directive_part(node)
 					})
 				} else {
 					// properties:
 					match = DYNAMIC_WHOLE.exec(value)
 					if (match !== null) {
-						toRemove.push(name)
+						to_remove.push(name)
 						if (FORCE_ATTRIBUTES.test(name)) {
 							patch(node, parseInt(match[1]), node => {
 								DEV: assert(node instanceof Element)
-								return createAttributePart(node, name)
+								return create_attribute_part(node, name)
 							})
 						} else {
 							if (!(name in node)) {
@@ -133,11 +139,11 @@ export function compileTemplate(statics: TemplateStringsArray) {
 					}
 				}
 			}
-			for (const name of toRemove) node.removeAttribute(name)
+			for (const name of to_remove) node.removeAttribute(name)
 		}
 	}
 
-	compiled._parts.length = nextPart
+	compiled._parts.length = next_part
 
 	templates.set(statics, compiled)
 	return compiled

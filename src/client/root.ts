@@ -1,34 +1,34 @@
 import type { CompiledTemplate } from './compiler.ts'
 import type { Key } from './controller.ts'
-import { isHtml, singlePartTemplate } from './html.ts'
+import { is_html, single_part_template } from './html.ts'
 import { assert } from './internal.ts'
 import type { Part } from './parts.ts'
-import { createSpan, spanDeleteContents, spanInsertNode, type Span } from './span.ts'
+import { create_span, span_delete_contents, span_insert_node, type Span } from './span.ts'
 import type { Displayable } from './util.ts'
 
-export interface Root {
+export interface RootPublic {
 	render(value: Displayable): void
 	detach(): void
 }
-export interface RootInternal extends Root {
+export interface Root extends RootPublic {
 	_span: Span
 	_key: Key | undefined
 }
 
-export function createRootInto(parent: Node): Root {
+export function create_root_into(parent: Node) {
 	const marker = new Text()
 	parent.appendChild(marker)
-	return createRoot(createSpan(marker))
+	return create_root(create_span(marker))
 }
 
-export function createRootAfter(node: Node) {
+export function create_root_after(node: Node) {
 	DEV: assert(node.parentNode, 'expected a parent node')
 	const marker = new Text()
 	node.parentNode.insertBefore(marker, node.nextSibling)
-	return createRoot(createSpan(marker))
+	return create_root(create_span(marker))
 }
 
-export function createRoot(span: Span): RootInternal {
+export function create_root(span: Span): Root {
 	let template: CompiledTemplate
 	let parts: [number, Part][] | undefined
 
@@ -44,7 +44,7 @@ export function createRoot(span: Span): RootInternal {
 		_key: undefined,
 
 		render: (value: Displayable) => {
-			const html = isHtml(value) ? value : singlePartTemplate(value)
+			const html = is_html(value) ? value : single_part_template(value)
 
 			if (template !== html._template) {
 				detach()
@@ -53,28 +53,28 @@ export function createRoot(span: Span): RootInternal {
 
 				const doc = template._content.cloneNode(true) as DocumentFragment
 
-				const nodeByPart: Array<Node | Span> = []
+				const node_by_part: Array<Node | Span> = []
 
 				for (const node of doc.querySelectorAll('[data-dynparts]')) {
 					const parts = node.getAttribute('data-dynparts')
 					assert(parts)
 					node.removeAttribute('data-dynparts')
 					// @ts-expect-error -- is part a number, is part a string, who cares?
-					for (const part of parts.split(' ')) nodeByPart[part] = node
+					for (const part of parts.split(' ')) node_by_part[part] = node
 				}
 
-				for (const part of template._rootParts) nodeByPart[part] = span
+				for (const part of template._root_parts) node_by_part[part] = span
 
 				// the fragment must be inserted before the parts are constructed,
 				// because they need to know their final location.
 				// this also ensures that custom elements are upgraded before we do things
 				// to them, like setting properties or attributes.
-				spanDeleteContents(span)
-				spanInsertNode(span, doc)
+				span_delete_contents(span)
+				span_insert_node(span, doc)
 
-				parts = html._template._parts.map(([dynamicIdx, createPart], elementIdx) => [
-					dynamicIdx,
-					createPart(nodeByPart[elementIdx], span),
+				parts = html._template._parts.map(([dynamic_index, createPart], element_index) => [
+					dynamic_index,
+					createPart(node_by_part[element_index], span),
 				])
 			}
 

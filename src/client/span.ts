@@ -1,39 +1,39 @@
 import { assert } from './internal.ts'
-import { isDocumentFragment } from './util.ts'
+import { is_document_fragment } from './util.ts'
 
 export interface Span {
-	_parentNode: Node
+	_parent: Node
 	_start: Node
 	_end: Node
 	_marker: Node | null
 }
 
-export function createSpan(node: Node): Span {
+export function create_span(node: Node): Span {
 	DEV: assert(node.parentNode !== null)
 	return {
-		_parentNode: node.parentNode,
+		_parent: node.parentNode,
 		_start: node,
 		_end: node,
 		_marker: null,
 	}
 }
 
-export function spanInsertNode(span: Span, node: Node) {
-	const end = isDocumentFragment(node) ? node.lastChild : node
+export function span_insert_node(span: Span, node: Node) {
+	const end = is_document_fragment(node) ? node.lastChild : node
 	if (end === null) return // empty fragment
-	span._parentNode.insertBefore(node, span._end.nextSibling)
+	span._parent.insertBefore(node, span._end.nextSibling)
 	span._end = end
 
 	if (span._start === span._marker) {
 		DEV: assert(span._start.nextSibling)
 		span._start = span._start.nextSibling
 
-		span._parentNode.removeChild(span._marker)
+		span._parent.removeChild(span._marker)
 		span._marker = null
 	}
 }
 
-export function* spanIterator(span: Span) {
+export function* span_iterator(span: Span) {
 	let node = span._start
 	for (;;) {
 		const next = node.nextSibling
@@ -44,22 +44,22 @@ export function* spanIterator(span: Span) {
 	}
 }
 
-export function spanExtractContents(span: Span) {
+export function span_extract_contents(span: Span) {
 	span._marker = new Text()
-	span._parentNode.insertBefore(span._marker, span._start)
+	span._parent.insertBefore(span._marker, span._start)
 
 	const fragment = document.createDocumentFragment()
-	for (const node of spanIterator(span)) fragment.appendChild(node)
+	for (const node of span_iterator(span)) fragment.appendChild(node)
 
 	span._start = span._end = span._marker
 	return fragment
 }
 
-export function spanDeleteContents(span: Span) {
+export function span_delete_contents(span: Span) {
 	span._marker = new Text()
-	span._parentNode.insertBefore(span._marker, span._start)
+	span._parent.insertBefore(span._marker, span._start)
 
-	for (const node of spanIterator(span)) span._parentNode.removeChild(node)
+	for (const node of span_iterator(span)) span._parent.removeChild(node)
 
 	span._start = span._end = span._marker
 }

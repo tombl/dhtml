@@ -1,4 +1,10 @@
+import { create_root_into, type RootPublic as Root } from './client/root.ts'
+
+export function createRoot(parent: Node): Root {
+	return create_root_into(parent)
+}
+export type { Root }
+
 export { getParentNode, invalidate, keyed, onMount, onUnmount } from './client/controller.ts'
 export { html } from './client/html.ts'
-export { attr, type Directive } from './client/parts.ts'
-export { createRootInto as createRoot, type Root } from './client/root.ts'
+export { attr_directive as attr, type Directive } from './client/parts.ts'

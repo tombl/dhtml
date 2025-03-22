@@ -1,88 +1,88 @@
-import { controllers, keys, mountCallbacks } from './controller.ts'
-import { isHtml, singlePartTemplate } from './html.ts'
+import { controllers, keys, mount_callbacks } from './controller.ts'
+import { is_html, single_part_template } from './html.ts'
 import { assert } from './internal.ts'
-import { createRoot, createRootAfter, type RootInternal } from './root.ts'
-import { createSpan, spanDeleteContents, spanExtractContents, spanInsertNode, type Span } from './span.ts'
-import { isIterable, isRenderable, type Cleanup, type Displayable, type Renderable } from './util.ts'
+import { create_root, create_root_after, type Root } from './root.ts'
+import { create_span, span_delete_contents, span_extract_contents, span_insert_node, type Span } from './span.ts'
+import { is_iterable, is_renderable, type Cleanup, type Displayable, type Renderable } from './util.ts'
 
 export interface Part {
 	update(value: unknown): void
 	detach(): void
 }
 
-export function createChildPart(parentNode: Node | Span, parentSpan: Span, childIndex: number): Part {
-	let span
+export function create_child_part(parent_node: Node | Span, parentSpan: Span, childIndex: number): Part {
+	let span: Span
 
 	// for when we're rendering a renderable:
 	let renderable: Renderable | null = null
 
 	// for when we're rendering a template:
-	let root: RootInternal | undefined
+	let root: Root | undefined
 
 	// for when we're rendering multiple values:
-	let roots: RootInternal[] | undefined
+	let roots: Root[] | undefined
 
 	// for when we're rendering a string/single dom node:
 	// undefined means no previous value, because a user-specified undefined is remapped to null
 
-	let prevValue: Displayable | null | undefined
+	let old_value: Displayable | null | undefined
 
-	function switchRenderable(next: Renderable | null) {
+	function switch_renderable(next: Renderable | null) {
 		if (renderable && renderable !== next) {
 			const controller = controllers.get(renderable)
-			if (controller?._unmountCallbacks) for (const callback of controller._unmountCallbacks) callback?.()
+			if (controller?._unmount_callbacks) for (const callback of controller._unmount_callbacks) callback?.()
 			controllers.delete(renderable)
 		}
 		renderable = next
 	}
 
-	function disconnectRoot() {
+	function disconnect_root() {
 		// root.detach and part.detach are mutually recursive, so this detaches children too.
 		root?.detach()
 		root = undefined
 	}
 
-	if (parentNode instanceof Node) {
-		const child = parentNode.childNodes[childIndex]
-		span = createSpan(child)
+	if (parent_node instanceof Node) {
+		const child = parent_node.childNodes[childIndex]
+		span = create_span(child)
 	} else {
-		let child = parentNode._start
+		let child = parent_node._start
 		for (let i = 0; i < childIndex; i++) {
 			DEV: {
 				assert(child.nextSibling !== null, 'expected more siblings')
-				assert(child.nextSibling !== parentNode._end, 'ran out of siblings before the end')
+				assert(child.nextSibling !== parent_node._end, 'ran out of siblings before the end')
 			}
 			child = child.nextSibling
 		}
-		span = createSpan(child)
+		span = create_span(child)
 	}
 
 	return {
 		update: function update(value: Displayable) {
 			DEV: assert(span)
-			const endsWereEqual = span._parentNode === parentSpan._parentNode && span._end === parentSpan._end
+			const endsWereEqual = span._parent === parentSpan._parent && span._end === parentSpan._end
 
-			if (isRenderable(value)) {
-				switchRenderable(value)
+			if (is_renderable(value)) {
+				switch_renderable(value)
 
 				const renderable = value
 
 				if (!controllers.has(renderable))
 					controllers.set(renderable, {
 						_mounted: false,
-						_invalidateQueued: null,
+						_invalidate_queued: null,
 						_invalidate: () => {
 							DEV: assert(renderable === renderable, 'could not invalidate an outdated renderable')
 							update(renderable)
 						},
-						_unmountCallbacks: null, // will be upgraded to a Set if needed.
-						_parentNode: span._parentNode,
+						_unmount_callbacks: null, // will be upgraded to a Set if needed.
+						_parent_node: span._parent,
 					})
 
 				try {
 					value = renderable.render()
 				} catch (thrown) {
-					if (isHtml(thrown)) {
+					if (is_html(thrown)) {
 						value = thrown
 					} else {
 						throw thrown
@@ -91,8 +91,8 @@ export function createChildPart(parentNode: Node | Span, parentSpan: Span, child
 
 				// if render returned another renderable, we want to track/cache both renderables individually.
 				// wrap it in a nested ChildPart so that each can be tracked without ChildPart having to handle multiple renderables.
-				if (isRenderable(value)) value = singlePartTemplate(value)
-			} else switchRenderable(null)
+				if (is_renderable(value)) value = single_part_template(value)
+			} else switch_renderable(null)
 
 			// if it's undefined, swap the value for null.
 			// this means if the initial value is undefined,
@@ -102,11 +102,11 @@ export function createChildPart(parentNode: Node | Span, parentSpan: Span, child
 
 			// NOTE: we're explicitly not caching/diffing the value when it's an iterable,
 			// given it can yield different values but have the same identity. (e.g. arrays)
-			if (isIterable(value)) {
+			if (is_iterable(value)) {
 				if (!roots) {
 					// we previously rendered a single value, so we need to clear it.
-					disconnectRoot()
-					spanDeleteContents(span)
+					disconnect_root()
+					span_delete_contents(span)
 
 					roots = []
 				}
@@ -117,7 +117,7 @@ export function createChildPart(parentNode: Node | Span, parentSpan: Span, child
 				for (const item of value) {
 					// @ts-expect-error -- WeakMap lookups of non-objects always return undefined, which is fine
 					const key = keys.get(item) ?? item
-					let root = (roots[i] ??= createRootAfter(end))
+					let root = (roots[i] ??= create_root_after(end))
 
 					if (key !== undefined && root._key !== key) {
 						const j = roots.findIndex(r => r._key === key)
@@ -127,14 +127,14 @@ export function createChildPart(parentNode: Node | Span, parentSpan: Span, child
 							const root2 = roots[j]
 
 							// swap the contents of the spans
-							const tmpContent = spanExtractContents(root1._span)
-							spanInsertNode(root1._span, spanExtractContents(root2._span))
-							spanInsertNode(root2._span, tmpContent)
+							const tmp_content = span_extract_contents(root1._span)
+							span_insert_node(root1._span, span_extract_contents(root2._span))
+							span_insert_node(root2._span, tmp_content)
 
 							// swap the spans back
-							const tmpSpan = root1._span
+							const tmp_span = root1._span
 							root1._span = root2._span
-							root2._span = tmpSpan
+							root2._span = tmp_span
 
 							// swap the roots
 							roots[j] = root1
@@ -152,7 +152,7 @@ export function createChildPart(parentNode: Node | Span, parentSpan: Span, child
 					const root = roots.pop()
 					assert(root)
 					root.detach()
-					spanDeleteContents(root._span)
+					span_delete_contents(root._span)
 				}
 
 				span._end = end
@@ -162,11 +162,11 @@ export function createChildPart(parentNode: Node | Span, parentSpan: Span, child
 				if (controller) {
 					controller._mounted = true
 					// @ts-expect-error -- WeakMap lookups of null always return undefined, which is fine
-					for (const callback of mountCallbacks.get(renderable) ?? []) {
-						;(controller._unmountCallbacks ??= new Set()).add(callback())
+					for (const callback of mount_callbacks.get(renderable) ?? []) {
+						;(controller._unmount_callbacks ??= new Set()).add(callback())
 					}
 					// @ts-expect-error -- WeakMap lookups of null always return undefined, which is fine
-					mountCallbacks.delete(renderable)
+					mount_callbacks.delete(renderable)
 				}
 
 				if (endsWereEqual) parentSpan._end = span._end
@@ -178,46 +178,46 @@ export function createChildPart(parentNode: Node | Span, parentSpan: Span, child
 			}
 
 			// now early return if the value hasn't changed.
-			if (Object.is(prevValue, value)) return
+			if (Object.is(old_value, value)) return
 
-			if (isHtml(value)) {
-				root ??= createRoot(span)
+			if (is_html(value)) {
+				root ??= create_root(span)
 				root.render(value) // root.render will detach the previous tree if the template has changed.
 			} else {
 				// if we previously rendered a tree that might contain renderables,
 				// and the template has changed (or we're not even rendering a template anymore),
 				// we need to clear the old renderables.
-				disconnectRoot()
+				disconnect_root()
 
-				if (prevValue != null && value !== null && !(prevValue instanceof Node) && !(value instanceof Node)) {
+				if (old_value != null && value !== null && !(old_value instanceof Node) && !(value instanceof Node)) {
 					// we previously rendered a string, and we're rendering a string again.
 					DEV: assert(span._start === span._end && span._start instanceof Text)
 					span._start.data = '' + value
 				} else {
-					spanDeleteContents(span)
-					if (value !== null) spanInsertNode(span, value instanceof Node ? value : new Text('' + value))
+					span_delete_contents(span)
+					if (value !== null) span_insert_node(span, value instanceof Node ? value : new Text('' + value))
 				}
 			}
 
-			prevValue = value
+			old_value = value
 
 			// @ts-expect-error -- a null controllable will always return a null controller
 			const controller = controllers.get(renderable)
 			if (controller) {
 				controller._mounted = true
 				// @ts-expect-error -- WeakMap lookups of null always return undefined, which is fine
-				for (const callback of mountCallbacks.get(renderable) ?? []) {
-					;(controller._unmountCallbacks ??= new Set()).add(callback())
+				for (const callback of mount_callbacks.get(renderable) ?? []) {
+					;(controller._unmount_callbacks ??= new Set()).add(callback())
 				}
 				// @ts-expect-error -- WeakMap lookups of null always return undefined, which is fine
-				mountCallbacks.delete(renderable)
+				mount_callbacks.delete(renderable)
 			}
 
 			if (endsWereEqual) parentSpan._end = span._end
 		},
 		detach: () => {
-			switchRenderable(null)
-			disconnectRoot()
+			switch_renderable(null)
+			disconnect_root()
 		},
 	}
 }
@@ -235,7 +235,7 @@ export function createPropertyPart(node: Node, name: string): Part {
 	}
 }
 
-export function createAttributePart(node: Element, name: string): Part {
+export function create_attribute_part(node: Element, name: string): Part {
 	return {
 		// @ts-expect-error -- setAttribute implicitly casts the value to a string
 		update: value => node.setAttribute(name, value),
@@ -245,7 +245,7 @@ export function createAttributePart(node: Element, name: string): Part {
 
 export type Directive = (node: Element) => Cleanup
 
-export function createDirectivePart(node: Node): Part {
+export function create_directive_part(node: Node): Part {
 	let cleanup: Cleanup
 	return {
 		update: fn => {
@@ -261,7 +261,7 @@ export function createDirectivePart(node: Node): Part {
 	}
 }
 
-export function attr(name: string, value: string | boolean | null | undefined): Directive {
+export function attr_directive(name: string, value: string | boolean | null | undefined): Directive {
 	return node => {
 		if (typeof value === 'boolean') node.toggleAttribute(name, value)
 		else if (value == null) node.removeAttribute(name)
