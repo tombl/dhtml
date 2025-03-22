@@ -1,15 +1,17 @@
 {
 	"compilerOptions": {
 		"strict": true,
-		"noImplicitAny": false,
-		"checkJs": true,
+		"noImplicitAny": true,
 		"skipLibCheck": true,
 		"noEmit": true,
 		"module": "es2020",
 		"target": "es2020",
 		"verbatimModuleSyntax": true,
-		"allowUnusedLabels": true, // esbuild drops DEV labeled code in the prod build
-		"moduleResolution": "bundler"
+		"moduleResolution": "bundler",
+		"allowImportingTsExtensions": true,
+		"stripInternal": true,
+		"isolatedDeclarations": true,
+		"declaration": true
 	},
 	"include": ["src"]
 }

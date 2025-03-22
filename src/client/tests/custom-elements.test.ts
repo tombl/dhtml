@@ -1,4 +1,5 @@
-import { createRoot, html } from 'dhtml'
+import { html } from 'dhtml'
+import { createRoot } from 'dhtml/client'
 import { describe, expect, it } from 'vitest'
 import { setup } from './setup'
 

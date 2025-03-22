@@ -1,5 +1,7 @@
-import type { Displayable, Renderable } from './types.ts'
+import type { Displayable, Renderable } from './shared.ts'
 import { Tokenizer } from 'htmlparser2'
+
+export type { Displayable, Renderable }
 
 function isRenderable(value: unknown): value is Renderable {
 	return typeof value === 'object' && value !== null && 'render' in value
@@ -9,7 +11,7 @@ function isIterable(value: unknown): value is Iterable<unknown> {
 	return typeof value === 'object' && value !== null && Symbol.iterator in value
 }
 
-export function html(statics: TemplateStringsArray, ...dynamics: unknown[]) {
+export function html(statics: TemplateStringsArray, ...dynamics: unknown[]): BoundTemplateInstance {
 	return new BoundTemplateInstance(statics, dynamics)
 }
 
@@ -33,7 +35,7 @@ class BoundTemplateInstance {
 	#statics: TemplateStringsArray
 	dynamics: unknown[]
 
-	get template() {
+	get template(): CompiledTemplate {
 		return (this.#template ??= compileTemplate(this.#statics))
 	}
 
@@ -215,7 +217,7 @@ const ESCAPE_SUBSTITUTIONS = {
 	"'": '&#39;',
 }
 function escape(str: unknown) {
-	return String(str).replace(ESCAPE_RE, c => ESCAPE_SUBSTITUTIONS[c])
+	return String(str).replace(ESCAPE_RE, c => ESCAPE_SUBSTITUTIONS[c as keyof typeof ESCAPE_SUBSTITUTIONS])
 }
 
 function* renderToIterable(value: Displayable) {
@@ -228,13 +230,13 @@ function* renderToIterable(value: Displayable) {
 	yield template.statics[template.statics.length - 1]
 }
 
-export function renderToString(value: Displayable) {
+export function renderToString(value: Displayable): string {
 	let str = ''
 	for (const part of renderToIterable(value)) str += part
 	return str
 }
 
-export function renderToReadableStream(value: Displayable) {
+export function renderToReadableStream(value: Displayable): ReadableStream {
 	const iter = renderToIterable(value)[Symbol.iterator]()
 	return new ReadableStream({
 		pull(controller) {

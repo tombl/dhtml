@@ -1,5 +1,5 @@
 import { html, type Displayable } from 'dhtml'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { setup } from './setup'
 
 describe('basic', () => {

@@ -1,14 +1,14 @@
 /// <reference types='vite/client' />
 /// <reference types='@vitest/browser/providers/playwright' />
 
-import '../reset.css'
+import '../../../reset.css'
 
-import { createRoot, type Root } from 'dhtml'
+import { createRoot, type Root } from 'dhtml/client'
 import { afterEach, expect } from 'vitest'
 
 const roots: Root[] = []
 
-export function setup(initialHtml = '') {
+export function setup(initialHtml = ''): { root: Root; el: HTMLDivElement } {
 	const state = expect.getState()
 	const parentEl = document.createElement('div')
 	Object.assign(parentEl.style, {

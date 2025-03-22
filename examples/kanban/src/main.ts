@@ -1,4 +1,4 @@
-import { createRoot } from 'dhtml'
+import { createRoot } from 'dhtml/client'
 import { App } from './app'
 
 const root = createRoot(document.body)

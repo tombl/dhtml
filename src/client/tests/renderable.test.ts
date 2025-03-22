@@ -1,4 +1,5 @@
-import { getParentNode, html, invalidate, onMount, onUnmount, type Renderable } from 'dhtml'
+import { html, type Renderable } from 'dhtml'
+import { getParentNode, invalidate, onMount, onUnmount } from 'dhtml/client'
 import { describe, expect, it, vi } from 'vitest'
 import { setup } from './setup'
 
