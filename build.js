@@ -1,7 +1,9 @@
 import terser from '@rollup/plugin-terser'
+import MagicString from 'magic-string'
 import { rm } from 'node:fs/promises'
 import { brotliCompressSync, gzipSync } from 'node:zlib'
 import { build } from 'rolldown'
+import { walk } from 'zimmerframe'
 
 try {
 	await rm('dist', { recursive: true })
@@ -19,7 +21,7 @@ await build({
 	input,
 	output: {
 		dir: 'dist/dev',
-    banner: "// @ts-nocheck"
+		banner: '// @ts-nocheck',
 	},
 	define: {
 		DHTML_PROD: 'false',
@@ -28,6 +30,29 @@ await build({
 
 const bundle = await build({
 	input,
+	plugins: [
+		{
+			transform(code, id, { moduleType }) {
+				if (id.includes('node_modules')) return
+
+				const ast = this.parse(code, { lang: moduleType })
+				const source = new MagicString(code, { filename: id })
+
+				walk(/** @type {import('@oxc-project/types').Node} */ (ast), null, {
+					CallExpression(node, { next }) {
+						if (node.callee.type === 'Identifier' && node.callee.name === 'assert') {
+							source.update(node.start, node.end, ';')
+							return
+						}
+
+						next()
+					},
+				})
+
+				return { code: source.toString(), map: source.generateMap() }
+			},
+		},
+	],
 	output: {
 		dir: 'dist/prod',
 		plugins: [

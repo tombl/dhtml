@@ -26,7 +26,7 @@ export function invalidate(renderable: Renderable): Promise<void> {
 }
 
 export function onMount(renderable: Renderable, callback: () => Cleanup) {
-	DEV: assert(is_renderable(renderable), 'expected a renderable')
+	assert(is_renderable(renderable), 'expected a renderable')
 
 	const controller = controllers.get(renderable)
 	if (controller?._mounted) {

@@ -22,7 +22,7 @@ export function create_root_into(parent: Node) {
 }
 
 export function create_root_after(node: Node) {
-	DEV: assert(node.parentNode, 'expected a parent node')
+	assert(node.parentNode, 'expected a parent node')
 	const marker = new Text()
 	node.parentNode.insertBefore(marker, node.nextSibling)
 	return create_root(create_span(marker))

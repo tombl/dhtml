@@ -48,7 +48,7 @@ export function create_child_part(parent_node: Node | Span, parentSpan: Span, ch
 	} else {
 		let child = parent_node._start
 		for (let i = 0; i < childIndex; i++) {
-			DEV: {
+			{
 				assert(child.nextSibling !== null, 'expected more siblings')
 				assert(child.nextSibling !== parent_node._end, 'ran out of siblings before the end')
 			}
@@ -59,7 +59,7 @@ export function create_child_part(parent_node: Node | Span, parentSpan: Span, ch
 
 	return {
 		update: function update(value: Displayable) {
-			DEV: assert(span)
+			assert(span)
 			const endsWereEqual = span._parent === parentSpan._parent && span._end === parentSpan._end
 
 			if (is_renderable(value)) {
@@ -72,7 +72,7 @@ export function create_child_part(parent_node: Node | Span, parentSpan: Span, ch
 						_mounted: false,
 						_invalidate_queued: null,
 						_invalidate: () => {
-							DEV: assert(renderable === renderable, 'could not invalidate an outdated renderable')
+							assert(renderable === renderable, 'could not invalidate an outdated renderable')
 							update(renderable)
 						},
 						_unmount_callbacks: null, // will be upgraded to a Set if needed.
@@ -191,7 +191,7 @@ export function create_child_part(parent_node: Node | Span, parentSpan: Span, ch
 
 				if (old_value != null && value !== null && !(old_value instanceof Node) && !(value instanceof Node)) {
 					// we previously rendered a string, and we're rendering a string again.
-					DEV: assert(span._start === span._end && span._start instanceof Text)
+					assert(span._start === span._end && span._start instanceof Text)
 					span._start.data = '' + value
 				} else {
 					span_delete_contents(span)
@@ -249,7 +249,7 @@ export function create_directive_part(node: Node): Part {
 	let cleanup: Cleanup
 	return {
 		update: fn => {
-			DEV: assert(typeof fn === 'function' || fn == null)
+			assert(typeof fn === 'function' || fn == null)
 			cleanup?.()
 			cleanup = fn?.(node)
 		},

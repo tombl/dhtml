@@ -38,11 +38,13 @@
 		"@vitest/ui": "^3.0.5",
 		"dhtml": ".",
 		"htmlparser2": "^10.0.0",
+		"magic-string": "^0.30.17",
 		"playwright": "^1.50.1",
 		"prettier": "^3.4.2",
 		"rolldown": "^1.0.0-beta.6",
 		"typescript": "^5.7.2",
-		"vitest": "^3.0.6"
+		"vitest": "^3.0.6",
+		"zimmerframe": "^1.1.2"
 	},
 	"prettier": {
 		"arrowParens": "avoid",

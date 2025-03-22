@@ -9,7 +9,7 @@ export interface Span {
 }
 
 export function create_span(node: Node): Span {
-	DEV: assert(node.parentNode !== null)
+	assert(node.parentNode !== null)
 	return {
 		_parent: node.parentNode,
 		_start: node,
@@ -25,7 +25,7 @@ export function span_insert_node(span: Span, node: Node) {
 	span._end = end
 
 	if (span._start === span._marker) {
-		DEV: assert(span._start.nextSibling)
+		assert(span._start.nextSibling)
 		span._start = span._start.nextSibling
 
 		span._parent.removeChild(span._marker)

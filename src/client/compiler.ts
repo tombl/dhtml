@@ -44,7 +44,7 @@ export function compile_template(statics: TemplateStringsArray) {
 		idx: number,
 		createPart: (node: Node | Span, span: Span) => Part,
 	) {
-		DEV: assert(next_part < compiled._parts.length, 'got more parts than expected')
+		assert(next_part < compiled._parts.length, 'got more parts than expected')
 		if (is_document_fragment(node)) compiled._root_parts.push(next_part)
 		else if ('dynparts' in node.dataset) node.dataset.dynparts += ' ' + next_part
 		// @ts-expect-error -- this assigment will cast nextPart to a string
@@ -72,8 +72,8 @@ export function compile_template(statics: TemplateStringsArray) {
 
 			if (nodes.length) {
 				const parent_node = node.parentNode
-				DEV: assert(parent_node !== null, 'all text nodes should have a parent node')
-				DEV: assert(
+				assert(parent_node !== null, 'all text nodes should have a parent node')
+				assert(
 					parent_node instanceof DocumentFragment ||
 						parent_node instanceof HTMLElement ||
 						parent_node instanceof SVGElement,
@@ -94,7 +94,7 @@ export function compile_template(statics: TemplateStringsArray) {
 			}
 		} else {
 			assert(is_element(node))
-			DEV: assert(node instanceof HTMLElement || node instanceof SVGElement)
+			assert(node instanceof HTMLElement || node instanceof SVGElement)
 
 			const to_remove = []
 			for (let name of node.getAttributeNames()) {
@@ -105,9 +105,9 @@ export function compile_template(statics: TemplateStringsArray) {
 				if (match !== null) {
 					// directive:
 					to_remove.push(name)
-					DEV: assert(value === '', `directives must not have values`)
+					assert(value === '', `directives must not have values`)
 					patch(node, parseInt(match[1]), node => {
-						DEV: assert(node instanceof Node)
+						assert(node instanceof Node)
 						return create_directive_part(node)
 					})
 				} else {
@@ -117,7 +117,7 @@ export function compile_template(statics: TemplateStringsArray) {
 						to_remove.push(name)
 						if (FORCE_ATTRIBUTES.test(name)) {
 							patch(node, parseInt(match[1]), node => {
-								DEV: assert(node instanceof Element)
+								assert(node instanceof Element)
 								return create_attribute_part(node, name)
 							})
 						} else {
@@ -130,7 +130,7 @@ export function compile_template(statics: TemplateStringsArray) {
 								}
 							}
 							patch(node, parseInt(match[1]), node => {
-								DEV: assert(node instanceof Node)
+								assert(node instanceof Node)
 								return createPropertyPart(node, name)
 							})
 						}
