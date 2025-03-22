@@ -1,4 +1,5 @@
-import { html, keyed, type Displayable } from 'dhtml'
+import { html, type Displayable } from 'dhtml'
+import { keyed } from 'dhtml/client'
 import { describe, expect, it } from 'vitest'
 import { setup } from './setup'
 

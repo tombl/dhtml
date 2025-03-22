@@ -1,13 +1,11 @@
 import { defineConfig } from 'vitest/config'
 
-const prod = !!process.env.PROD
-
 export default defineConfig({
 	resolve: {
-		alias: { dhtml: new URL(prod ? 'dist/client.min.js' : 'src/client.ts', import.meta.url) },
+		conditions: ['dhtml-source', 'browser'], // use the source directly
 	},
 	define: {
-		DHTML_PROD: prod,
+		DHTML_PROD: !!process.env.PROD,
 	},
 	test: {
 		clearMocks: true,
@@ -15,7 +13,8 @@ export default defineConfig({
 			enabled: true,
 			reporter: ['text', 'json-summary', 'json', 'html'],
 			reportOnFailure: true,
-			include: ['src/**/*.ts'],
+			include: ['src/client/**', 'src/client.ts'],
+			exclude: ['**/tests'],
 		},
 		browser: {
 			enabled: true,

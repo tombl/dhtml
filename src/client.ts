@@ -6,5 +6,4 @@ export function createRoot(parent: Node): Root {
 export type { Root }
 
 export { getParentNode, invalidate, keyed, onMount, onUnmount } from './client/controller.ts'
-export { html } from './client/html.ts'
 export { attr_directive as attr, type Directive } from './client/parts.ts'

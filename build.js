@@ -1,14 +1,25 @@
-import { build } from 'rolldown'
 import terser from '@rollup/plugin-terser'
-import { gzipSync, brotliCompressSync } from 'node:zlib'
+import { rm } from 'node:fs/promises'
+import { brotliCompressSync, gzipSync } from 'node:zlib'
+import { build } from 'rolldown'
+
+try {
+	await rm('dist', { recursive: true })
+} catch {}
+
+const input = {
+	client: './src/client.ts',
+	'index.client': './src/index.client.ts',
+
+	server: './src/server.ts',
+	'index.server': './src/index.server.ts',
+}
 
 await build({
-	input: {
-		client: './src/client.ts',
-		server: './src/server.ts',
-	},
+	input,
 	output: {
-		dir: 'dist',
+		dir: 'dist/dev',
+    banner: "// @ts-nocheck"
 	},
 	define: {
 		DHTML_PROD: 'false',
@@ -16,13 +27,9 @@ await build({
 })
 
 const bundle = await build({
-	input: {
-		client: './src/client.ts',
-		server: './src/server.ts',
-	},
+	input,
 	output: {
-		dir: 'dist',
-		entryFileNames: '[name].min.js',
+		dir: 'dist/prod',
 		plugins: [
 			terser({
 				mangle: { properties: { regex: /^_/ } },
@@ -35,10 +42,15 @@ const bundle = await build({
 	},
 })
 
-for (const file of bundle.output) {
-	console.group(file.name)
-	console.log(`normal: ${file.code.length}`)
-	console.log(`gzip: ${gzipSync(file.code).length}`)
-	console.log(`brotli: ${brotliCompressSync(file.code).length}`)
-	console.groupEnd(file.name)
-}
+console.table(
+	Object.fromEntries(
+		bundle.output.map(file => [
+			file.name,
+			{
+				normal: file.code.length,
+				gzip: gzipSync(file.code).length,
+				brotli: brotliCompressSync(file.code).length,
+			},
+		]),
+	),
+)

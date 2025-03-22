@@ -1,5 +1,7 @@
-import type { Displayable, Renderable } from './types.ts'
+import type { Displayable, Renderable } from './shared.ts'
 import { Tokenizer } from 'htmlparser2'
+
+export type { Displayable, Renderable }
 
 function isRenderable(value: unknown): value is Renderable {
 	return typeof value === 'object' && value !== null && 'render' in value

@@ -1,15 +1,26 @@
 {
 	"name": "dhtml",
 	"type": "module",
-	"main": "src/client.ts",
 	"exports": {
 		".": {
-			"production": "./dist/client.min.js",
-			"default": "./src/client.ts"
+			"browser": {
+				"dhtml-source": "./src/index.client.ts",
+				"production": "./dist/prod/index.client.js",
+				"default": "./dist/dev/index.client.js"
+			},
+			"dhtml-source": "./src/index.server.ts",
+			"production": "./dist/prod/index.server.js",
+			"default": "./dist/dev/index.server.js"
+		},
+		"./client": {
+			"dhtml-source": "./src/client.ts",
+			"production": "./dist/prod/client.js",
+			"default": "./dist/dev/client.js"
 		},
 		"./server": {
-			"production": "./dist/server.min.js",
-			"default": "./src/server.ts"
+			"dhtml-source": "./src/server.ts",
+			"production": "./dist/prod/server.js",
+			"default": "./dist/dev/server.js"
 		}
 	},
 	"scripts": {
