@@ -58,7 +58,7 @@ function define_bundle(env, runtime) {
 			],
 		},
 		define: {
-			DHTML_PROD: JSON.stringify(!is_dev),
+			DHTML_DEV: JSON.stringify(is_dev),
 		},
 	}
 }

@@ -1,4 +1,4 @@
-import { assert } from './internal.ts'
+import { assert } from '../shared.ts'
 import { is_document_fragment } from './util.ts'
 
 export interface Span {
