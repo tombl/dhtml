@@ -1,6 +1,7 @@
 import terser from '@rollup/plugin-terser'
+import { createBundle } from 'dts-buddy'
 import MagicString from 'magic-string'
-import { rm, readFile, writeFile } from 'node:fs/promises'
+import { readFile, rm, writeFile } from 'node:fs/promises'
 import { brotliCompressSync, gzipSync } from 'node:zlib'
 import { build } from 'rolldown'
 import { walk } from 'zimmerframe'
@@ -69,6 +70,16 @@ const bundles = await build([
 	define_bundle('prod', 'server'),
 ])
 
+await createBundle({
+	project: 'tsconfig.json',
+	output: 'dist/types.d.ts',
+	modules: {
+		dhtml: './src/index.client.ts',
+		'dhtml/client': './src/client.ts',
+		'dhtml/server': './src/server.ts',
+	},
+})
+
 const pkg = JSON.parse(await readFile('package.json', 'utf8'))
 
 delete pkg.scripts
@@ -79,6 +90,7 @@ delete pkg.prettier
 		if (exports.startsWith('./src/')) exports = exports.slice('./src/'.length)
 		exports = exports.replace(/\.ts$/, '')
 		return {
+			types: './types.d.ts',
 			production: `./${exports}.min.js`,
 			default: `./${exports}.js`,
 		}

@@ -9,7 +9,8 @@
 		"target": "es2020",
 		"verbatimModuleSyntax": true,
 		"moduleResolution": "bundler",
-		"allowImportingTsExtensions": true
+		"allowImportingTsExtensions": true,
+		"stripInternal": true
 	},
 	"include": ["src"]
 }

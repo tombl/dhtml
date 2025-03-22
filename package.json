@@ -23,6 +23,7 @@
 		"@vitest/coverage-v8": "^3.0.6",
 		"@vitest/ui": "^3.0.5",
 		"dhtml": ".",
+		"dts-buddy": "^0.5.5",
 		"htmlparser2": "^10.0.0",
 		"magic-string": "^0.30.17",
 		"playwright": "^1.50.1",
