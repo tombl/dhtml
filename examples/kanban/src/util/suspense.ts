@@ -1,4 +1,5 @@
-import { html, invalidate, type Renderable } from 'dhtml'
+import { html, type Renderable } from 'dhtml'
+import { invalidate } from 'dhtml/client'
 
 const results = new WeakMap<
 	Promise<unknown>,

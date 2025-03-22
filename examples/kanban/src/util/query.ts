@@ -1,4 +1,5 @@
-import { invalidate, onMount, type Renderable } from 'dhtml'
+import type { Renderable } from 'dhtml'
+import { invalidate, onMount } from 'dhtml/client'
 import type { Bus } from './bus'
 import { suspend } from './suspense'
 
