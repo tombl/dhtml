@@ -1,7 +1,7 @@
 import { html } from 'dhtml'
 import { createRoot } from 'dhtml/client'
-import { describe, expect, it } from 'vitest'
-import { setup } from './setup'
+import test, { type TestContext } from 'node:test'
+import { setup } from './setup.ts'
 
 class CustomElement extends HTMLElement {
 	#thing?: string
@@ -20,26 +20,24 @@ class CustomElement extends HTMLElement {
 
 customElements.define('custom-element', CustomElement)
 
-describe('custom elements', () => {
-	it('correctly instantiates custom elements', () => {
-		const { root, el } = setup()
+test('custom elements instantiate correctly', (t: TestContext) => {
+	const { root, el } = setup()
 
-		root.render(html`<custom-element thing=${'hello'}></custom-element>`)
-		expect(el.innerHTML).toBe(`<custom-element>inside custom element</custom-element>`)
+	root.render(html`<custom-element thing=${'hello'}></custom-element>`)
+	t.assert.strictEqual(el.innerHTML, `<custom-element>inside custom element</custom-element>`)
 
-		const customElement = el.querySelector('custom-element') as CustomElement
-		expect(customElement).toBeInstanceOf(CustomElement)
-		expect(customElement.thing).toBe('HELLO')
-	})
+	const customElement = el.querySelector('custom-element') as CustomElement
+	t.assert.ok(customElement instanceof CustomElement)
+	t.assert.strictEqual(customElement.thing, 'HELLO')
+})
 
-	it('renders into shadow dom', () => {
-		const { el } = setup()
-		const shadowRoot = el.attachShadow({ mode: 'open' })
+test('content renders into shadow dom', (t: TestContext) => {
+	const { el } = setup()
+	const shadowRoot = el.attachShadow({ mode: 'open' })
 
-		const root = createRoot(shadowRoot)
-		root.render(html`<p>hello</p>`)
+	const root = createRoot(shadowRoot)
+	root.render(html`<p>hello</p>`)
 
-		expect(el.innerHTML).toBe(``)
-		expect(shadowRoot.innerHTML).toBe(`<p>hello</p>`)
-	})
+	t.assert.strictEqual(el.innerHTML, ``)
+	t.assert.strictEqual(shadowRoot.innerHTML, `<p>hello</p>`)
 })
