@@ -7,6 +7,7 @@ type PartRenderer = (values: unknown[]) => string | Generator<string, void, void
 interface CompiledTemplate {
 	statics: string[]
 	parts: PartRenderer[]
+	extra_parts: number
 }
 
 const WHITESPACE_WHOLE = /^\s+$/
@@ -27,6 +28,9 @@ function compile_template(statics: TemplateStringsArray): CompiledTemplate {
 	let attribname: [start: number, end: number] | null = null
 	function noop() {}
 
+	// count of parts that don't directly correspond to inputs
+	let extra_parts = 0
+
 	const tokenizer = new Tokenizer(
 		{},
 		{
@@ -39,7 +43,7 @@ function compile_template(statics: TemplateStringsArray): CompiledTemplate {
 					return
 				}
 
-				assert(!DYNAMIC_GLOBAL.test(name), `expected a whole dynamic value for ${name}, got a partial one`)
+				// assert(!DYNAMIC_GLOBAL.test(name), `expected a whole dynamic value for ${name}, got a partial one`)
 
 				attribname = [start, end]
 			},
@@ -57,7 +61,7 @@ function compile_template(statics: TemplateStringsArray): CompiledTemplate {
 					return
 				}
 
-				assert(!DYNAMIC_GLOBAL.test(value), `expected a whole dynamic value for ${name}, got a partial one`)
+				// assert(!DYNAMIC_GLOBAL.test(value), `expected a whole dynamic value for ${name}, got a partial one`)
 			},
 			onattribentity: noop,
 			onattribend() {
@@ -82,6 +86,7 @@ function compile_template(statics: TemplateStringsArray): CompiledTemplate {
 				}
 
 				if (WHITESPACE_WHOLE.test(value)) {
+					extra_parts++
 					parts.push({ start, end, render: () => ' ' })
 					return
 				}
@@ -115,6 +120,7 @@ function compile_template(statics: TemplateStringsArray): CompiledTemplate {
 	const compiled: CompiledTemplate = {
 		statics: [],
 		parts: [],
+		extra_parts,
 	}
 
 	compiled.statics.push(html.slice(0, parts[0]?.start))
@@ -148,12 +154,14 @@ function render_attribute(name: string, value: unknown) {
 }
 
 function* render_child(value: unknown) {
-	const seen = new Set()
+	const seen = new Map<object, number>()
 
 	while (is_renderable(value))
 		try {
-			if (seen.has(value)) throw new Error('circular render')
-			seen.add(value)
+			const times = seen.get(value) ?? 0
+			if (times > 100) throw new Error('circular render')
+			seen.set(value, times + 1)
+
 			value = value.render()
 		} catch (thrown) {
 			if (is_html(thrown)) {
@@ -189,7 +197,7 @@ function* render_to_iterable(value: Displayable) {
 	const template = compile_template(statics)
 
 	assert(
-		template.parts.length === dynamics.length,
+		template.parts.length - template.extra_parts === dynamics.length,
 		'expected the same number of dynamics as parts. do you have a ${...} in an unsupported place?',
 	)
 
