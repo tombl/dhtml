@@ -140,7 +140,7 @@ test('errors are thrown cleanly', (t: TestContext) => {
 	t.assert.strictEqual(el.innerHTML, '<!---->')
 })
 
-test('invalid part placement produces warning', { skip: process.env.NODE_ENV === 'production' }, (t: TestContext) => {
+test('invalid part placement raises error', { skip: process.env.NODE_ENV === 'production' }, (t: TestContext) => {
 	const { root, el } = setup()
 
 	t.assert.throws(() => root.render(html`<${'div'}>${'text'}</${'div'}>`), {
