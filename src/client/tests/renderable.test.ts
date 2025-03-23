@@ -1,9 +1,10 @@
+import { mock, test } from 'bun:test'
 import { html, type Renderable } from 'dhtml'
 import { getParentNode, invalidate, onMount, onUnmount } from 'dhtml/client'
-import test, { type TestContext } from 'node:test'
+import assert from 'node:assert/strict'
 import { setup } from './setup.ts'
 
-test('renderables work correctly', async (t: TestContext) => {
+test('renderables work correctly', async () => {
 	const { root, el } = setup()
 
 	root.render(
@@ -13,7 +14,7 @@ test('renderables work correctly', async (t: TestContext) => {
 			},
 		}}`,
 	)
-	t.assert.strictEqual(el.innerHTML, '<h1>Hello, world!</h1>')
+	assert.equal(el.innerHTML, '<h1>Hello, world!</h1>')
 
 	const app = {
 		i: 0,
@@ -22,17 +23,17 @@ test('renderables work correctly', async (t: TestContext) => {
 		},
 	}
 	root.render(app)
-	t.assert.strictEqual(el.innerHTML, 'Count: 0')
+	assert.equal(el.innerHTML, 'Count: 0')
 	root.render(app)
-	t.assert.strictEqual(el.innerHTML, 'Count: 1')
+	assert.equal(el.innerHTML, 'Count: 1')
 	await invalidate(app)
-	t.assert.strictEqual(el.innerHTML, 'Count: 2')
+	assert.equal(el.innerHTML, 'Count: 2')
 	await invalidate(app)
-	t.assert.strictEqual(el.innerHTML, 'Count: 3')
-	t.assert.strictEqual(app.i, 4)
+	assert.equal(el.innerHTML, 'Count: 3')
+	assert.equal(app.i, 4)
 })
 
-test('renderables handle undefined correctly', (t: TestContext) => {
+test('renderables handle undefined correctly', () => {
 	const { root, el } = setup()
 
 	root.render({
@@ -40,10 +41,10 @@ test('renderables handle undefined correctly', (t: TestContext) => {
 		render() {},
 	})
 
-	t.assert.strictEqual(el.innerHTML, '')
+	assert.equal(el.innerHTML, '')
 })
 
-test('onMount calls in the right order', (t: TestContext) => {
+test('onMount calls in the right order', () => {
 	const { root, el } = setup()
 
 	const sequence: string[] = []
@@ -86,24 +87,24 @@ test('onMount calls in the right order', (t: TestContext) => {
 
 	outer.show = true
 	root.render(outer)
-	t.assert.strictEqual(el.innerHTML, 'inner')
-	t.assert.deepStrictEqual(sequence, ['outer render', 'inner render', 'inner mount', 'outer mount'])
+	assert.equal(el.innerHTML, 'inner')
+	assert.deepStrictEqual(sequence, ['outer render', 'inner render', 'inner mount', 'outer mount'])
 	sequence.length = 0
 
 	outer.show = false
 	root.render(outer)
-	t.assert.strictEqual(el.innerHTML, '')
-	t.assert.deepStrictEqual(sequence, ['outer render', 'inner cleanup'])
+	assert.equal(el.innerHTML, '')
+	assert.deepStrictEqual(sequence, ['outer render', 'inner cleanup'])
 	sequence.length = 0
 
 	outer.show = true
 	root.render(outer)
-	t.assert.strictEqual(el.innerHTML, 'inner')
-	t.assert.deepStrictEqual(sequence, ['outer render', 'inner render'])
+	assert.equal(el.innerHTML, 'inner')
+	assert.deepStrictEqual(sequence, ['outer render', 'inner render'])
 	sequence.length = 0
 })
 
-test('onMount registers multiple callbacks', (t: TestContext) => {
+test('onMount registers multiple callbacks', () => {
 	const { root } = setup()
 
 	const sequence: string[] = []
@@ -125,14 +126,14 @@ test('onMount registers multiple callbacks', (t: TestContext) => {
 	}
 
 	root.render(app)
-	t.assert.deepStrictEqual(sequence, ['mount 1', 'mount 2'])
+	assert.deepStrictEqual(sequence, ['mount 1', 'mount 2'])
 	sequence.length = 0
 
 	root.render(null)
-	t.assert.deepStrictEqual(sequence, ['cleanup 1', 'cleanup 2'])
+	assert.deepStrictEqual(sequence, ['cleanup 1', 'cleanup 2'])
 })
 
-test('onMount registers a fixed callback once', (t: TestContext) => {
+test('onMount registers a fixed callback once', () => {
 	const { root } = setup()
 
 	const sequence: string[] = []
@@ -151,14 +152,14 @@ test('onMount registers a fixed callback once', (t: TestContext) => {
 	}
 
 	root.render(app)
-	t.assert.deepStrictEqual(sequence, ['mount'])
+	assert.deepStrictEqual(sequence, ['mount'])
 	sequence.length = 0
 
 	root.render(null)
-	t.assert.deepStrictEqual(sequence, ['cleanup'])
+	assert.deepStrictEqual(sequence, ['cleanup'])
 })
 
-test('onMount registers callbacks outside of render', (t: TestContext) => {
+test('onMount registers callbacks outside of render', () => {
 	const { root } = setup()
 
 	const sequence: string[] = []
@@ -175,24 +176,24 @@ test('onMount registers callbacks outside of render', (t: TestContext) => {
 		return () => sequence.push('cleanup')
 	})
 
-	t.assert.deepStrictEqual(sequence, [])
+	assert.deepStrictEqual(sequence, [])
 
 	root.render(app)
-	t.assert.deepStrictEqual(sequence, ['render', 'mount'])
+	assert.deepStrictEqual(sequence, ['render', 'mount'])
 	sequence.length = 0
 
 	root.render(null)
-	t.assert.deepStrictEqual(sequence, ['cleanup'])
+	assert.deepStrictEqual(sequence, ['cleanup'])
 })
 
-test('onMount can access the dom in callback', (t: TestContext) => {
+test('onMount can access the dom in callback', () => {
 	const { root } = setup()
 
 	const app = {
 		render() {
 			onMount(this, () => {
 				const parent = getParentNode(this) as Element
-				t.assert.ok(parent.firstElementChild instanceof HTMLParagraphElement)
+				assert(parent.firstElementChild instanceof HTMLParagraphElement)
 			})
 			return html`<p>Hello, world!</p>`
 		},
@@ -201,7 +202,7 @@ test('onMount can access the dom in callback', (t: TestContext) => {
 	root.render(app)
 })
 
-test('onMount works after render', (t: TestContext) => {
+test('onMount works after render', () => {
 	const { root } = setup()
 
 	const app = {
@@ -212,12 +213,12 @@ test('onMount works after render', (t: TestContext) => {
 
 	root.render(app)
 
-	const mounted = t.mock.fn()
+	const mounted = mock(() => {})
 	onMount(app, mounted)
-	t.assert.strictEqual(mounted.mock.callCount(), 1)
+	assert.equal(mounted.mock.calls.length, 1)
 })
 
-test('onUnmount deep works correctly', (t: TestContext) => {
+test('onUnmount deep works correctly', () => {
 	const { root, el } = setup()
 
 	const sequence: string[] = []
@@ -256,30 +257,30 @@ test('onUnmount deep works correctly', (t: TestContext) => {
 
 	outer.show = true
 	root.render(outer)
-	t.assert.strictEqual(el.innerHTML, 'inner')
-	t.assert.deepStrictEqual(sequence, ['outer render', 'inner render'])
+	assert.equal(el.innerHTML, 'inner')
+	assert.deepStrictEqual(sequence, ['outer render', 'inner render'])
 	sequence.length = 0
 
 	outer.show = false
 	root.render(outer)
-	t.assert.strictEqual(el.innerHTML, '')
-	t.assert.deepStrictEqual(sequence, ['outer render', 'inner abort'])
+	assert.equal(el.innerHTML, '')
+	assert.deepStrictEqual(sequence, ['outer render', 'inner abort'])
 	sequence.length = 0
 
 	outer.show = true
 	root.render(outer)
-	t.assert.strictEqual(el.innerHTML, 'inner')
-	t.assert.deepStrictEqual(sequence, ['outer render', 'inner render'])
+	assert.equal(el.innerHTML, 'inner')
+	assert.deepStrictEqual(sequence, ['outer render', 'inner render'])
 	sequence.length = 0
 
 	outer.show = false
 	root.render(outer)
-	t.assert.strictEqual(el.innerHTML, '')
-	t.assert.deepStrictEqual(sequence, ['outer render', 'inner abort'])
+	assert.equal(el.innerHTML, '')
+	assert.deepStrictEqual(sequence, ['outer render', 'inner abort'])
 	sequence.length = 0
 })
 
-test('onUnmount shallow works correctly', (t: TestContext) => {
+test('onUnmount shallow works correctly', () => {
 	const { root, el } = setup()
 
 	const sequence: string[] = []
@@ -317,30 +318,30 @@ test('onUnmount shallow works correctly', (t: TestContext) => {
 
 	outer.show = true
 	root.render(outer)
-	t.assert.strictEqual(el.innerHTML, 'inner')
-	t.assert.deepStrictEqual(sequence, ['outer render', 'inner render'])
+	assert.equal(el.innerHTML, 'inner')
+	assert.deepStrictEqual(sequence, ['outer render', 'inner render'])
 	sequence.length = 0
 
 	outer.show = false
 	root.render(outer)
-	t.assert.strictEqual(el.innerHTML, '')
-	t.assert.deepStrictEqual(sequence, ['outer render', 'inner abort'])
+	assert.equal(el.innerHTML, '')
+	assert.deepStrictEqual(sequence, ['outer render', 'inner abort'])
 	sequence.length = 0
 
 	outer.show = true
 	root.render(outer)
-	t.assert.strictEqual(el.innerHTML, 'inner')
-	t.assert.deepStrictEqual(sequence, ['outer render', 'inner render'])
+	assert.equal(el.innerHTML, 'inner')
+	assert.deepStrictEqual(sequence, ['outer render', 'inner render'])
 	sequence.length = 0
 
 	outer.show = false
 	root.render(outer)
-	t.assert.strictEqual(el.innerHTML, '')
-	t.assert.deepStrictEqual(sequence, ['outer render', 'inner abort'])
+	assert.equal(el.innerHTML, '')
+	assert.deepStrictEqual(sequence, ['outer render', 'inner abort'])
 	sequence.length = 0
 })
 
-test('onUnmount works externally', async (t: TestContext) => {
+test('onUnmount works externally', async () => {
 	const { root, el } = setup()
 
 	const app = {
@@ -349,18 +350,18 @@ test('onUnmount works externally', async (t: TestContext) => {
 		},
 	}
 
-	const unmounted = t.mock.fn()
+	const unmounted = mock(() => {})
 	onUnmount(app, unmounted)
 
 	root.render(app)
-	t.assert.strictEqual(el.innerHTML, '<div>1</div><div>2</div><div>3</div>')
-	t.assert.strictEqual(unmounted.mock.callCount(), 0)
+	assert.equal(el.innerHTML, '<div>1</div><div>2</div><div>3</div>')
+	assert.equal(unmounted.mock.calls.length, 0)
 
 	root.render(null)
-	t.assert.strictEqual(unmounted.mock.callCount(), 1)
+	assert.equal(unmounted.mock.calls.length, 1)
 })
 
-test('getParentNode works externally', (t: TestContext) => {
+test('getParentNode works externally', () => {
 	const { root, el } = setup()
 
 	const app = {
@@ -370,11 +371,11 @@ test('getParentNode works externally', (t: TestContext) => {
 	}
 
 	root.render(app)
-	t.assert.strictEqual(el.innerHTML, '<div></div>')
-	t.assert.strictEqual(getParentNode(app), el)
+	assert.equal(el.innerHTML, '<div></div>')
+	assert.equal(getParentNode(app), el)
 })
 
-test('getParentNode works internally', (t: TestContext) => {
+test('getParentNode works internally', () => {
 	const { root, el } = setup()
 
 	root.render({
@@ -383,25 +384,25 @@ test('getParentNode works internally', (t: TestContext) => {
 		},
 	} satisfies Renderable)
 
-	t.assert.strictEqual(el.innerHTML, '<div>true</div>')
+	assert.equal(el.innerHTML, '<div>true</div>')
 })
 
-test('getParentNode handles nesting', (t: TestContext) => {
+test('getParentNode handles nesting', () => {
 	const { root, el } = setup()
 
 	const inner = {
 		render() {
 			const parent = getParentNode(this)
 
-			t.assert.ok(parent instanceof HTMLDivElement)
-			t.assert.strictEqual((parent as HTMLDivElement).outerHTML, '<div class="the-app"><!----></div>')
-			t.assert.strictEqual(parent.parentNode, el)
+			assert(parent instanceof HTMLDivElement)
+			assert.equal((parent as HTMLDivElement).outerHTML, '<div class="the-app"><!----></div>')
+			assert.equal(parent.parentNode, el)
 
 			return null
 		},
 	}
 
-	const spy = t.mock.fn(inner.render)
+	const spy = mock(inner.render)
 	inner.render = spy
 
 	root.render({
@@ -410,5 +411,5 @@ test('getParentNode handles nesting', (t: TestContext) => {
 		},
 	})
 
-	t.assert.strictEqual(spy.mock.callCount(), 1)
+	assert.equal(spy.mock.calls.length, 1)
 })

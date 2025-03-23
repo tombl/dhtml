@@ -1,6 +1,7 @@
+import { test } from 'bun:test'
 import { html } from 'dhtml'
 import { createRoot } from 'dhtml/client'
-import test, { type TestContext } from 'node:test'
+import assert from 'node:assert/strict'
 import { setup } from './setup.ts'
 
 class CustomElement extends HTMLElement {
@@ -20,24 +21,24 @@ class CustomElement extends HTMLElement {
 
 customElements.define('custom-element', CustomElement)
 
-test('custom elements instantiate correctly', (t: TestContext) => {
+test('custom elements instantiate correctly', () => {
 	const { root, el } = setup()
 
 	root.render(html`<custom-element thing=${'hello'}></custom-element>`)
-	t.assert.strictEqual(el.innerHTML, `<custom-element>inside custom element</custom-element>`)
+	assert.equal(el.innerHTML, `<custom-element>inside custom element</custom-element>`)
 
 	const customElement = el.querySelector('custom-element') as CustomElement
-	t.assert.ok(customElement instanceof CustomElement)
-	t.assert.strictEqual(customElement.thing, 'HELLO')
+	assert(customElement instanceof CustomElement)
+	assert.equal(customElement.thing, 'HELLO')
 })
 
-test('content renders into shadow dom', (t: TestContext) => {
+test('content renders into shadow dom', () => {
 	const { el } = setup()
 	const shadowRoot = el.attachShadow({ mode: 'open' })
 
 	const root = createRoot(shadowRoot)
 	root.render(html`<p>hello</p>`)
 
-	t.assert.strictEqual(el.innerHTML, ``)
-	t.assert.strictEqual(shadowRoot.innerHTML, `<p>hello</p>`)
+	assert.equal(el.innerHTML, ``)
+	assert.equal(shadowRoot.innerHTML, `<p>hello</p>`)
 })

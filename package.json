@@ -10,15 +10,15 @@
 		"build": "node build.js",
 		"format": "prettier --write . --cache",
 		"check": "tsc",
-		"test": "node --no-warnings --test --experimental-test-coverage src/*/tests/*",
-		"test:coverage": "node --no-warnings --test --experimental-test-coverage --test-reporter=spec --test-reporter-destination=stderr --test-reporter=lcov --test-reporter-destination=lcov.info src/*/tests/*",
-		"test:watch": "node --no-warnings --test --watch src/*/tests/*",
-		"test:prod": "npm run build && NODE_ENV=production npm test"
+		"test": "bun test --coverage --define __DEV__=true",
+		"test:watch": "npm test -- --watch",
+		"test:prod": "bun test --define __DEV__=false"
 	},
 	"devDependencies": {
 		"@happy-dom/global-registrator": "^17.4.4",
 		"@rollup/plugin-terser": "^0.4.4",
 		"@types/node": "^22.13.11",
+		"bun-types": "^1.2.5",
 		"dhtml": ".",
 		"dts-buddy": "^0.5.5",
 		"htmlparser2": "^10.0.0",

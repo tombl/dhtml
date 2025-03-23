@@ -1,9 +1,8 @@
 import { GlobalRegistrator } from '@happy-dom/global-registrator'
+import { afterEach } from 'bun:test'
 import { createRoot, type Root } from 'dhtml/client'
-import { afterEach } from 'node:test'
 
 GlobalRegistrator.register()
-globalThis.__DEV__ = process.env.NODE_ENV !== 'production'
 
 const roots: Root[] = []
 

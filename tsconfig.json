@@ -11,7 +11,8 @@
 		"allowImportingTsExtensions": true,
 		"stripInternal": true,
 		"isolatedDeclarations": true,
-		"declaration": true
+		"declaration": true,
+		"types": ["bun-types"]
 	},
 	"include": ["src"]
 }
