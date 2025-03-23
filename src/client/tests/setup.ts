@@ -1,10 +1,8 @@
 import { GlobalRegistrator } from '@happy-dom/global-registrator'
-import { afterEach } from 'bun:test'
+import { afterAll } from 'bun:test'
 import { createRoot, type Root } from 'dhtml/client'
 
 GlobalRegistrator.register()
-
-const roots: Root[] = []
 
 export function setup(initialHtml = ''): { root: Root; el: HTMLDivElement } {
 	const el = document.createElement('div')
@@ -12,12 +10,8 @@ export function setup(initialHtml = ''): { root: Root; el: HTMLDivElement } {
 	document.body.appendChild(el)
 
 	const root = createRoot(el)
-	roots.push(root)
+
+	afterAll(() => root.detach())
 
 	return { root, el }
 }
-
-afterEach(() => {
-	roots.forEach(root => root.detach())
-	roots.length = 0
-})

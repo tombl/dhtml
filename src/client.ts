@@ -1,8 +1,6 @@
 import { create_root_into, type RootPublic as Root } from './client/root.ts'
 
-export function createRoot(parent: Node): Root {
-	return create_root_into(parent)
-}
+export const createRoot: (parent: Node) => Root = create_root_into
 export type { Root }
 
 export { getParentNode, invalidate, keyed, onMount, onUnmount } from './client/controller.ts'

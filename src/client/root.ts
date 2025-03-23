@@ -3,7 +3,7 @@ import { assert, is_html, single_part_template } from '../shared.ts'
 import { compile_template, type CompiledTemplate } from './compiler.ts'
 import type { Key } from './controller.ts'
 import type { Part } from './parts.ts'
-import { create_span, span_delete_contents, span_insert_node, type Span } from './span.ts'
+import { create_span, delete_contents, insert_node, type Span } from './span.ts'
 
 export interface RootPublic {
 	render(value: Displayable): void
@@ -34,7 +34,7 @@ export function create_root(span: Span): Root {
 	function detach() {
 		if (!parts) return
 		// scan through all the parts of the previous tree, and clear any renderables.
-		for (const [_idx, part] of parts) part.detach()
+		for (const [_idx, part] of parts) part(null)
 		parts = undefined
 	}
 
@@ -74,8 +74,8 @@ export function create_root(span: Span): Root {
 				// because they need to know their final location.
 				// this also ensures that custom elements are upgraded before we do things
 				// to them, like setting properties or attributes.
-				span_delete_contents(span)
-				span_insert_node(span, doc)
+				delete_contents(span)
+				insert_node(span, doc)
 
 				parts = template._parts.map(([dynamic_index, createPart], element_index) => [
 					dynamic_index,
@@ -84,7 +84,7 @@ export function create_root(span: Span): Root {
 			}
 
 			assert(parts)
-			for (const [idx, part] of parts) part.update(dynamics[idx])
+			for (const [idx, part] of parts) part(dynamics[idx])
 		},
 
 		detach,
