@@ -1,124 +1,127 @@
+import { test } from 'bun:test'
 import { html, type Displayable } from 'dhtml'
-import test, { type TestContext } from 'node:test'
+import assert from 'node:assert/strict'
 import { setup } from './setup.ts'
 
-test('basic html renders correctly', (t: TestContext) => {
+const dev_test = test.skipIf(!__DEV__)
+
+test('basic html renders correctly', () => {
 	const { root, el } = setup()
 
 	root.render(html`<h1>Hello, world!</h1>`)
-	t.assert.strictEqual(el.innerHTML, '<h1>Hello, world!</h1>')
+	assert.equal(el.innerHTML, '<h1>Hello, world!</h1>')
 })
 
-test('inner content renders correctly', (t: TestContext) => {
+test('inner content renders correctly', () => {
 	const { root, el } = setup()
 
 	root.render(html`<h1>${html`Inner content!`}</h1>`)
-	t.assert.strictEqual(el.innerHTML, '<h1>Inner content!</h1>')
+	assert.equal(el.innerHTML, '<h1>Inner content!</h1>')
 })
 
-test('template with number renders correctly', (t: TestContext) => {
+test('template with number renders correctly', () => {
 	const { root, el } = setup()
 
 	const template = (n: number) => html`<h1>Hello, ${n}!</h1>`
 
 	root.render(template(1))
-	t.assert.strictEqual(el.innerHTML, '<h1>Hello, 1!</h1>')
+	assert.equal(el.innerHTML, '<h1>Hello, 1!</h1>')
 
 	root.render(template(2))
-	t.assert.strictEqual(el.innerHTML, '<h1>Hello, 2!</h1>')
+	assert.equal(el.innerHTML, '<h1>Hello, 2!</h1>')
 })
 
-test('external sibling nodes are not clobbered', (t: TestContext) => {
+test('external sibling nodes are not clobbered', () => {
 	const { root, el } = setup('<div>before</div>')
 
 	root.render(html`<h1>Hello, world!</h1>`)
-	t.assert.strictEqual(el.innerHTML, '<div>before</div><h1>Hello, world!</h1>')
+	assert.equal(el.innerHTML, '<div>before</div><h1>Hello, world!</h1>')
 
 	el.appendChild(document.createElement('div')).textContent = 'after'
-	t.assert.strictEqual(el.innerHTML, '<div>before</div><h1>Hello, world!</h1><div>after</div>')
+	assert.equal(el.innerHTML, '<div>before</div><h1>Hello, world!</h1><div>after</div>')
 
 	root.render(html`<h2>Goodbye, world!</h2>`)
-	t.assert.strictEqual(el.innerHTML, '<div>before</div><h2>Goodbye, world!</h2><div>after</div>')
+	assert.equal(el.innerHTML, '<div>before</div><h2>Goodbye, world!</h2><div>after</div>')
 
 	root.render(html``)
-	t.assert.strictEqual(el.innerHTML, '<div>before</div><div>after</div>')
+	assert.equal(el.innerHTML, '<div>before</div><div>after</div>')
 
 	root.render(html`<h1>Hello, world!</h1>`)
-	t.assert.strictEqual(el.innerHTML, '<div>before</div><h1>Hello, world!</h1><div>after</div>')
+	assert.equal(el.innerHTML, '<div>before</div><h1>Hello, world!</h1><div>after</div>')
 })
 
-test('identity is updated correctly', (t: TestContext) => {
+test('identity is updated correctly', () => {
 	const { root, el } = setup()
 
 	const template = (n: Displayable) => html`<h1>Hello, ${n}!</h1>`
 	const template2 = (n: Displayable) => html`<h1>Hello, ${n}!</h1>`
 
 	root.render(template(1))
-	t.assert.strictEqual(el.innerHTML, '<h1>Hello, 1!</h1>')
+	assert.equal(el.innerHTML, '<h1>Hello, 1!</h1>')
 	let h1 = el.children[0]
 	const text = h1.childNodes[1] as Text
-	t.assert.ok(text instanceof Text)
-	t.assert.strictEqual(text.data, '1')
+	assert(text instanceof Text)
+	assert.equal(text.data, '1')
 
 	root.render(template(2))
-	t.assert.strictEqual(el.innerHTML, '<h1>Hello, 2!</h1>')
-	t.assert.strictEqual(el.children[0], h1)
-	t.assert.strictEqual(text.data, '2')
-	t.assert.strictEqual(h1.childNodes[1], text)
+	assert.equal(el.innerHTML, '<h1>Hello, 2!</h1>')
+	assert.equal(el.children[0], h1)
+	assert.equal(text.data, '2')
+	assert.equal(h1.childNodes[1], text)
 
 	root.render(template2(3))
-	t.assert.strictEqual(el.innerHTML, '<h1>Hello, 3!</h1>')
-	t.assert.notStrictEqual(el.children[0], h1)
+	assert.equal(el.innerHTML, '<h1>Hello, 3!</h1>')
+	assert.notStrictEqual(el.children[0], h1)
 	h1 = el.children[0]
 
 	root.render(template2(template(template('inner'))))
-	t.assert.strictEqual(el.innerHTML, '<h1>Hello, <h1>Hello, <h1>Hello, inner!</h1>!</h1>!</h1>')
-	t.assert.strictEqual(el.children[0], h1)
+	assert.equal(el.innerHTML, '<h1>Hello, <h1>Hello, <h1>Hello, inner!</h1>!</h1>!</h1>')
+	assert.equal(el.children[0], h1)
 })
 
-test('basic children render correctly', (t: TestContext) => {
+test('basic children render correctly', () => {
 	const { root, el } = setup()
 
 	root.render(html`<span>${'This is a'}</span> ${html`test`} ${html`test`} ${html`test`}`)
 
-	t.assert.strictEqual(el.innerHTML, '<span>This is a</span> test test test')
+	assert.equal(el.innerHTML, '<span>This is a</span> test test test')
 })
 
-test('nodes can be embedded', (t: TestContext) => {
+test('nodes can be embedded', () => {
 	const { root, el } = setup()
 
 	let node: ParentNode = document.createElement('span')
 
 	root.render(html`<div>${node}</div>`)
-	t.assert.strictEqual(el.innerHTML, '<div><span></span></div>')
-	t.assert.strictEqual(el.children[0].children[0], node)
+	assert.equal(el.innerHTML, '<div><span></span></div>')
+	assert.equal(el.children[0].children[0], node)
 
 	node = document.createDocumentFragment()
 	node.append(document.createElement('h1'), document.createElement('h2'), document.createElement('h3'))
 
 	root.render(html`<div>${node}</div>`)
-	t.assert.strictEqual(el.innerHTML, '<div><h1></h1><h2></h2><h3></h3></div>')
-	t.assert.strictEqual(node.children.length, 0)
+	assert.equal(el.innerHTML, '<div><h1></h1><h2></h2><h3></h3></div>')
+	assert.equal(node.children.length, 0)
 })
 
-test.skip('extra empty text nodes are not added', (t: TestContext) => {
+test.skip('extra empty text nodes are not added', () => {
 	const { root, el } = setup()
 
 	root.render(html`${'abc'}`)
-	t.assert.strictEqual(el.childNodes.length, 1)
-	t.assert.ok(el.firstChild instanceof Text)
-	t.assert.strictEqual((el.firstChild as Text).data, 'abc')
+	assert.equal(el.childNodes.length, 1)
+	assert(el.firstChild instanceof Text)
+	assert.equal((el.firstChild as Text).data, 'abc')
 })
 
-test('ChildPart index shifts correctly', (t: TestContext) => {
+test('ChildPart index shifts correctly', () => {
 	const { root, el } = setup()
 
 	root.render(html`${html`A<!--x-->`}B${'C'}`)
 
-	t.assert.strictEqual(el.innerHTML, 'A<!--x-->BC')
+	assert.equal(el.innerHTML, 'A<!--x-->BC')
 })
 
-test('errors are thrown cleanly', (t: TestContext) => {
+test('errors are thrown cleanly', () => {
 	const { root, el } = setup()
 
 	const oops = new Error('oops')
@@ -134,49 +137,45 @@ test('errors are thrown cleanly', (t: TestContext) => {
 	} catch (error) {
 		thrown = error
 	}
-	t.assert.strictEqual(thrown, oops)
+	assert.equal(thrown, oops)
 
 	// on an error, don't leave any visible artifacts
-	t.assert.strictEqual(el.innerHTML, '<!---->')
+	assert.equal(el.innerHTML, '<!---->')
 })
 
-test('invalid part placement raises error', { skip: process.env.NODE_ENV === 'production' }, (t: TestContext) => {
+dev_test('invalid part placement raises error', () => {
 	const { root, el } = setup()
 
-	t.assert.throws(() => root.render(html`<${'div'}>${'text'}</${'div'}>`), {
+	assert.throws(() => root.render(html`<${'div'}>${'text'}</${'div'}>`), {
 		message: 'expected the same number of dynamics as parts. do you have a ${...} in an unsupported place?',
 	})
-	t.assert.strictEqual(el.innerHTML, '')
+	assert.equal(el.innerHTML, '')
 })
 
-test('parts in comments do not throw', (t: TestContext) => {
+test('parts in comments do not throw', () => {
 	const { root, el } = setup()
 
 	root.render(html`<!-- ${'text'} -->`)
-	t.assert.strictEqual(el.innerHTML, '<!-- dyn-$0$ -->')
+	assert.equal(el.innerHTML, '<!-- dyn-$0$ -->')
 })
 
-test(
-	'manually specifying internal template syntax throws',
-	{ skip: process.env.NODE_ENV === 'production' },
-	(t: TestContext) => {
-		const { root, el } = setup()
+dev_test('manually specifying internal template syntax throws', () => {
+	const { root, el } = setup()
 
-		t.assert.throws(
-			() => {
-				root.render(html`${1} dyn-$0$`)
-			},
-			{ message: 'got more parts than expected' },
-		)
+	assert.throws(
+		() => {
+			root.render(html`${1} dyn-$0$`)
+		},
+		{ message: 'got more parts than expected' },
+	)
 
-		t.assert.strictEqual(el.innerHTML, '')
-	},
-)
+	assert.equal(el.innerHTML, '')
+})
 
-test('syntax close but not exact does not throw', (t: TestContext) => {
+test('syntax close but not exact does not throw', () => {
 	const { root, el } = setup()
 
 	root.render(html`dyn-$${0}1$`)
 
-	t.assert.strictEqual(el.innerHTML, 'dyn-$01$')
+	assert.equal(el.innerHTML, 'dyn-$01$')
 })

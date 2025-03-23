@@ -1,9 +1,10 @@
+import { test } from 'bun:test'
 import { html } from 'dhtml'
 import { attr, type Directive } from 'dhtml/client'
-import test, { type TestContext } from 'node:test'
+import assert from 'node:assert/strict'
 import { setup } from './setup.ts'
 
-test('directive functions work correctly', (t: TestContext) => {
+test('directive functions work correctly', () => {
 	const { root, el } = setup()
 
 	const redifier: Directive = node => {
@@ -25,19 +26,19 @@ test('directive functions work correctly', (t: TestContext) => {
 
 	root.render(template(redifier))
 	const div = el.firstChild as HTMLElement
-	t.assert.strictEqual(div.tagName, 'DIV')
-	t.assert.strictEqual(div.style.cssText, 'color: red;')
+	assert.equal(div.tagName, 'DIV')
+	assert.equal(div.style.cssText, 'color: red;')
 
 	root.render(template(flipper))
-	t.assert.strictEqual(div.style.cssText, 'transform: scaleX(-1);')
+	assert.equal(div.style.cssText, 'transform: scaleX(-1);')
 
 	root.render(template(null))
-	t.assert.strictEqual(div.style.cssText, '')
+	assert.equal(div.style.cssText, '')
 
 	root.render(null)
 })
 
-test('directive functions with values work correctly', (t: TestContext) => {
+test('directive functions with values work correctly', () => {
 	const { root, el } = setup()
 
 	function classes(value: string[]): Directive {
@@ -54,17 +55,17 @@ test('directive functions with values work correctly', (t: TestContext) => {
 
 	root.render(template(['a', 'b']))
 	const div = el.firstChild as HTMLElement
-	t.assert.strictEqual(div.tagName, 'DIV')
-	t.assert.strictEqual(div.className, 'foo a b')
+	assert.equal(div.tagName, 'DIV')
+	assert.equal(div.className, 'foo a b')
 
 	root.render(template(['c', 'd']))
-	t.assert.strictEqual(div.className, 'foo c d')
+	assert.equal(div.className, 'foo c d')
 
 	root.render(template([]))
-	t.assert.strictEqual(div.className, 'foo')
+	assert.equal(div.className, 'foo')
 })
 
-test('attr directive works correctly', (t: TestContext) => {
+test('attr directive works correctly', () => {
 	const { root, el } = setup()
 
 	const template = (value: string | null) => html`
@@ -73,23 +74,23 @@ test('attr directive works correctly', (t: TestContext) => {
 	`
 
 	root.render(template('attr-works-input'))
-	t.assert.strictEqual(el.querySelector('label')!.htmlFor, 'attr-works-input')
+	assert.equal(el.querySelector('label')!.htmlFor, 'attr-works-input')
 
 	root.render(template('updated'))
-	t.assert.strictEqual(el.querySelector('label')!.htmlFor, 'updated')
+	assert.equal(el.querySelector('label')!.htmlFor, 'updated')
 
 	root.render(template(null))
-	t.assert.strictEqual(el.querySelector('label')!.htmlFor, '')
+	assert.equal(el.querySelector('label')!.htmlFor, '')
 })
 
-test('attr directive supports booleans', (t: TestContext) => {
+test('attr directive supports booleans', () => {
 	const { root, el } = setup()
 
 	const template = (value: boolean) => html`<input ${attr('disabled', value)} />`
 
 	root.render(template(true))
-	t.assert.strictEqual(el.querySelector('input')!.disabled, true)
+	assert.equal(el.querySelector('input')!.disabled, true)
 
 	root.render(template(false))
-	t.assert.strictEqual(el.querySelector('input')!.disabled, false)
+	assert.equal(el.querySelector('input')!.disabled, false)
 })

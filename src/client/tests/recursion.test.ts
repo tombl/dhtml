@@ -1,10 +1,11 @@
+import { test } from 'bun:test'
 import { html } from 'dhtml'
-import test, { type TestContext } from 'node:test'
+import assert from 'node:assert/strict'
 import { setup } from './setup.ts'
 
 const DEPTH = 10
 
-test('basic recursion is handled correctly', (t: TestContext) => {
+test('basic recursion is handled correctly', () => {
 	const { root, el } = setup()
 
 	const app = {
@@ -15,10 +16,10 @@ test('basic recursion is handled correctly', (t: TestContext) => {
 		},
 	}
 	root.render(app)
-	t.assert.strictEqual(el.innerHTML, 'hello!')
+	assert.equal(el.innerHTML, 'hello!')
 })
 
-test('nested recursion is handled correctly', (t: TestContext) => {
+test('nested recursion is handled correctly', () => {
 	const { root, el } = setup()
 
 	const app = {
@@ -29,5 +30,5 @@ test('nested recursion is handled correctly', (t: TestContext) => {
 		},
 	}
 	root.render(app)
-	t.assert.strictEqual(el.innerHTML, '<span>'.repeat(DEPTH) + 'hello!' + '</span>'.repeat(DEPTH))
+	assert.equal(el.innerHTML, '<span>'.repeat(DEPTH) + 'hello!' + '</span>'.repeat(DEPTH))
 })
