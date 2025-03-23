@@ -7,35 +7,17 @@
 		<link rel="stylesheet" href="reset.css" />
 		<title>dhtml</title>
 		<script type="module">
-			globalThis.__DEV__ = new URLSearchParams(location.search).has('dev')
-			const { createRoot, html, invalidate } = await import('./src/html.js')
+			import { html } from './dist/index.js'
+			import { createRoot, invalidate } from './dist/client.js'
+
 			const root = createRoot(document.body)
 			Object.assign(globalThis, { createRoot, html, root })
+
+			const url = ({ href }) => html`<a href=${href}>${href}</a>`
+
 			root.render({
 				i: 0,
 				render() {
-					const codePre = `import { createRoot, html, invalidate } from '`
-					const url = new URL('src/html.js', location.href).toString()
-					const codePost = `'
-
-const app = {
-  i: 0,
-  render() {
-    return html\`
-      <button
-        onclick=\${() => {
-          this.i++
-          invalidate(this)
-        }}
-      >
-        Count: \${this.i}
-      </button>
-    \`
-  },
-}
-
-createRoot(document.body).render(app)`
-
 					return html`
 						<main style="padding: 1rem; display: flex; flex-direction: column; gap: 1rem">
 							<header>
@@ -43,7 +25,34 @@ createRoot(document.body).render(app)`
 								<p>a post-component library for building user interfaces on the web.</p>
 								<p><a href="https://github.com/tombl/dhtml">github</a></p>
 							</header>
-							<pre>${codePre}<a href=${url}>${url}</a>${codePost}</pre>
+							<pre style="tab-size: 2">
+${[
+									`import { html } from '`,
+									url(new URL('dist/index.js', location.href)),
+									`'
+import { createRoot, invalidate } from '`,
+									url(new URL('dist/client.js', location.href)),
+									`'
+
+const app = {
+	i: 0,
+	render() {
+		return html\`
+			<button
+				onclick=\${() => {
+					this.i++
+					invalidate(this)
+				}}
+			>
+				Count: \${this.i}
+			</button>
+		\`
+	},
+}
+
+createRoot(document.body).render(app)`,
+								]}</pre
+							>
 							<button
 								onclick=${() => {
 									this.i++
