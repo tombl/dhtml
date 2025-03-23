@@ -23,7 +23,7 @@ const DYNAMIC_WHOLE = /^dyn-\$(\d+)\$$/i
 const DYNAMIC_GLOBAL = /dyn-\$(\d+)\$/gi
 const FORCE_ATTRIBUTES = /-|^class$|^for$/i
 
-const templates: Map<TemplateStringsArray, CompiledTemplate> = new Map()
+const templates: WeakMap<TemplateStringsArray, CompiledTemplate> = new WeakMap()
 export function compile_template(statics: TemplateStringsArray): CompiledTemplate {
 	const cached = templates.get(statics)
 	if (cached) return cached
