@@ -3,15 +3,11 @@ import {
 	create_attribute_part,
 	create_child_part,
 	create_directive_part,
-	createPropertyPart,
+	create_property_part,
 	type Part,
 } from './parts.ts'
 import type { Span } from './span.ts'
 import { is_comment, is_document_fragment, is_element, is_text } from './util.ts'
-
-const NODE_FILTER_ELEMENT: typeof NodeFilter.SHOW_ELEMENT = 1
-const NODE_FILTER_TEXT: typeof NodeFilter.SHOW_TEXT = 4
-const NODE_FILTER_COMMENT: typeof NodeFilter.SHOW_COMMENT = 128
 
 export interface CompiledTemplate {
 	_content: DocumentFragment
@@ -23,7 +19,7 @@ const DYNAMIC_WHOLE = /^dyn-\$(\d+)\$$/i
 const DYNAMIC_GLOBAL = /dyn-\$(\d+)\$/gi
 const FORCE_ATTRIBUTES = /-|^class$|^for$/i
 
-const templates: Map<TemplateStringsArray, CompiledTemplate> = new Map()
+const templates: WeakMap<TemplateStringsArray, CompiledTemplate> = new WeakMap()
 export function compile_template(statics: TemplateStringsArray): CompiledTemplate {
 	const cached = templates.get(statics)
 	if (cached) return cached
@@ -52,10 +48,10 @@ export function compile_template(statics: TemplateStringsArray): CompiledTemplat
 		compiled._parts[next_part++] = [idx, createPart]
 	}
 
-	const walker = document.createTreeWalker(
-		template_element.content,
-		NODE_FILTER_TEXT | NODE_FILTER_ELEMENT | (__DEV__ ? NODE_FILTER_COMMENT : 0),
-	)
+	const walker = document.createTreeWalker(template_element.content, __DEV__ ? 133 : 5)
+	assert((NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT | NodeFilter.SHOW_COMMENT) === 133)
+	assert((NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT) === 5)
+
 	// stop iterating once we've hit the last part, but if we're in dev mode, keep going to check for mistakes.
 	while ((next_part < compiled._parts.length || __DEV__) && walker.nextNode()) {
 		const node = walker.currentNode
@@ -90,7 +86,7 @@ export function compile_template(statics: TemplateStringsArray): CompiledTemplat
 			// issues with incorrect part counts.
 			// in production the check is skipped, so we can also skip this.
 			for (const _match of node.data.matchAll(DYNAMIC_GLOBAL)) {
-				compiled._parts[next_part++] = [parseInt(_match[1]), () => ({ update() {}, detach() {} })]
+				compiled._parts[next_part++] = [parseInt(_match[1]), () => () => {}]
 			}
 		} else {
 			assert(is_element(node))
@@ -126,7 +122,7 @@ export function compile_template(statics: TemplateStringsArray): CompiledTemplat
 							}
 							patch(node, parseInt(match[1]), node => {
 								assert(node instanceof Node)
-								return createPropertyPart(node, name)
+								return create_property_part(node, name)
 							})
 						}
 					} else {
