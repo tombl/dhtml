@@ -44,6 +44,18 @@ test('renderables handle undefined correctly', () => {
 	assert.equal(el.innerHTML, '')
 })
 
+test('renderables can throw instead of returning', () => {
+	const { root, el } = setup()
+
+	root.render({
+		render() {
+			throw html`this was thrown`
+		},
+	})
+
+	assert.equal(el.innerHTML, 'this was thrown')
+})
+
 test('onMount calls in the right order', () => {
 	const { root, el } = setup()
 
