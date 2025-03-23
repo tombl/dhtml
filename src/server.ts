@@ -188,6 +188,11 @@ function* render_to_iterable(value: Displayable) {
 	const { _statics: statics, _dynamics: dynamics } = is_html(value) ? value : single_part_template(value)
 	const template = compile_template(statics)
 
+	assert(
+		template.parts.length === dynamics.length,
+		'expected the same number of dynamics as parts. do you have a ${...} in an unsupported place?',
+	)
+
 	for (let i = 0; i < template.statics.length - 1; i++) {
 		yield template.statics[i]
 		yield* template.parts[i](dynamics)
