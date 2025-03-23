@@ -2,10 +2,7 @@
 	"name": "dhtml",
 	"type": "module",
 	"exports": {
-		".": {
-			"browser": "./src/index.client.ts",
-			"default": "./src/index.server.ts"
-		},
+		".": "./src/index.ts",
 		"./client": "./src/client.ts",
 		"./server": "./src/server.ts"
 	},

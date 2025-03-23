@@ -1,40 +1,11 @@
 import { Tokenizer } from 'htmlparser2'
-import { assert, type Displayable, type Renderable } from './shared.ts'
-
-function is_renderable(value: unknown): value is Renderable {
-	return typeof value === 'object' && value !== null && 'render' in value
-}
-
-function is_iterable(value: unknown): value is Iterable<unknown> {
-	return typeof value === 'object' && value !== null && Symbol.iterator in value
-}
-
-export function html(statics: TemplateStringsArray, ...dynamics: unknown[]): BoundTemplateInstance {
-	return new BoundTemplateInstance(statics, dynamics)
-}
-
-const single_part_template = (part: Displayable) => html`${part}`
+import { assert, is_html, is_iterable, is_renderable, single_part_template, type Displayable } from './shared.ts'
 
 type PartRenderer = (values: unknown[]) => string | Generator<string, void, void>
 
 interface CompiledTemplate {
 	statics: string[]
 	parts: PartRenderer[]
-}
-
-class BoundTemplateInstance {
-	#template: CompiledTemplate | undefined
-	#statics: TemplateStringsArray
-	/* @internal */ dynamics: unknown[]
-
-	get template(): CompiledTemplate {
-		return (this.#template ??= compile_template(this.#statics))
-	}
-
-	constructor(statics: TemplateStringsArray, dynamics: unknown[]) {
-		this.#statics = statics
-		this.dynamics = dynamics
-	}
 }
 
 const WHITESPACE_WHOLE = /^\s+$/
@@ -184,7 +155,7 @@ function* render_child(value: unknown) {
 			seen.add(value)
 			value = value.render()
 		} catch (thrown) {
-			if (thrown instanceof BoundTemplateInstance) {
+			if (is_html(thrown)) {
 				value = thrown
 			} else {
 				throw thrown
@@ -193,7 +164,7 @@ function* render_child(value: unknown) {
 
 	if (is_iterable(value)) {
 		for (const item of value) yield* render_to_iterable(item as Displayable)
-	} else if (value instanceof BoundTemplateInstance) {
+	} else if (is_html(value)) {
 		yield* render_to_iterable(value)
 	} else if (value !== null) {
 		yield escape(value)
@@ -213,7 +184,8 @@ function escape(str: unknown) {
 }
 
 function* render_to_iterable(value: Displayable) {
-	const { template, dynamics } = value instanceof BoundTemplateInstance ? value : single_part_template(value)
+	const { _statics: statics, _dynamics: dynamics } = is_html(value) ? value : single_part_template(value)
+	const template = compile_template(statics)
 
 	for (let i = 0; i < template.statics.length - 1; i++) {
 		yield template.statics[i]

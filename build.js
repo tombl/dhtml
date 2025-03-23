@@ -35,13 +35,14 @@ const strip_asserts_plugin = {
 }
 
 /** @returns {import('rolldown').BuildOptions} */
-function define_bundle(env, runtime) {
+function define_bundle(env) {
 	const is_dev = env === 'dev'
 
 	return {
 		input: {
-			[runtime]: `./src/${runtime}.ts`,
-			[`index.${runtime}`]: `./src/index.${runtime}.ts`,
+			client: './src/client.ts',
+			server: './src/server.ts',
+			index: './src/index.ts',
 		},
 		plugins: [!is_dev && strip_asserts_plugin],
 		output: {
@@ -58,23 +59,18 @@ function define_bundle(env, runtime) {
 			],
 		},
 		define: {
-			DHTML_DEV: JSON.stringify(is_dev),
+			__DEV__: JSON.stringify(is_dev),
 		},
 	}
 }
 
-const bundles = await build([
-	define_bundle('dev', 'client'),
-	define_bundle('dev', 'server'),
-	define_bundle('prod', 'client'),
-	define_bundle('prod', 'server'),
-])
+const bundles = await build([define_bundle('dev'), define_bundle('prod')])
 
 await createBundle({
 	project: 'tsconfig.json',
 	output: 'dist/types.d.ts',
 	modules: {
-		dhtml: './src/index.client.ts',
+		dhtml: './src/index.ts',
 		'dhtml/client': './src/client.ts',
 		'dhtml/server': './src/server.ts',
 	},

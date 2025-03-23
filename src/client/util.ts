@@ -10,9 +10,3 @@ export const is_comment = (node: Node): node is Comment => node.nodeType === (8 
 
 export const is_document_fragment = (node: Node): node is DocumentFragment =>
 	node.nodeType === (11 satisfies typeof Node.DOCUMENT_FRAGMENT_NODE)
-
-export const is_renderable = (value: unknown): value is Renderable =>
-	typeof value === 'object' && value !== null && 'render' in value
-
-export const is_iterable = (value: unknown): value is Iterable<unknown> =>
-	typeof value === 'object' && value !== null && Symbol.iterator in value

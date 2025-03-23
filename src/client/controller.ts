@@ -1,5 +1,5 @@
-import { assert, DEV, type Displayable, type Renderable } from '../shared.ts'
-import { is_renderable, type Cleanup } from './util.ts'
+import { assert, is_renderable, type Displayable, type Renderable } from '../shared.ts'
+import { type Cleanup } from './util.ts'
 
 export type Key = string | number | bigint | boolean | symbol | object | null
 
@@ -51,7 +51,7 @@ export function getParentNode(renderable: Renderable): Node {
 }
 
 export function keyed<T extends Displayable & object>(renderable: T, key: Key): T {
-	if (DEV && keys.has(renderable)) throw new Error('renderable already has a key')
+	if (__DEV__ && keys.has(renderable)) throw new Error('renderable already has a key')
 	keys.set(renderable, key)
 	return renderable
 }

@@ -1,4 +1,4 @@
-import { assert, DEV } from '../shared.ts'
+import { assert } from '../shared.ts'
 import {
 	create_attribute_part,
 	create_child_part,
@@ -54,10 +54,10 @@ export function compile_template(statics: TemplateStringsArray): CompiledTemplat
 
 	const walker = document.createTreeWalker(
 		template_element.content,
-		NODE_FILTER_TEXT | NODE_FILTER_ELEMENT | (DEV ? NODE_FILTER_COMMENT : 0),
+		NODE_FILTER_TEXT | NODE_FILTER_ELEMENT | (__DEV__ ? NODE_FILTER_COMMENT : 0),
 	)
 	// stop iterating once we've hit the last part, but if we're in dev mode, keep going to check for mistakes.
-	while ((next_part < compiled._parts.length || DEV) && walker.nextNode()) {
+	while ((next_part < compiled._parts.length || __DEV__) && walker.nextNode()) {
 		const node = walker.currentNode
 		if (is_text(node)) {
 			// reverse the order because we'll be supplying ChildPart with its index in the parent node.
@@ -84,7 +84,7 @@ export function compile_template(statics: TemplateStringsArray): CompiledTemplat
 					patch(parent_node, idx, (node, span) => create_child_part(node, span, child))
 				}
 			}
-		} else if (DEV && is_comment(node)) {
+		} else if (__DEV__ && is_comment(node)) {
 			// just in dev, stub out a fake part for every interpolation in a comment.
 			// this means you can comment out code inside a template and not run into
 			// issues with incorrect part counts.
@@ -134,7 +134,7 @@ export function compile_template(statics: TemplateStringsArray): CompiledTemplat
 								return createPropertyPart(node, name)
 							})
 						}
-					} else if (DEV) {
+					} else if (__DEV__) {
 						assert(!DYNAMIC_GLOBAL.test(value), `expected a whole dynamic value for ${name}, got a partial one`)
 					}
 				}
