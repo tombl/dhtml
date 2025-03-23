@@ -1,12 +1,5 @@
-import {
-	assert,
-	is_html,
-	is_iterable,
-	is_renderable,
-	single_part_template,
-	type Displayable,
-	type Renderable,
-} from '../shared.ts'
+import type { Displayable, Renderable } from 'dhtml'
+import { assert, is_html, is_iterable, is_renderable, single_part_template } from '../shared.ts'
 import { controllers, keys, mount_callbacks } from './controller.ts'
 import { create_root, create_root_after, type Root } from './root.ts'
 import { create_span, span_delete_contents, span_extract_contents, span_insert_node, type Span } from './span.ts'

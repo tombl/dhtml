@@ -1,4 +1,5 @@
-import { assert, is_renderable, type Displayable, type Renderable } from '../shared.ts'
+import type { Displayable, Renderable } from 'dhtml'
+import { assert, is_renderable } from '../shared.ts'
 import { type Cleanup } from './util.ts'
 
 export type Key = string | number | bigint | boolean | symbol | object | null
