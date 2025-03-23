@@ -1,4 +1,5 @@
-import { assert, is_html, single_part_template, type Displayable } from '../shared.ts'
+import type { Displayable } from 'dhtml'
+import { assert, is_html, single_part_template } from '../shared.ts'
 import { compile_template, type CompiledTemplate } from './compiler.ts'
 import type { Key } from './controller.ts'
 import type { Part } from './parts.ts'
