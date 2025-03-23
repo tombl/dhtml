@@ -122,19 +122,14 @@ export function compile_template(statics: TemplateStringsArray): CompiledTemplat
 							})
 						} else {
 							if (!(name in node)) {
-								for (const property in node) {
-									if (property.toLowerCase() === name) {
-										name = property
-										break
-									}
-								}
+								name = (correct_case_cache[node.tagName] ??= generate_case_map(node))[name]
 							}
 							patch(node, parseInt(match[1]), node => {
 								assert(node instanceof Node)
 								return createPropertyPart(node, name)
 							})
 						}
-					} else if (__DEV__) {
+					} else {
 						assert(!DYNAMIC_GLOBAL.test(value), `expected a whole dynamic value for ${name}, got a partial one`)
 					}
 				}
@@ -147,4 +142,18 @@ export function compile_template(statics: TemplateStringsArray): CompiledTemplat
 
 	templates.set(statics, compiled)
 	return compiled
+}
+
+const correct_case_cache: Record<string, Record<string, string>> = {}
+function generate_case_map(node: Node) {
+	const cache: Record<string, string> = {}
+
+	while (node !== null) {
+		for (const prop of Object.getOwnPropertyNames(node)) {
+			cache[prop.toLowerCase()] ??= prop
+		}
+		node = Object.getPrototypeOf(node)
+	}
+
+	return cache
 }
