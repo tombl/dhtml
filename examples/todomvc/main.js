@@ -1,4 +1,7 @@
-import { createRoot, html, invalidate } from 'dhtml'
+// @ts-check
+
+import { html } from 'dhtml'
+import { createRoot, invalidate } from 'dhtml/client'
 
 function classes(...args) {
 	const classes = args.flatMap(a => (a ? a.split(' ') : []))

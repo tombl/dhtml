@@ -7,7 +7,7 @@
 		<link rel="stylesheet" href="reset.css" />
 		<title>dhtml</title>
 		<script type="module">
-			globalThis.DHTML_PROD = !new URLSearchParams(location.search).has('dev')
+			globalThis.__DEV__ = new URLSearchParams(location.search).has('dev')
 			const { createRoot, html, invalidate } = await import('./src/html.js')
 			const root = createRoot(document.body)
 			Object.assign(globalThis, { createRoot, html, root })

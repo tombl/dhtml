@@ -1,4 +1,5 @@
-import { attr, html, type Directive } from 'dhtml'
+import { html } from 'dhtml'
+import { attr, type Directive } from 'dhtml/client'
 import { describe, expect, it } from 'vitest'
 import { setup } from './setup'
 
