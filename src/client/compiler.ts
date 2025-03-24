@@ -1,4 +1,5 @@
 import { assert } from '../shared.ts'
+import { get_attribute, get_attribute_names, get_child_nodes } from './dom.ts'
 import {
 	create_attribute_part,
 	create_child_part,
@@ -74,7 +75,7 @@ export function compile_template(statics: TemplateStringsArray): CompiledTemplat
 						parent_node instanceof HTMLElement ||
 						parent_node instanceof SVGElement,
 				)
-				let siblings = [...parent_node.childNodes]
+				let siblings = [...get_child_nodes(parent_node)]
 				for (const [node, idx] of nodes) {
 					const child = siblings.indexOf(node)
 					patch(parent_node, idx, (node, span) => create_child_part(node, span, child))
@@ -93,8 +94,8 @@ export function compile_template(statics: TemplateStringsArray): CompiledTemplat
 			assert(node instanceof HTMLElement || node instanceof SVGElement)
 
 			const to_remove = []
-			for (let name of node.getAttributeNames()) {
-				const value = node.getAttribute(name)
+			for (let name of get_attribute_names(node)) {
+				const value = get_attribute(node, name)
 				assert(value !== null)
 
 				let match = DYNAMIC_WHOLE.exec(name)

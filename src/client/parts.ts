@@ -1,6 +1,7 @@
 import type { Displayable, Renderable } from 'dhtml'
 import { assert, is_html, is_iterable, is_renderable, single_part_template } from '../shared.ts'
 import { get_controller, get_key } from './controller.ts'
+import { get_child_nodes, get_next_sibling, remove_attribute, set_attribute } from './dom.ts'
 import { create_root, create_root_after, type Root } from './root.ts'
 import { create_span, delete_contents, extract_contents, insert_node, type Span } from './span.ts'
 import type { Cleanup } from './util.ts'
@@ -41,16 +42,15 @@ export function create_child_part(parent_node: Node | Span, parent_span: Span, c
 	}
 
 	if (parent_node instanceof Node) {
-		const child = parent_node.childNodes[child_index]
+		const child = get_child_nodes(parent_node)[child_index]
 		span = create_span(child)
 	} else {
 		let child = parent_node._start
 		for (let i = 0; i < child_index; i++) {
-			{
-				assert(child.nextSibling !== null, 'expected more siblings')
-				assert(child.nextSibling !== parent_node._end, 'ran out of siblings before the end')
-			}
-			child = child.nextSibling
+			const sibling = get_next_sibling(child)
+			assert(sibling !== null, 'expected more siblings')
+			assert(sibling !== parent_node._end, 'ran out of siblings before the end')
+			child = sibling
 		}
 		span = create_span(child)
 	}
@@ -210,10 +210,10 @@ export function create_property_part(node: Node, name: string): Part {
 export function create_attribute_part(node: Element, name: string): Part {
 	return value => {
 		if (value === null) {
-			node.removeAttribute(name)
+			remove_attribute(node, name)
 		} else {
 			// setAttribute implicitly casts the value to a string
-			node.setAttribute(name, value as string)
+			set_attribute(node, name, value as string)
 		}
 	}
 }
@@ -231,11 +231,11 @@ export function create_directive_part(node: Node): Part {
 
 export function attr_directive(name: string, value: string | boolean | null | undefined): Directive {
 	return node => {
-		if (typeof value === 'boolean') node.toggleAttribute(name, value)
-		else if (value == null) node.removeAttribute(name)
-		else node.setAttribute(name, value)
+		if (value === true) set_attribute(node, name, '')
+		else if (value == null || value === false) remove_attribute(node, name)
+		else set_attribute(node, name, value)
 		return () => {
-			node.removeAttribute(name)
+			remove_attribute(node, name)
 		}
 	}
 }

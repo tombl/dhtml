@@ -1,4 +1,5 @@
 import { assert } from '../shared.ts'
+import { append_child, get_next_sibling, insert_before, remove_child } from './dom.ts'
 import { is_document_fragment } from './util.ts'
 
 export interface Span {
@@ -21,14 +22,15 @@ export function create_span(node: Node): Span {
 export function insert_node(span: Span, node: Node): void {
 	const end = is_document_fragment(node) ? node.lastChild : node
 	if (end === null) return // empty fragment
-	span._parent.insertBefore(node, span._end.nextSibling)
+	insert_before(span._parent, node, get_next_sibling(span._end))
 	span._end = end
 
 	if (span._start === span._marker) {
-		assert(span._start.nextSibling)
-		span._start = span._start.nextSibling
+		const sibling = get_next_sibling(span._start)
+		assert(sibling)
+		span._start = sibling
 
-		span._parent.removeChild(span._marker)
+		remove_child(span._parent, span._marker)
 		span._marker = null
 	}
 }
@@ -36,7 +38,7 @@ export function insert_node(span: Span, node: Node): void {
 function* nodes(span: Span): Generator<Node, void, unknown> {
 	let node = span._start
 	for (;;) {
-		const next = node.nextSibling
+		const next = get_next_sibling(node)
 		yield node
 		if (node === span._end) return
 		assert(next, 'expected more siblings')
@@ -45,21 +47,22 @@ function* nodes(span: Span): Generator<Node, void, unknown> {
 }
 
 export function extract_contents(span: Span): DocumentFragment {
-	span._marker = new Text()
-	span._parent.insertBefore(span._marker, span._start)
+	span._marker = document.createTextNode('')
+	insert_before(span._parent, span._marker, span._start)
 
 	const fragment = document.createDocumentFragment()
-	for (const node of nodes(span)) fragment.appendChild(node)
+
+	for (const node of nodes(span)) append_child(fragment, node)
 
 	span._start = span._end = span._marker
 	return fragment
 }
 
 export function delete_contents(span: Span): void {
-	span._marker = new Text()
-	span._parent.insertBefore(span._marker, span._start)
+	span._marker = document.createTextNode('')
+	insert_before(span._parent, span._marker, span._start)
 
-	for (const node of nodes(span)) span._parent.removeChild(node)
+	for (const node of nodes(span)) remove_child(span._parent, node)
 
 	span._start = span._end = span._marker
 }
