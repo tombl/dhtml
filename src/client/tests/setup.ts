@@ -4,9 +4,9 @@ import { createRoot, type Root } from 'dhtml/client'
 
 GlobalRegistrator.register()
 
-export function setup(initialHtml = ''): { root: Root; el: HTMLDivElement } {
+export function setup(initial_html = ''): { root: Root; el: HTMLDivElement } {
 	const el = document.createElement('div')
-	el.innerHTML = initialHtml
+	el.innerHTML = initial_html
 	document.body.appendChild(el)
 
 	const root = createRoot(el)

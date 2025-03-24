@@ -38,14 +38,14 @@ export function compile_template(statics: TemplateStringsArray): CompiledTemplat
 	function patch(
 		node: DocumentFragment | HTMLElement | SVGElement,
 		idx: number,
-		createPart: (node: Node | Span, span: Span) => Part,
+		create_part: (node: Node | Span, span: Span) => Part,
 	) {
 		assert(next_part < compiled._parts.length, 'got more parts than expected')
 		if (is_document_fragment(node)) compiled._root_parts.push(next_part)
 		else if ('dynparts' in node.dataset) node.dataset.dynparts += ' ' + next_part
 		// @ts-expect-error -- this assigment will cast nextPart to a string
 		else node.dataset.dynparts = next_part
-		compiled._parts[next_part++] = [idx, createPart]
+		compiled._parts[next_part++] = [idx, create_part]
 	}
 
 	const walker = document.createTreeWalker(template_element.content, __DEV__ ? 133 : 5)
