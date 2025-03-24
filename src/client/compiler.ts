@@ -61,7 +61,7 @@ export function compile_template(statics: TemplateStringsArray): CompiledTemplat
 			// also reverse it because that's the correct order for splitting.
 			const nodes = [...node.data.matchAll(DYNAMIC_GLOBAL)].reverse().map(match => {
 				node.splitText(match.index + match[0].length)
-				const dyn = new Comment()
+				const dyn = document.createComment('')
 				node.splitText(match.index).replaceWith(dyn)
 				return [dyn, parseInt(match[1])] as const
 			})
