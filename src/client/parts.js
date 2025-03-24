@@ -1,29 +1,44 @@
-import type { Displayable, Renderable } from 'dhtml'
-import { assert, is_html, is_iterable, is_renderable, single_part_template } from '../shared.ts'
-import { delete_controller, get_controller, get_key } from './controller.ts'
-import { create_root, create_root_after, type Root } from './root.ts'
-import { create_span, delete_contents, extract_contents, insert_node, type Span } from './span.ts'
-import type { Cleanup } from './util.ts'
+/** @import { Displayable, Renderable } from 'dhtml' */
+/** @import { Directive } from 'dhtml/client' */
+/** @import { Part, Span, Root } from './types.js' */
+/** @import { Cleanup } from '../types.js' */
+import { assert, is_html, is_iterable, is_renderable, single_part_template } from '../shared.js'
+import { delete_controller, get_controller, get_key } from './controller.js'
+import { create_root, create_root_after } from './root.js'
+import { create_span, delete_contents, extract_contents, insert_node } from './span.js'
 
-export type Part = (value: unknown) => void
-
-export function create_child_part(parent_node: Node | Span, parent_span: Span, child_index: number): Part {
-	let span: Span
+/**
+ * @param {Node | Span} parent_node
+ * @param {Span} parentSpan
+ * @param {number} childIndex
+ * @returns {Part}
+ */
+export function create_child_part(parent_node, parentSpan, childIndex) {
+	/** @type {Span} */
+	let span
 
 	// for when we're rendering a renderable:
-	let current_renderable: Renderable | null = null
+	/** @type {Renderable | null} */
+	let current_renderable = null
 
 	// for when we're rendering a template:
-	let root: Root | undefined
+	/** @type {Root | undefined} */
+	let root
 
 	// for when we're rendering multiple values:
-	let roots: Root[] | undefined
+	/** @type {Root[] | undefined} */
+	let roots
 
 	// for when we're rendering a string/single dom node:
 	// undefined means no previous value, because a user-specified undefined is remapped to null
-	let old_value: unknown
 
-	function switch_renderable(next: Renderable | null) {
+	/** @type {unknown} */
+	let old_value
+
+	/**
+	 * @param {Renderable | null} next
+	 */
+	function switch_renderable(next) {
 		if (current_renderable && current_renderable !== next) {
 			const controller = get_controller(current_renderable)
 			controller._unmount_callbacks.forEach(callback => callback?.())
@@ -131,7 +146,7 @@ export function create_child_part(parent_node: Node | Span, parent_span: Span, c
 					}
 				}
 
-				root.render(item as Displayable)
+				root.render(/** @type {Displayable} */ (item))
 				end = root._span._end
 				i++
 			}
@@ -194,36 +209,61 @@ export function create_child_part(parent_node: Node | Span, parent_span: Span, c
 	}
 }
 
-export function create_property_part(node: Node, name: string): Part {
+/**
+ * @param {Node} node
+ * @param {string} name
+ * @returns {Part}
+ */
+export function create_property_part(node, name) {
 	return value => {
 		// @ts-expect-error
 		node[name] = value
 	}
 }
 
-export function create_attribute_part(node: Element, name: string): Part {
+/**
+ * @param {Element} node
+ * @param {string} name
+ * @returns {Part}
+ */
+export function create_attribute_part(node, name) {
 	return value => {
 		if (value === null) {
 			node.removeAttribute(name)
 		} else {
 			// setAttribute implicitly casts the value to a string
-			node.setAttribute(name, value as string)
+			node.setAttribute(name, /** @type {string} */ (value))
 		}
 	}
 }
 
-export type Directive = (node: Element) => Cleanup
+/**
+ * @param {Node} node
+ * @returns {Part}
+ */
+export function create_directive_part(node) {
+	/** @type {Cleanup} */
+	let cleanup
+	return {
+		update: fn => {
+			assert(typeof fn === 'function' || fn == null)
+			cleanup?.()
+			cleanup = fn?.(node)
+		},
 
-export function create_directive_part(node: Node): Part {
-	let cleanup: Cleanup
-	return fn => {
-		assert(typeof fn === 'function' || fn == null)
-		cleanup?.()
-		cleanup = fn?.(node)
+		detach: () => {
+			cleanup?.()
+			cleanup = undefined
+		},
 	}
 }
 
-export function attr_directive(name: string, value: string | boolean | null | undefined): Directive {
+/**
+ * @param {string} name
+ * @param {string | boolean | null | undefined} value
+ * @returns {Directive}
+ */
+export function attr_directive(name, value) {
 	return node => {
 		if (typeof value === 'boolean') node.toggleAttribute(name, value)
 		else if (value == null) node.removeAttribute(name)

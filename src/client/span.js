@@ -1,14 +1,12 @@
-import { assert } from '../shared.ts'
-import { is_document_fragment } from './util.ts'
+/** @import { Span } from './types.js' */
+import { assert } from '../shared.js'
+import { is_document_fragment } from './util.js'
 
-export interface Span {
-	_parent: Node
-	_start: Node
-	_end: Node
-	_marker: Node | null
-}
-
-export function create_span(node: Node): Span {
+/**
+ * @param {Node} node
+ * @returns {Span}
+ */
+export function create_span(node) {
 	assert(node.parentNode !== null)
 	return {
 		_parent: node.parentNode,
@@ -18,7 +16,12 @@ export function create_span(node: Node): Span {
 	}
 }
 
-export function insert_node(span: Span, node: Node): void {
+/**
+ * @param {Span} span
+ * @param {Node} node
+ * @returns {void}
+ */
+export function insert_node(span, node) {
 	const end = is_document_fragment(node) ? node.lastChild : node
 	if (end === null) return // empty fragment
 	span._parent.insertBefore(node, span._end.nextSibling)
@@ -33,7 +36,11 @@ export function insert_node(span: Span, node: Node): void {
 	}
 }
 
-function* nodes(span: Span): Generator<Node, void, unknown> {
+/**
+ * @param {Span} span
+ * @returns {Generator<Node, void, unknown>}
+ */
+function* nodes(span) {
 	let node = span._start
 	for (;;) {
 		const next = node.nextSibling
@@ -44,7 +51,11 @@ function* nodes(span: Span): Generator<Node, void, unknown> {
 	}
 }
 
-export function extract_contents(span: Span): DocumentFragment {
+/**
+ * @param {Span} span
+ * @returns {DocumentFragment}
+ */
+export function extract_contents(span) {
 	span._marker = new Text()
 	span._parent.insertBefore(span._marker, span._start)
 
@@ -55,7 +66,11 @@ export function extract_contents(span: Span): DocumentFragment {
 	return fragment
 }
 
-export function delete_contents(span: Span): void {
+/**
+ * @param {Span} span
+ * @returns {void}
+ */
+export function delete_contents(span) {
 	span._marker = new Text()
 	span._parent.insertBefore(span._marker, span._start)
 

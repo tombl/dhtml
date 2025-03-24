@@ -1,35 +1,39 @@
-import type { Displayable } from 'dhtml'
-import { assert, is_html, single_part_template } from '../shared.ts'
-import { compile_template, type CompiledTemplate } from './compiler.ts'
-import type { Key } from './controller.ts'
-import type { Part } from './parts.ts'
-import { create_span, delete_contents, insert_node, type Span } from './span.ts'
+/** @import { Displayable } from 'dhtml' */
+/** @import { CompiledTemplate, Part, Span, Root } from './types.js' */
+import { assert, is_html, single_part_template } from '../shared.js'
+import { compile_template } from './compiler.js'
+import { create_span, delete_contents, insert_node } from './span.js'
 
-export interface RootPublic {
-	render(value: Displayable): void
-	detach(): void
-}
-export interface Root extends RootPublic {
-	_span: Span
-	_key: Key | undefined
-}
-
-export function create_root_into(parent: Node): Root {
+/**
+ * @param {Node} parent
+ * @returns {Root}
+ */
+export function create_root_into(parent) {
 	const marker = new Text()
 	parent.appendChild(marker)
 	return create_root(create_span(marker))
 }
 
-export function create_root_after(node: Node): Root {
+/**
+ * @param {Node} node
+ * @returns {Root}
+ */
+export function create_root_after(node) {
 	assert(node.parentNode, 'expected a parent node')
 	const marker = new Text()
 	node.parentNode.insertBefore(marker, node.nextSibling)
 	return create_root(create_span(marker))
 }
 
-export function create_root(span: Span): Root {
-	let old_template: CompiledTemplate
-	let parts: [number, Part][] | undefined
+/**
+ * @param {Span} span
+ * @returns {Root}
+ */
+export function create_root(span) {
+	/** @type {CompiledTemplate} */
+	let old_template
+	/** @type {[number, Part][] | undefined} */
+	let parts
 
 	function detach() {
 		if (!parts) return
@@ -42,7 +46,10 @@ export function create_root(span: Span): Root {
 		_span: span,
 		_key: undefined,
 
-		render: (value: Displayable) => {
+		/**
+		 * @param {Displayable} value
+		 */
+		render: value => {
 			const { _dynamics: dynamics, _statics: statics } = is_html(value) ? value : single_part_template(value)
 			const template = compile_template(statics)
 
@@ -56,9 +63,10 @@ export function create_root(span: Span): Root {
 
 				old_template = template
 
-				const doc = old_template._content.cloneNode(true) as DocumentFragment
+				const doc = /** @type {DocumentFragment} */ (old_template._content.cloneNode(true))
 
-				const node_by_part: Array<Node | Span> = []
+				/** @type {Array<Node | Span>} */
+				const node_by_part = []
 
 				for (const node of doc.querySelectorAll('[data-dynparts]')) {
 					const parts = node.getAttribute('data-dynparts')

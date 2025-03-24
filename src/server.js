@@ -1,31 +1,27 @@
-import type { Displayable } from 'dhtml'
+/** @import { Displayable } from 'dhtml' */
+/** @import { CompiledTemplate, PartRenderer } from './server/types.js' */
 import { Tokenizer } from 'htmlparser2'
-import { assert, is_html, is_iterable, is_renderable, single_part_template } from './shared.ts'
-
-type PartRenderer = (values: unknown[]) => string | Generator<string, void, void>
-
-interface CompiledTemplate {
-	statics: string[]
-	parts: PartRenderer[]
-	extra_parts: number
-}
+import { assert, is_html, is_iterable, is_renderable, single_part_template } from './shared.js'
 
 const WHITESPACE_WHOLE = /^\s+$/
 const DYNAMIC_WHOLE = /^dyn-\$(\d+)\$$/i
 const DYNAMIC_GLOBAL = /dyn-\$(\d+)\$/gi
 
-const templates = new WeakMap<TemplateStringsArray, CompiledTemplate>()
-function compile_template(statics: TemplateStringsArray): CompiledTemplate {
+/** @type {WeakMap<TemplateStringsArray, CompiledTemplate>} */
+const templates = new WeakMap()
+
+/**
+ * @param {TemplateStringsArray} statics
+ */
+function compile_template(statics) {
 	const cached = templates.get(statics)
 	if (cached) return cached
 
 	const html = statics.reduce((a, v, i) => a + v + (i === statics.length - 1 ? '' : `dyn-$${i}$`), '')
-	const parts: {
-		start: number
-		end: number
-		render: PartRenderer
-	}[] = []
-	let attribname: [start: number, end: number] | null = null
+	/** @type {Array<{start: number, end: number, render: PartRenderer}>} */
+	const parts = []
+	/** @type {[number, number] | null} */
+	let attribname = null
 	function noop() {}
 
 	// count of parts that don't directly correspond to inputs
@@ -117,7 +113,8 @@ function compile_template(statics: TemplateStringsArray): CompiledTemplate {
 	tokenizer.write(html)
 	tokenizer.end()
 
-	const compiled: CompiledTemplate = {
+	/** @type {CompiledTemplate} */
+	const compiled = {
 		statics: [],
 		parts: [],
 		extra_parts,
@@ -136,7 +133,10 @@ function compile_template(statics: TemplateStringsArray): CompiledTemplate {
 	return compiled
 }
 
-function render_directive(value: unknown) {
+/**
+ * @param {unknown} value
+ */
+function render_directive(value) {
 	if (value === null) return ''
 
 	assert(typeof value === 'function')
@@ -145,7 +145,11 @@ function render_directive(value: unknown) {
 	return ''
 }
 
-function render_attribute(name: string, value: unknown) {
+/**
+ * @param {string} name
+ * @param {unknown} value
+ */
+function render_attribute(name, value) {
 	if (value === false || value === null || typeof value === 'function') {
 		return ''
 	}
@@ -153,8 +157,12 @@ function render_attribute(name: string, value: unknown) {
 	return `${name}="${escape(value)}"`
 }
 
-function* render_child(value: unknown) {
-	const seen = new Map<object, number>()
+/**
+ * @param {unknown} value
+ */
+function* render_child(value) {
+	/** @type {Map<object, number>} */
+	const seen = new Map()
 
 	while (is_renderable(value))
 		try {
@@ -172,7 +180,7 @@ function* render_child(value: unknown) {
 		}
 
 	if (is_iterable(value)) {
-		for (const item of value) yield* render_to_iterable(item as Displayable)
+		for (const item of value) yield* render_to_iterable(/** @type {Displayable} */ (item))
 	} else if (is_html(value)) {
 		yield* render_to_iterable(value)
 	} else if (value !== null) {
@@ -188,11 +196,18 @@ const ESCAPE_SUBSTITUTIONS = {
 	'"': '&quot;',
 	"'": '&#39;',
 }
-function escape(str: unknown) {
-	return String(str).replace(ESCAPE_RE, c => ESCAPE_SUBSTITUTIONS[c as keyof typeof ESCAPE_SUBSTITUTIONS])
+
+/**
+ * @param {unknown} str
+ */
+function escape(str) {
+	return String(str).replace(ESCAPE_RE, c => ESCAPE_SUBSTITUTIONS[/** @type {keyof typeof ESCAPE_SUBSTITUTIONS} */ (c)])
 }
 
-function* render_to_iterable(value: Displayable) {
+/**
+ * @param {Displayable} value
+ */
+function* render_to_iterable(value) {
 	const { _statics: statics, _dynamics: dynamics } = is_html(value) ? value : single_part_template(value)
 	const template = compile_template(statics)
 
@@ -208,13 +223,19 @@ function* render_to_iterable(value: Displayable) {
 	yield template.statics[template.statics.length - 1]
 }
 
-export function renderToString(value: Displayable): string {
+/**
+ * @param {Displayable} value
+ */
+export function renderToString(value) {
 	let str = ''
 	for (const part of render_to_iterable(value)) str += part
 	return str
 }
 
-export function renderToReadableStream(value: Displayable): ReadableStream {
+/**
+ * @param {Displayable} value
+ */
+export function renderToReadableStream(value) {
 	const iter = render_to_iterable(value)[Symbol.iterator]()
 	return new ReadableStream({
 		pull(controller) {
@@ -227,28 +248,3 @@ export function renderToReadableStream(value: Displayable): ReadableStream {
 		},
 	})
 }
-
-// {
-// 	const displayable = html`
-// 		<!-- ${'z'} -->
-// 		<p>a${'text'}b</p>
-// 		<a href=${'attr'} onclick=${() => {}}></a>
-// 		<button ${() => 'directive'}>but</button>
-// 		<script>
-// 			;<span>z</span>
-// 		</script>
-// 		${{
-// 			render() {
-// 				return html`<div>${[1, 2, 3]}</div>`
-// 			},
-// 		}}
-// 		${html`[${'A'}|${'B'}]`}
-// 	`
-
-// 	const stream = renderToReadableStream(displayable).pipeThrough(new TextEncoderStream())
-
-// 	new Response(stream).text().then(rendered => {
-// 		console.log(rendered)
-// 		console.log(rendered === renderToString(displayable))
-// 	})
-// }

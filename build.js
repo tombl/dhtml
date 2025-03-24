@@ -41,9 +41,9 @@ async function bundle_code() {
 
 		return {
 			input: {
-				client: './src/client.ts',
-				server: './src/server.ts',
-				index: './src/index.ts',
+				client: './src/client.js',
+				server: './src/server.js',
+				index: './src/index.js',
 			},
 			plugins: [!is_dev && strip_asserts_plugin],
 			output: {

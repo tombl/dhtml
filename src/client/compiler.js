@@ -1,26 +1,29 @@
-import { assert } from '../shared.ts'
-import {
-	create_attribute_part,
-	create_child_part,
-	create_directive_part,
-	create_property_part,
-	type Part,
-} from './parts.ts'
-import type { Span } from './span.ts'
-import { is_comment, is_document_fragment, is_element, is_text } from './util.ts'
+/** @import { Part, Span, CompiledTemplate } from './types.js' */
+import { assert } from '../shared.js'
+import { create_attribute_part, create_child_part, create_directive_part, create_property_part } from './parts.js'
+import { is_comment, is_document_fragment, is_element, is_text } from './util.js'
 
-export interface CompiledTemplate {
-	_content: DocumentFragment
-	_parts: [idx: number, createPart: (node: Node | Span, span: Span) => Part][]
-	_root_parts: number[]
-}
+/** @type {typeof NodeFilter.SHOW_ELEMENT} */
+const NODE_FILTER_ELEMENT = 1
+
+/** @type {typeof NodeFilter.SHOW_TEXT} */
+const NODE_FILTER_TEXT = 4
+
+/** @type {typeof NodeFilter.SHOW_COMMENT} */
+const NODE_FILTER_COMMENT = 128
 
 const DYNAMIC_WHOLE = /^dyn-\$(\d+)\$$/i
 const DYNAMIC_GLOBAL = /dyn-\$(\d+)\$/gi
 const FORCE_ATTRIBUTES = /-|^class$|^for$/i
 
-const templates: WeakMap<TemplateStringsArray, CompiledTemplate> = new WeakMap()
-export function compile_template(statics: TemplateStringsArray): CompiledTemplate {
+/** @type {WeakMap<TemplateStringsArray, CompiledTemplate>} */
+const templates = new WeakMap()
+
+/**
+ * @param {TemplateStringsArray} statics
+ * @returns {CompiledTemplate}
+ */
+export function compile_template(statics) {
 	const cached = templates.get(statics)
 	if (cached) return cached
 
@@ -29,17 +32,19 @@ export function compile_template(statics: TemplateStringsArray): CompiledTemplat
 
 	let next_part = 0
 
-	const compiled: CompiledTemplate = {
+	/** @type {CompiledTemplate} */
+	const compiled = {
 		_content: template_element.content,
 		_parts: Array(statics.length - 1),
 		_root_parts: [],
 	}
 
-	function patch(
-		node: DocumentFragment | HTMLElement | SVGElement,
-		idx: number,
-		createPart: (node: Node | Span, span: Span) => Part,
-	) {
+	/**
+	 * @param {DocumentFragment | HTMLElement | SVGElement} node
+	 * @param {number} idx
+	 * @param {function(Node | Span, Span): Part} createPart
+	 */
+	function patch(node, idx, createPart) {
 		assert(next_part < compiled._parts.length, 'got more parts than expected')
 		if (is_document_fragment(node)) compiled._root_parts.push(next_part)
 		else if ('dynparts' in node.dataset) node.dataset.dynparts += ' ' + next_part
@@ -63,7 +68,7 @@ export function compile_template(statics: TemplateStringsArray): CompiledTemplat
 				node.splitText(match.index + match[0].length)
 				const dyn = new Comment()
 				node.splitText(match.index).replaceWith(dyn)
-				return [dyn, parseInt(match[1])] as const
+				return /** @type {const} */ ([dyn, parseInt(match[1])])
 			})
 
 			if (nodes.length) {
@@ -140,9 +145,15 @@ export function compile_template(statics: TemplateStringsArray): CompiledTemplat
 	return compiled
 }
 
-const correct_case_cache: Record<string, Record<string, string>> = {}
-function generate_case_map(node: Node) {
-	const cache: Record<string, string> = {}
+/** @type {Record<string, Record<string, string>>} */
+const correct_case_cache = {}
+
+/**
+ * @param {Node} node
+ */
+function generate_case_map(node) {
+	/** @type {Record<string, string>} */
+	const cache = {}
 
 	while (node !== null) {
 		for (const prop of Object.getOwnPropertyNames(node)) {
