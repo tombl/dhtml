@@ -16,7 +16,6 @@
 	},
 	"devDependencies": {
 		"@happy-dom/global-registrator": "^17.4.4",
-		"@rollup/plugin-terser": "^0.4.4",
 		"@types/node": "^22.13.11",
 		"bun-types": "^1.2.5",
 		"dhtml": ".",
@@ -25,6 +24,7 @@
 		"magic-string": "^0.30.17",
 		"prettier": "^3.4.2",
 		"rolldown": "^1.0.0-beta.6",
+		"terser": "^5.39.0",
 		"typescript": "^5.7.2",
 		"zimmerframe": "^1.1.2"
 	},
