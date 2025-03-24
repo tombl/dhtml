@@ -6,12 +6,11 @@ import {
 	create_property_part,
 	type Part,
 } from './parts.ts'
-import type { Span } from './span.ts'
 import { is_comment, is_document_fragment, is_element, is_text } from './util.ts'
 
 export interface CompiledTemplate {
 	_content: DocumentFragment
-	_parts: [idx: number, createPart: (node: Node | Span, span: Span) => Part][]
+	_parts: [idx: number, part: Part][]
 	_root_parts: number[]
 }
 
@@ -35,17 +34,13 @@ export function compile_template(statics: TemplateStringsArray): CompiledTemplat
 		_root_parts: [],
 	}
 
-	function patch(
-		node: DocumentFragment | HTMLElement | SVGElement,
-		idx: number,
-		create_part: (node: Node | Span, span: Span) => Part,
-	) {
+	function patch(node: DocumentFragment | HTMLElement | SVGElement, idx: number, part: Part) {
 		assert(next_part < compiled._parts.length, 'got more parts than expected')
 		if (is_document_fragment(node)) compiled._root_parts.push(next_part)
 		else if ('dynparts' in node.dataset) node.dataset.dynparts += ' ' + next_part
 		// @ts-expect-error -- this assigment will cast nextPart to a string
 		else node.dataset.dynparts = next_part
-		compiled._parts[next_part++] = [idx, create_part]
+		compiled._parts[next_part++] = [idx, part]
 	}
 
 	const walker = document.createTreeWalker(template_element.content, __DEV__ ? 133 : 5)
@@ -77,7 +72,7 @@ export function compile_template(statics: TemplateStringsArray): CompiledTemplat
 				let siblings = [...parent_node.childNodes]
 				for (const [node, idx] of nodes) {
 					const child = siblings.indexOf(node)
-					patch(parent_node, idx, (node, span) => create_child_part(node, span, child))
+					patch(parent_node, idx, create_child_part(child))
 				}
 			}
 		} else if (__DEV__ && is_comment(node)) {
@@ -102,28 +97,20 @@ export function compile_template(statics: TemplateStringsArray): CompiledTemplat
 					// directive:
 					to_remove.push(name)
 					assert(value === '', `directives must not have values`)
-					patch(node, parseInt(match[1]), node => {
-						assert(node instanceof Node)
-						return create_directive_part(node)
-					})
+					const idx = parseInt(match[1])
+					patch(node, idx, create_directive_part())
 				} else {
 					// properties:
 					match = DYNAMIC_WHOLE.exec(value)
 					if (match !== null) {
 						to_remove.push(name)
 						if (FORCE_ATTRIBUTES.test(name)) {
-							patch(node, parseInt(match[1]), node => {
-								assert(node instanceof Element)
-								return create_attribute_part(node, name)
-							})
+							patch(node, parseInt(match[1]), create_attribute_part(name))
 						} else {
 							if (!(name in node)) {
 								name = (correct_case_cache[node.tagName] ??= generate_case_map(node))[name]
 							}
-							patch(node, parseInt(match[1]), node => {
-								assert(node instanceof Node)
-								return create_property_part(node, name)
-							})
+							patch(node, parseInt(match[1]), create_property_part(name))
 						}
 					} else {
 						assert(!DYNAMIC_GLOBAL.test(value), `expected a whole dynamic value for ${name}, got a partial one`)

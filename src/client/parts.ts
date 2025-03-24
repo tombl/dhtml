@@ -13,117 +13,113 @@ import { create_root, create_root_after, type Root } from './root.ts'
 import { create_span, delete_contents, extract_contents, insert_node, type Span } from './span.ts'
 import type { Cleanup } from './util.ts'
 
-export type Part = (value: unknown) => void
+export type Part = (node: Node | Span, value: unknown, span: Span) => void
 
-export function create_child_part(parent_node: Node | Span, parent_span: Span, child_index: number): Part {
-	let span: Span
+interface ChildPart {
+	_span: Span
 
 	// for when we're rendering a renderable:
-	let current_renderable: Renderable | null = null
+	_renderable: Renderable | null
 
 	// for when we're rendering a template:
-	let root: Root | undefined
+	_root: Root | undefined
 
 	// for when we're rendering multiple values:
-	let roots: Root[] | undefined
+	_roots: Root[] | undefined
 
 	// for when we're rendering a string/single dom node:
 	// undefined means no previous value, because a user-specified undefined is remapped to null
-	let old_value: unknown
+	_value: unknown
+}
 
-	function switch_renderable(next: Renderable | null) {
-		if (current_renderable && current_renderable !== next) {
-			const controller = get_controller(current_renderable)
-			if (controller._mounted) {
-				controller._mounted = false
-				controller._unmount_callbacks.forEach(callback => callback?.())
+export function create_child_part(child_index: number): Part {
+	const instances = new WeakMap<Node | Span, ChildPart>()
+	return function the_part(parent_node, value, parent_span) {
+		let part = instances.get(parent_node)!
+		if (!part) {
+			instances.set(
+				parent_node,
+				(part = {
+					_renderable: null,
+				} as ChildPart),
+			)
+		}
+
+		if (!part._span) {
+			if (parent_node instanceof Node) {
+				const child = parent_node.childNodes[child_index]
+				part._span = create_span(child)
+			} else {
+				let child = parent_node._start
+				for (let i = 0; i < child_index; i++) {
+					const sibling = child.nextSibling
+					assert(sibling !== null, 'expected more siblings')
+					assert(sibling !== parent_node._end, 'ran out of siblings before the end')
+					child = sibling
+				}
+				part._span = create_span(child)
 			}
 		}
-		current_renderable = next
-	}
 
-	function disconnect_root() {
-		// root.detach and part.detach are mutually recursive, so this detaches children too.
-		root?.detach()
-		root = undefined
-	}
-
-	if (parent_node instanceof Node) {
-		const child = parent_node.childNodes[child_index]
-		span = create_span(child)
-	} else {
-		let child = parent_node._start
-		for (let i = 0; i < child_index; i++) {
-			{
-				assert(child.nextSibling !== null, 'expected more siblings')
-				assert(child.nextSibling !== parent_node._end, 'ran out of siblings before the end')
+		function switch_renderable(next: Renderable | null) {
+			if (part._renderable && part._renderable !== next) {
+				const controller = get_controller(part._renderable)
+				if (controller._mounted) {
+					controller._mounted = false
+					controller._unmount_callbacks.forEach(callback => callback?.())
+				}
 			}
-			child = child.nextSibling
+			part._renderable = next
 		}
-		span = create_span(child)
-	}
 
-	return function update(value) {
-		assert(span)
-		const ends_were_equal = span._parent === parent_span._parent && span._end === parent_span._end
+		function disconnect_root() {
+			// root.detach and part.detach are mutually recursive, so this detaches children too.
+			part._root?.detach()
+			part._root = undefined
+		}
 
-		if (is_renderable(value)) {
-			switch_renderable(value)
-
-			const renderable = value
+		function render_renderable(renderable: Renderable): Displayable {
 			const controller = get_controller(renderable)
 
 			controller._invalidate = () => {
-				assert(current_renderable === renderable, 'could not invalidate an outdated renderable')
-				update(renderable)
+				assert(part._renderable === renderable, 'could not invalidate an outdated renderable')
+				the_part(parent_node, renderable, parent_span)
 			}
-			controller._parent_node = span._parent
+			controller._parent_node = part._span._parent
 
 			try {
-				value = renderable.render()
+				return renderable.render()
 			} catch (thrown) {
 				if (is_html(thrown)) {
-					value = thrown
+					return thrown
 				} else {
 					throw thrown
 				}
 			}
+		}
 
-			// if render returned another renderable, we want to track/cache both renderables individually.
-			// wrap it in a nested ChildPart so that each can be tracked without ChildPart having to handle multiple renderables.
-			if (is_renderable(value)) value = single_part_template(value)
-		} else switch_renderable(null)
-
-		// if it's undefined, swap the value for null.
-		// this means if the initial value is undefined,
-		// it won't conflict with old_value's default of undefined,
-		// so it'll still render.
-		if (value === undefined) value = null
-
-		// NOTE: we're explicitly not caching/diffing the value when it's an iterable,
-		// given it can yield different values but have the same identity. (e.g. arrays)
-		if (is_iterable(value)) {
-			if (!roots) {
+		function handle_iterable(values: Iterable<Displayable>) {
+			if (!part._roots) {
 				// we previously rendered a single value, so we need to clear it.
 				disconnect_root()
-				delete_contents(span)
+				delete_contents(part._span)
 
-				roots = []
+				part._roots = []
 			}
 
 			// create or update a root for every item.
 			let i = 0
-			let end = span._start
-			for (const item of value) {
+			let end = part._span._start
+			for (const item of values) {
 				const key = get_key(item)
-				let root = (roots[i] ??= create_root_after(end))
+				let root = (part._roots[i] ??= create_root_after(end))
 
 				if (key !== undefined && root._key !== key) {
-					const j = roots.findIndex(r => r._key === key)
+					const j = part._roots.findIndex(r => r._key === key)
 					root._key = key
 					if (j !== -1) {
 						const root1 = root
-						const root2 = roots[j]
+						const root2 = part._roots[j]
 
 						// swap the contents of the spans
 						const tmp_content = extract_contents(root1._span)
@@ -136,87 +132,108 @@ export function create_child_part(parent_node: Node | Span, parent_span: Span, c
 						root2._span = tmp_span
 
 						// swap the roots
-						roots[j] = root1
-						root = roots[i] = root2
+						part._roots[j] = root1
+						root = part._roots[i] = root2
 					}
 				}
 
-				root.render(item as Displayable)
+				root.render(item)
 				end = root._span._end
 				i++
 			}
 
 			// and now remove excess roots if the iterable has shrunk.
-			while (roots.length > i) {
-				const root = roots.pop()
+			while (part._roots.length > i) {
+				const root = part._roots.pop()
 				assert(root)
 				root.detach()
 				delete_contents(root._span)
 			}
 
-			span._end = end
-
-			if (current_renderable) {
-				const controller = get_controller(current_renderable)
-				if (!controller._mounted) {
-					controller._mounted = true
-					controller._unmount_callbacks = controller._mount_callbacks.map(callback => callback?.())
-				}
-			}
-
-			if (ends_were_equal) parent_span._end = span._end
-
-			return
-		} else if (roots) {
-			for (const root of roots) root.detach()
-			roots = undefined
+			part._span._end = end
 		}
 
-		// now early return if the value hasn't changed.
-		if (Object.is(old_value, value)) return
-
-		if (is_html(value)) {
-			root ??= create_root(span)
-			root.render(value) // root.render will detach the previous tree if the template has changed.
-		} else {
-			// if we previously rendered a tree that might contain renderables,
-			// and the template has changed (or we're not even rendering a template anymore),
-			// we need to clear the old renderables.
-			disconnect_root()
-
-			if (old_value != null && value !== null && !(old_value instanceof Node) && !(value instanceof Node)) {
+		function handle_single_value(value: unknown) {
+			if (part._value != null && value !== null && !(part._value instanceof Node) && !(value instanceof Node)) {
 				// we previously rendered a string, and we're rendering a string again.
-				assert(span._start === span._end && span._start instanceof Text)
-				span._start.data = '' + value
+				assert(part._span._start === part._span._end && part._span._start instanceof Text)
+				part._span._start.data = '' + value
 			} else {
-				delete_contents(span)
-				if (value !== null) insert_node(span, value instanceof Node ? value : new Text('' + value))
+				delete_contents(part._span)
+				if (value !== null) insert_node(part._span, value instanceof Node ? value : document.createTextNode('' + value))
 			}
 		}
 
-		old_value = value
+		const ends_were_equal = part._span._parent === parent_span._parent && part._span._end === parent_span._end
 
-		if (current_renderable) {
-			const controller = get_controller(current_renderable)
+		if (is_renderable(value)) {
+			switch_renderable(value)
+
+			value = render_renderable(value)
+
+			// if render returned another renderable, we want to track/cache both renderables individually.
+			// wrap it in a nested ChildPart so that each can be tracked without ChildPart having to handle multiple renderables.
+			if (is_renderable(value)) value = single_part_template(value)
+		} else {
+			switch_renderable(null)
+		}
+
+		// if it's undefined, swap the value for null.
+		// this means if the initial value is undefined,
+		// it won't conflict with old_value's default of undefined,
+		// so it'll still render.
+		if (value === undefined) value = null
+
+		// NOTE: we're explicitly not caching/diffing the value when it's an iterable,
+		// given it can yield different values but have the same identity. (e.g. arrays)
+		if (is_iterable(value)) {
+			handle_iterable(value as Iterable<Displayable>)
+		} else {
+			if (part._roots) {
+				for (const root of part._roots) root.detach()
+				part._roots = undefined
+			}
+
+			// only continue if the value hasn't changed.
+			if (!Object.is(part._value, value)) {
+				if (is_html(value)) {
+					part._root ??= create_root(part._span)
+					part._root.render(value) // root.render will detach the previous tree if the template has changed.
+				} else {
+					// if we previously rendered a tree that might contain renderables,
+					// and the template has changed (or we're not even rendering a template anymore),
+					// we need to clear the old renderables.
+					disconnect_root()
+
+					handle_single_value(value)
+				}
+
+				part._value = value
+			}
+		}
+
+		if (part._renderable) {
+			const controller = get_controller(part._renderable)
 			if (!controller._mounted) {
 				controller._mounted = true
 				controller._unmount_callbacks = controller._mount_callbacks.map(callback => callback?.())
 			}
 		}
 
-		if (ends_were_equal) parent_span._end = span._end
+		if (ends_were_equal) parent_span._end = part._span._end
 	}
 }
 
-export function create_property_part(node: Node, name: string): Part {
-	return value => {
+export function create_property_part(name: string): Part {
+	return (node, value) => {
 		// @ts-expect-error
 		node[name] = value
 	}
 }
 
-export function create_attribute_part(node: Element, name: string): Part {
-	return value => {
+export function create_attribute_part(name: string): Part {
+	return (node, value) => {
+		assert(node instanceof Element)
 		if (value === null) {
 			node.removeAttribute(name)
 		} else {
@@ -228,12 +245,14 @@ export function create_attribute_part(node: Element, name: string): Part {
 
 export type Directive = (node: Element) => Cleanup
 
-export function create_directive_part(node: Node): Part {
-	let cleanup: Cleanup
-	return fn => {
+export function create_directive_part(): Part {
+	const cleanups = new WeakMap<Node, Cleanup>()
+	return (node, fn) => {
+		assert(node instanceof Node)
 		assert(typeof fn === 'function' || fn == null)
-		cleanup?.()
-		cleanup = fn?.(node)
+
+		cleanups.get(node)?.()
+		cleanups.set(node, fn?.(node))
 	}
 }
 

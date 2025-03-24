@@ -26,12 +26,16 @@ export function create_root_after(node: Node): Root {
 
 export function create_root(span: Span): Root {
 	let old_template: CompiledTemplate
-	let parts: [number, Part][] | undefined
+	let parts: { _dynamic: number; _part: number; _run: Part }[] | undefined
+	let node_by_part: Array<Node | Span> = []
 
 	function detach() {
 		if (!parts) return
 		// scan through all the parts of the previous tree, and clear any renderables.
-		for (const [_idx, part] of parts) part(null)
+		for (let i = 0; i < parts.length; i++) {
+			const part = parts[i]
+			part._run(node_by_part[part._part], null, span)
+		}
 		parts = undefined
 	}
 
@@ -49,13 +53,11 @@ export function create_root(span: Span): Root {
 			)
 
 			if (old_template !== template) {
-				detach()
-
 				old_template = template
+				detach()
+				node_by_part = []
 
-				const doc = old_template._content.cloneNode(true) as DocumentFragment
-
-				const node_by_part: Array<Node | Span> = []
+				const doc = template._content.cloneNode(true) as DocumentFragment
 
 				for (const node of doc.querySelectorAll('[data-dynparts]')) {
 					const parts = node.getAttribute('data-dynparts')
@@ -65,7 +67,7 @@ export function create_root(span: Span): Root {
 					for (const part of parts.split(' ')) node_by_part[part] = node
 				}
 
-				for (const part of old_template._root_parts) node_by_part[part] = span
+				for (const part of template._root_parts) node_by_part[part] = span
 
 				// the fragment must be inserted before the parts are constructed,
 				// because they need to know their final location.
@@ -74,14 +76,18 @@ export function create_root(span: Span): Root {
 				delete_contents(span)
 				insert_node(span, doc)
 
-				parts = template._parts.map(([dynamic_index, createPart], element_index) => [
-					dynamic_index,
-					createPart(node_by_part[element_index], span),
-				])
+				parts = template._parts.map(([dynamic, run], part) => ({
+					_dynamic: dynamic,
+					_part: part,
+					_run: run,
+				}))
 			}
 
 			assert(parts)
-			for (const [idx, part] of parts) part(dynamics[idx])
+			for (let i = 0; i < parts.length; i++) {
+				const part = parts[i]
+				part._run(node_by_part[part._part], dynamics[part._dynamic], span)
+			}
 		},
 
 		detach,
