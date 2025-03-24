@@ -76,7 +76,7 @@ function compile_template(statics: TemplateStringsArray): CompiledTemplate {
 			ontext(start, end) {
 				const value = html.slice(start, end)
 
-				for (const match of [...value.matchAll(DYNAMIC_GLOBAL)]) {
+				for (const match of value.matchAll(DYNAMIC_GLOBAL)) {
 					const idx = parseInt(match[1])
 					parts.push({
 						start: start + match.index,
@@ -96,7 +96,7 @@ function compile_template(statics: TemplateStringsArray): CompiledTemplate {
 			oncomment(start, end) {
 				const value = html.slice(start, end)
 
-				for (const match of [...value.matchAll(DYNAMIC_GLOBAL)]) {
+				for (const match of value.matchAll(DYNAMIC_GLOBAL)) {
 					const idx = parseInt(match[1])
 					parts.push({
 						start: start + match.index,
