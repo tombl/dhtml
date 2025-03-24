@@ -1,8 +1,4 @@
-import { html_tag } from './shared.ts'
-
-interface ToString {
-	toString(): string
-}
+import { html_tag, type ToString } from './shared.ts'
 
 export type Displayable = null | undefined | ToString | Node | Renderable | Iterable<Displayable> | HTML
 export interface Renderable {
