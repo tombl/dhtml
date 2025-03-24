@@ -1,9 +1,9 @@
-import terser from '@rollup/plugin-terser'
 import { createBundle } from 'dts-buddy'
 import MagicString from 'magic-string'
 import { readFile, rm, writeFile } from 'node:fs/promises'
 import { brotliCompressSync, gzipSync } from 'node:zlib'
 import { build } from 'rolldown'
+import { minify_sync } from 'terser'
 import { walk } from 'zimmerframe'
 
 await rm('dist', { recursive: true, force: true })
@@ -35,6 +35,20 @@ async function bundle_code() {
 		},
 	}
 
+	const terser_name_cache = {}
+
+	/** @type {import('rolldown').Plugin} */
+	const terser_plugin = {
+		name: 'terser',
+		renderChunk(code) {
+			return minify_sync(code, {
+				mangle: { properties: { regex: /^_/ } },
+				nameCache: terser_name_cache,
+				module: true,
+			})
+		},
+	}
+
 	/** @returns {import('rolldown').BuildOptions} */
 	function define_bundle(env) {
 		const is_dev = env === 'dev'
@@ -52,12 +66,7 @@ async function bundle_code() {
 				chunkFileNames: is_dev ? '[name].js' : '[name].min.js',
 				banner: is_dev ? '// @ts-nocheck' : undefined,
 				minify: !is_dev,
-				plugins: [
-					!is_dev &&
-						terser({
-							mangle: { properties: { regex: /^_/ } },
-						}),
-				],
+				plugins: [!is_dev && terser_plugin],
 			},
 			define: {
 				__DEV__: JSON.stringify(is_dev),
