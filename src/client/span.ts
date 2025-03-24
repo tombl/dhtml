@@ -33,23 +33,16 @@ export function insert_node(span: Span, node: Node): void {
 	}
 }
 
-function* nodes(span: Span): Generator<Node, void, unknown> {
-	let node = span._start
-	for (;;) {
-		const next = node.nextSibling
-		yield node
-		if (node === span._end) return
-		assert(next, 'expected more siblings')
-		node = next
-	}
-}
-
 export function extract_contents(span: Span): DocumentFragment {
 	span._marker = new Text()
 	span._parent.insertBefore(span._marker, span._start)
 
 	const fragment = document.createDocumentFragment()
-	for (const node of nodes(span)) fragment.appendChild(node)
+
+	for (let node = span._start, next; (next = node.nextSibling); node = next) {
+		fragment.appendChild(node)
+		if (node === span._end) break
+	}
 
 	span._start = span._end = span._marker
 	return fragment
@@ -59,7 +52,10 @@ export function delete_contents(span: Span): void {
 	span._marker = new Text()
 	span._parent.insertBefore(span._marker, span._start)
 
-	for (const node of nodes(span)) span._parent.removeChild(node)
+	for (let node = span._start, next; (next = node.nextSibling); node = next) {
+		span._parent.removeChild(node)
+		if (node === span._end) break
+	}
 
 	span._start = span._end = span._marker
 }
