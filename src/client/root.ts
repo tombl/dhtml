@@ -15,14 +15,14 @@ export interface Root extends RootPublic {
 }
 
 export function create_root_into(parent: Node): Root {
-	const marker = new Text()
+	const marker = document.createTextNode('')
 	parent.appendChild(marker)
 	return create_root(create_span(marker))
 }
 
 export function create_root_after(node: Node): Root {
 	assert(node.parentNode, 'expected a parent node')
-	const marker = new Text()
+	const marker = document.createTextNode('')
 	node.parentNode.insertBefore(marker, node.nextSibling)
 	return create_root(create_span(marker))
 }

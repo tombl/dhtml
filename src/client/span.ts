@@ -45,7 +45,7 @@ function* nodes(span: Span): Generator<Node, void, unknown> {
 }
 
 export function extract_contents(span: Span): DocumentFragment {
-	span._marker = new Text()
+	span._marker = document.createTextNode('')
 	span._parent.insertBefore(span._marker, span._start)
 
 	const fragment = document.createDocumentFragment()
@@ -56,7 +56,7 @@ export function extract_contents(span: Span): DocumentFragment {
 }
 
 export function delete_contents(span: Span): void {
-	span._marker = new Text()
+	span._marker = document.createTextNode('')
 	span._parent.insertBefore(span._marker, span._start)
 
 	for (const node of nodes(span)) span._parent.removeChild(node)

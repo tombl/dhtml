@@ -182,7 +182,7 @@ export function create_child_part(parent_node: Node | Span, parent_span: Span, c
 				span._start.data = '' + value
 			} else {
 				delete_contents(span)
-				if (value !== null) insert_node(span, value instanceof Node ? value : new Text('' + value))
+				if (value !== null) insert_node(span, value instanceof Node ? value : document.createTextNode('' + value))
 			}
 		}
 
