@@ -3,9 +3,9 @@ import { html } from 'dhtml'
 import { renderToString } from 'dhtml/server'
 import assert from 'node:assert/strict'
 
-test('renderables work correctly', () => {
+test('renderables work correctly', async () => {
 	assert.equal(
-		renderToString(
+		await renderToString(
 			html`${{
 				render() {
 					return html`<h1>Hello, world!</h1>`
@@ -16,10 +16,10 @@ test('renderables work correctly', () => {
 	)
 })
 
-test('thrown errors directly propagate', () => {
+test('thrown errors directly propagate', async () => {
 	const oops = new Error('oops')
-	assert.throws(() => {
-		renderToString(
+	await assert.rejects(async () => {
+		await renderToString(
 			html`${{
 				render() {
 					throw oops
@@ -29,9 +29,9 @@ test('thrown errors directly propagate', () => {
 	}, oops)
 })
 
-test('renderables can throw instead of returning', () => {
+test('renderables can throw instead of returning', async () => {
 	assert.equal(
-		renderToString({
+		await renderToString({
 			render() {
 				throw html`this was thrown`
 			},
