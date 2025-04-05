@@ -7,6 +7,7 @@
 		"./server": "./src/server.ts"
 	},
 	"scripts": {
+		"postinstall": "patch-package",
 		"build": "node build.js",
 		"format": "prettier --write . --cache",
 		"check": "tsc",
@@ -16,12 +17,15 @@
 	},
 	"devDependencies": {
 		"@happy-dom/global-registrator": "^17.4.4",
+		"@mitata/counters": "^0.0.8",
 		"@types/node": "^22.13.11",
 		"bun-types": "^1.2.5",
 		"dhtml": ".",
 		"dts-buddy": "^0.5.5",
 		"htmlparser2": "^10.0.0",
 		"magic-string": "^0.30.17",
+		"mitata": "^1.0.34",
+		"patch-package": "^8.0.0",
 		"prettier": "^3.4.2",
 		"rolldown": "^1.0.0-beta.6",
 		"terser": "^5.39.0",
