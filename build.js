@@ -1,14 +1,15 @@
-import { createBundle } from 'dts-buddy'
 import MagicString from 'magic-string'
-import { readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { brotliCompressSync, gzipSync } from 'node:zlib'
 import { build } from 'rolldown'
+import { dts } from 'rolldown-plugin-dts'
 import { minify_sync } from 'terser'
 import { walk } from 'zimmerframe'
 
 await rm('dist', { recursive: true, force: true })
+await mkdir('dist')
 
-await Promise.all([bundle_code(), generate_declarations(), write_package_json()])
+await Promise.all([bundle_code(), write_package_json()])
 
 async function bundle_code() {
 	/** @type {import('rolldown').Plugin} */
@@ -51,22 +52,23 @@ async function bundle_code() {
 
 	/** @returns {import('rolldown').BuildOptions} */
 	function define_bundle(env) {
-		const is_dev = env === 'dev'
+		const input = {
+			client: './src/client.ts',
+			server: './src/server.ts',
+			index: './src/index.ts',
+		}
 
+		const is_dev = env === 'dev'
 		return {
-			input: {
-				client: './src/client.ts',
-				server: './src/server.ts',
-				index: './src/index.ts',
-			},
-			plugins: [!is_dev && strip_asserts_plugin],
+			input,
+			plugins: [!is_dev && strip_asserts_plugin, is_dev && dts({ sourcemap: true })],
 			output: {
 				dir: 'dist',
 				entryFileNames: is_dev ? '[name].js' : '[name].min.js',
 				chunkFileNames: is_dev ? '[name].js' : '[name].min.js',
-				banner: is_dev ? '// @ts-nocheck' : undefined,
 				minify: !is_dev,
 				plugins: [!is_dev && terser_plugin],
+				sourcemap: is_dev ? true : 'hidden',
 			},
 			define: {
 				__DEV__: JSON.stringify(is_dev),
@@ -79,29 +81,19 @@ async function bundle_code() {
 	console.table(
 		Object.fromEntries(
 			bundles.flatMap(bundle =>
-				bundle.output.map(file => [
-					file.fileName,
-					{
-						normal: file.code.length,
-						gzip: gzipSync(file.code).length,
-						brotli: brotliCompressSync(file.code).length,
-					},
-				]),
+				bundle.output
+					.filter(file => file.code)
+					.map(file => [
+						file.fileName,
+						{
+							normal: file.code.length,
+							gzip: gzipSync(file.code).length,
+							brotli: brotliCompressSync(file.code).length,
+						},
+					]),
 			),
 		),
 	)
-}
-
-async function generate_declarations() {
-	await createBundle({
-		project: 'tsconfig.json',
-		output: 'dist/types.d.ts',
-		modules: {
-			dhtml: './src/index.ts',
-			'dhtml/client': './src/client.ts',
-			'dhtml/server': './src/server.ts',
-		},
-	})
 }
 
 async function write_package_json() {
@@ -115,7 +107,7 @@ async function write_package_json() {
 			if (exports.startsWith('./src/')) exports = exports.slice('./src/'.length)
 			exports = exports.replace(/\.ts$/, '')
 			return {
-				types: './types.d.ts',
+				types: `./${exports}.d.ts`,
 				production: `./${exports}.min.js`,
 				default: `./${exports}.js`,
 			}
