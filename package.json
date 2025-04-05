@@ -11,9 +11,9 @@
 		"build": "node build.js",
 		"format": "prettier --write . --cache",
 		"check": "tsc",
-		"test": "bun test --coverage --define __DEV__=true",
+		"test": "bun test --preload ./src/client/tests/setup-dom.ts --coverage --define __DEV__=true",
 		"test:watch": "npm test -- --watch",
-		"test:prod": "bun test --define __DEV__=false"
+		"test:prod": "bun test --preload ./src/client/tests/setup-dom.ts --define __DEV__=false"
 	},
 	"devDependencies": {
 		"@happy-dom/global-registrator": "^17.6.3",
