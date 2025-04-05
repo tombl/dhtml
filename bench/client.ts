@@ -1,4 +1,4 @@
-#!/usr/bin/env -S bun run --define __DEV__=false
+#!/usr/bin/env -S bun run --preload ./src/client/tests/setup-dom.ts  --define __DEV__=false
 /// <reference types="bun-types" />
 
 import { html } from 'dhtml'
