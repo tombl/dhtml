@@ -1,6 +1,5 @@
-import type { Displayable } from 'dhtml'
 import { Tokenizer } from 'htmlparser2'
-import { assert, is_html, is_iterable, is_renderable, single_part_template } from './shared.ts'
+import { assert, is_html, is_iterable, is_renderable, single_part_template, type Displayable } from './shared.ts'
 
 type PartRenderer = (values: unknown[]) => string | Generator<string, void, void>
 
