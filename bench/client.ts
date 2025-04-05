@@ -614,4 +614,39 @@ bench('tree/worst_case/virtual_dom', () => {
 	root.render(state)
 })
 
-await run()
+const { benchmarks } = await run()
+
+if (process.argv.includes('--bencher')) {
+	// https://bencher.dev/docs/reference/bencher-metric-format/
+	interface BencherMetrics {
+		[benchmark: string]: {
+			[metric: string]: {
+				value: number
+				lower_value?: number
+				upper_value?: number
+			}
+		}
+	}
+
+	const metrics: BencherMetrics = {}
+
+	for (const trial of benchmarks) {
+		for (const run of trial.runs as any[]) {
+			const metric = (metric: { min: number; max: number; avg: number }) => ({
+				value: metric.avg,
+				lower_value: metric.min,
+				upper_value: metric.max,
+			})
+
+			metrics[run.name] = {
+				duration: metric(run.stats),
+				heap: metric(run.stats.heap),
+				cache: metric(run.stats.counters.cache),
+				cycles: metric(run.stats.counters.cycles),
+				instructions: metric(run.stats.counters.instructions),
+			}
+		}
+	}
+
+	await Bun.write('results.json', JSON.stringify(metrics, null, 2))
+}
