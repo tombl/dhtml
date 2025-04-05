@@ -1,14 +1,5 @@
 import { html_tag, is_html } from './shared.ts'
 
-interface ToString {
-	toString(): string
-}
-
-export type Displayable = null | undefined | ToString | Node | Renderable | Iterable<Displayable> | HTML
-export interface Renderable {
-	render(): Displayable
-}
-
 export interface HTML {
 	[html_tag]: true
 	/* @internal */ _statics: TemplateStringsArray
@@ -47,3 +38,5 @@ if (__DEV__) {
 		},
 	})
 }
+
+export type { Displayable, Renderable } from './shared.ts'
