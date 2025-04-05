@@ -1,4 +1,6 @@
 #!/usr/bin/env -S bun run --define __DEV__=false
+/// <reference types="bun-types" />
+
 import { html } from 'dhtml'
 import { bench, run } from 'mitata'
 import { setup } from './setup.ts'
@@ -641,9 +643,6 @@ if (process.argv.includes('--bencher')) {
 			metrics[run.name] = {
 				duration: metric(run.stats),
 				heap: metric(run.stats.heap),
-				cache: metric(run.stats.counters.cache),
-				cycles: metric(run.stats.counters.cycles),
-				instructions: metric(run.stats.counters.instructions),
 			}
 		}
 	}

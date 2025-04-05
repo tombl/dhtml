@@ -17,7 +17,6 @@
 	},
 	"devDependencies": {
 		"@happy-dom/global-registrator": "^17.4.4",
-		"@mitata/counters": "^0.0.8",
 		"@types/node": "^22.13.11",
 		"bun-types": "^1.2.5",
 		"dhtml": ".",
