@@ -44,15 +44,20 @@ function* nodes(span: Span): Generator<Node, void, unknown> {
 	}
 }
 
-export function extract_contents(span: Span): DocumentFragment {
+export function swap_contents(span: Span, other: Span): void {
+	other._marker = new Text()
+	other._parent.insertBefore(other._marker, other._start)
 	span._marker = new Text()
 	span._parent.insertBefore(span._marker, span._start)
 
-	const fragment = document.createDocumentFragment()
-	for (const node of nodes(span)) fragment.appendChild(node)
+	const tmp = document.createDocumentFragment()
 
+	for (const node of nodes(other)) tmp.appendChild(node)
+	other._start = other._end = other._marker
+	for (const node of nodes(span)) insert_node(other, node)
 	span._start = span._end = span._marker
-	return fragment
+
+	insert_node(span, tmp)
 }
 
 export function delete_contents(span: Span): void {
