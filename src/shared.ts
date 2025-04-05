@@ -1,7 +1,16 @@
-import { html, type Displayable, type HTML, type Renderable } from 'dhtml'
+import { html, type HTML } from './index.ts'
 
 declare global {
 	var __DEV__: boolean
+}
+
+export interface ToString {
+	toString(): string
+}
+
+export type Displayable = null | undefined | ToString | Node | Renderable | Iterable<Displayable> | HTML
+export interface Renderable {
+	render(): Displayable
 }
 
 export function is_renderable(value: unknown): value is Renderable {
