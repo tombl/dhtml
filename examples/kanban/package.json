@@ -14,7 +14,7 @@
 	},
 	"dependencies": {
 		"@tombl/router": "npm:@jsr/tombl__router@^0.1.2",
-		"dhtml": "file:../..",
+		"dhtml": "file:../../dist",
 		"sqlocal": "^0.14.1"
 	}
 }

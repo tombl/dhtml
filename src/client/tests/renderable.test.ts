@@ -62,40 +62,33 @@ test('onMount calls in the right order', () => {
 	const sequence: string[] = []
 
 	const inner = {
-		attached: false,
 		render() {
 			sequence.push('inner render')
-			if (!this.attached) {
-				this.attached = true
-				onMount(this, () => {
-					sequence.push('inner mount')
-					return () => {
-						sequence.push('inner cleanup')
-					}
-				})
-			}
 			return 'inner'
 		},
 	}
+	onMount(inner, () => {
+		sequence.push('inner mount')
+		return () => {
+			sequence.push('inner cleanup')
+		}
+	})
 
 	const outer = {
-		attached: false,
 		show: true,
 		render() {
 			sequence.push('outer render')
-			if (!this.attached) {
-				this.attached = true
-				onMount(this, () => {
-					sequence.push('outer mount')
-					return () => {
-						sequence.push('outer cleanup')
-					}
-				})
-			}
 			if (!this.show) return null
 			return inner
 		},
 	}
+
+	onMount(outer, () => {
+		sequence.push('outer mount')
+		return () => {
+			sequence.push('outer cleanup')
+		}
+	})
 
 	outer.show = true
 	root.render(outer)
@@ -112,7 +105,8 @@ test('onMount calls in the right order', () => {
 	outer.show = true
 	root.render(outer)
 	assert.equal(el.innerHTML, 'inner')
-	assert.deepStrictEqual(sequence, ['outer render', 'inner render'])
+	// inner is mounted a second time because of the above cleanup
+	assert.deepStrictEqual(sequence, ['outer render', 'inner render', 'inner mount'])
 	sequence.length = 0
 })
 
@@ -123,19 +117,19 @@ test('onMount registers multiple callbacks', () => {
 
 	const app = {
 		render() {
-			onMount(this, () => {
-				sequence.push('mount 1')
-				return () => sequence.push('cleanup 1')
-			})
-
-			onMount(this, () => {
-				sequence.push('mount 2')
-				return () => sequence.push('cleanup 2')
-			})
-
 			return 'app'
 		},
 	}
+
+	onMount(app, () => {
+		sequence.push('mount 1')
+		return () => sequence.push('cleanup 1')
+	})
+
+	onMount(app, () => {
+		sequence.push('mount 2')
+		return () => sequence.push('cleanup 2')
+	})
 
 	root.render(app)
 	assert.deepStrictEqual(sequence, ['mount 1', 'mount 2'])
@@ -145,7 +139,7 @@ test('onMount registers multiple callbacks', () => {
 	assert.deepStrictEqual(sequence, ['cleanup 1', 'cleanup 2'])
 })
 
-test('onMount registers a fixed callback once', () => {
+test('onMount registers a fixed callback multiple times', () => {
 	const { root } = setup()
 
 	const sequence: string[] = []
@@ -157,18 +151,19 @@ test('onMount registers a fixed callback once', () => {
 
 	const app = {
 		render() {
-			onMount(this, callback)
-			onMount(this, callback)
 			return 'app'
 		},
 	}
 
+	onMount(app, callback)
+	onMount(app, callback)
+
 	root.render(app)
-	assert.deepStrictEqual(sequence, ['mount'])
+	assert.deepStrictEqual(sequence, ['mount', 'mount'])
 	sequence.length = 0
 
 	root.render(null)
-	assert.deepStrictEqual(sequence, ['cleanup'])
+	assert.deepStrictEqual(sequence, ['cleanup', 'cleanup'])
 })
 
 test('onMount registers callbacks outside of render', () => {
@@ -203,18 +198,19 @@ test('onMount can access the dom in callback', () => {
 
 	const app = {
 		render() {
-			onMount(this, () => {
-				const parent = getParentNode(this) as Element
-				assert(parent.firstElementChild instanceof HTMLParagraphElement)
-			})
 			return html`<p>Hello, world!</p>`
 		},
 	}
 
+	onMount(app, () => {
+		const parent = getParentNode(app) as Element
+		assert(parent.firstElementChild instanceof HTMLParagraphElement)
+	})
+
 	root.render(app)
 })
 
-test('onMount works after render', () => {
+test('onMount is called immediately on a mounted renderable', () => {
 	const { root } = setup()
 
 	const app = {
@@ -236,36 +232,28 @@ test('onUnmount deep works correctly', () => {
 	const sequence: string[] = []
 
 	const inner = {
-		attached: false,
 		render() {
 			sequence.push('inner render')
-			if (!this.attached) {
-				this.attached = true
-				onUnmount(this, () => {
-					this.attached = false
-					sequence.push('inner abort')
-				})
-			}
 			return 'inner'
 		},
 	}
 
+	onUnmount(inner, () => {
+		sequence.push('inner abort')
+	})
+
 	const outer = {
-		attached: false,
 		show: true,
 		render() {
 			sequence.push('outer render')
-			if (!this.attached) {
-				this.attached = true
-				onUnmount(this, () => {
-					this.attached = false
-					sequence.push('outer abort')
-				})
-			}
 			if (!this.show) return null
 			return inner
 		},
 	}
+
+	onUnmount(outer, () => {
+		sequence.push('outer abort')
+	})
 
 	outer.show = true
 	root.render(outer)
@@ -298,19 +286,15 @@ test('onUnmount shallow works correctly', () => {
 	const sequence: string[] = []
 
 	const inner = {
-		attached: false,
 		render() {
 			sequence.push('inner render')
-			if (!this.attached) {
-				this.attached = true
-				onUnmount(this, () => {
-					this.attached = false
-					sequence.push('inner abort')
-				})
-			}
 			return 'inner'
 		},
 	}
+
+	onUnmount(inner, () => {
+		sequence.push('inner abort')
+	})
 
 	const outer = {
 		attached: false,
@@ -374,7 +358,7 @@ test('onUnmount works externally', async () => {
 })
 
 test('onMount works for repeated mounts', () => {
-	const { root, el } = setup()
+	const { root } = setup()
 	let mounted: boolean | null = null
 
 	const app = {

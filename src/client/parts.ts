@@ -1,6 +1,6 @@
 import type { Displayable, Renderable } from 'dhtml'
 import { assert, is_html, is_iterable, is_renderable, single_part_template } from '../shared.ts'
-import { delete_controller, get_controller, get_key } from './controller.ts'
+import { get_controller, get_key } from './controller.ts'
 import { create_root, create_root_after, type Root } from './root.ts'
 import { create_span, delete_contents, extract_contents, insert_node, type Span } from './span.ts'
 import type { Cleanup } from './util.ts'
@@ -26,8 +26,10 @@ export function create_child_part(parent_node: Node | Span, parent_span: Span, c
 	function switch_renderable(next: Renderable | null) {
 		if (current_renderable && current_renderable !== next) {
 			const controller = get_controller(current_renderable)
-			controller._unmount_callbacks.forEach(callback => callback?.())
-			delete_controller(current_renderable)
+			if (controller._mounted) {
+				controller._mounted = false
+				controller._unmount_callbacks.forEach(callback => callback?.())
+			}
 		}
 		current_renderable = next
 	}
@@ -148,8 +150,10 @@ export function create_child_part(parent_node: Node | Span, parent_span: Span, c
 
 			if (current_renderable) {
 				const controller = get_controller(current_renderable)
-				controller._mount_callbacks?.forEach(callback => controller._unmount_callbacks.add(callback?.()))
-				delete controller._mount_callbacks
+				if (!controller._mounted) {
+					controller._mounted = true
+					controller._unmount_callbacks = controller._mount_callbacks.map(callback => callback?.())
+				}
 			}
 
 			if (ends_were_equal) parent_span._end = span._end
@@ -186,8 +190,10 @@ export function create_child_part(parent_node: Node | Span, parent_span: Span, c
 
 		if (current_renderable) {
 			const controller = get_controller(current_renderable)
-			controller._mount_callbacks?.forEach(callback => controller._unmount_callbacks.add(callback?.()))
-			delete controller._mount_callbacks
+			if (!controller._mounted) {
+				controller._mounted = true
+				controller._unmount_callbacks = controller._mount_callbacks.map(callback => callback?.())
+			}
 		}
 
 		if (ends_were_equal) parent_span._end = span._end
