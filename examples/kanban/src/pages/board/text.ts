@@ -1,7 +1,7 @@
 import { html } from 'dhtml'
 import { attr } from 'dhtml/client'
 
-export function text({ value, onSubmit }: { value: string; onSubmit: (value: string) => void }) {
+export function textInput({ value, onSubmit }: { value: string; onSubmit: (value: string) => void }) {
 	return html`
 		<form
 			style="display: contents"
