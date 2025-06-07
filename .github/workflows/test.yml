@@ -10,8 +10,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
-      - run: npm install
-      - run: npm run test -- --coverage-reporter=lcov
+      - run: bun install
+      - run: bun run test -- --coverage-reporter=lcov
       - if: always()
         uses: coverallsapp/github-action@v2
         with:

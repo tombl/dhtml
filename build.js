@@ -108,6 +108,7 @@ async function write_package_json() {
 	const pkg = JSON.parse(await readFile('package.json', 'utf8'))
 
 	delete pkg.scripts
+	delete pkg.workspaces
 	delete pkg.devDependencies
 	delete pkg.prettier
 	;(function walk(exports) {

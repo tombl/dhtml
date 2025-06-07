@@ -19,9 +19,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
       - uses: actions/configure-pages@v5
-      - run: npm ci
-      - run: npm run build
+      - run: bun install
+      - run: bun run build
       - run: rm -rf node_modules
       - uses: actions/upload-pages-artifact@v3
         with:

@@ -6,29 +6,30 @@
 		"./client": "./src/client.ts",
 		"./server": "./src/server.ts"
 	},
+	"workspaces": [
+		"dist",
+		"examples/*"
+	],
 	"scripts": {
-		"postinstall": "patch-package",
 		"build": "node build.js",
 		"format": "prettier --write . --cache",
 		"check": "tsc",
 		"test": "bun test --coverage --define __DEV__=true",
-		"test:watch": "npm test -- --watch",
+		"test:watch": "bun run test --watch",
 		"test:prod": "bun test --define __DEV__=false"
 	},
 	"devDependencies": {
 		"@happy-dom/global-registrator": "^17.4.4",
 		"@types/node": "^22.13.11",
 		"bun-types": "^1.2.5",
-		"dhtml": ".",
-		"dts-buddy": "^0.5.5",
+		"dts-buddy": "^0.6.2",
 		"htmlparser2": "^10.0.0",
 		"magic-string": "^0.30.17",
 		"mitata": "^1.0.34",
-		"patch-package": "^8.0.0",
 		"prettier": "^3.4.2",
 		"rolldown": "^1.0.0-beta.6",
 		"terser": "^5.39.0",
-		"typescript": "^5.7.2",
+		"typescript": "^5.8.3",
 		"zimmerframe": "^1.1.2"
 	},
 	"prettier": {
@@ -38,5 +39,8 @@
 		"singleQuote": true,
 		"trailingComma": "all",
 		"useTabs": true
+	},
+	"patchedDependencies": {
+		"mitata@1.0.34": "patches/mitata@1.0.34.patch"
 	}
 }

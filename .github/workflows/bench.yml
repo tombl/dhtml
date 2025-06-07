@@ -19,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
-      - run: npm install
+      - run: bun install
       - uses: bencherdev/bencher@main
       - name: Run baseline benchmarks
         run: |
@@ -40,7 +40,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
-      - run: npm install
+      - run: bun install
       - uses: bencherdev/bencher@main
       - name: Run benchmarks
         run: |

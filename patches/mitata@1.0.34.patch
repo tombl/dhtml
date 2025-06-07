@@ -1,7 +1,7 @@
-diff --git a/node_modules/mitata/src/main.mjs b/node_modules/mitata/src/main.mjs
-index d0b58fa..d2e1c49 100644
---- a/node_modules/mitata/src/main.mjs
-+++ b/node_modules/mitata/src/main.mjs
+diff --git a/src/main.mjs b/src/main.mjs
+index a8915ca74b897842f80ae005225d8236ff1b7da5..fdec895a27da26f2c16b471eb393aef8ec4c7b47 100644
+--- a/src/main.mjs
++++ b/src/main.mjs
 @@ -264,6 +264,7 @@ function version() {
  }
  
