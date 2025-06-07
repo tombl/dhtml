@@ -5,8 +5,9 @@ import { type Cleanup } from './util.ts'
 export type Key = string | number | bigint | boolean | symbol | object | null
 
 export interface Controller {
-	_mount_callbacks?: Set<Cleanup> // undefined if mounted
-	_unmount_callbacks: Set<Cleanup>
+	_mounted: boolean
+	_mount_callbacks: Cleanup[]
+	_unmount_callbacks: Cleanup[]
 
 	_invalidate_queued?: Promise<void>
 	_invalidate?: () => void
@@ -17,18 +18,16 @@ const controllers: WeakMap<Renderable, Controller> = new WeakMap()
 
 export function get_controller(renderable: Renderable): Controller {
 	let controller = controllers.get(renderable)
-	if (controller) return controller
-
-	controller = {
-		_mount_callbacks: new Set(),
-		_unmount_callbacks: new Set(),
-	}
-
-	controllers.set(renderable, controller)
+	if (!controller)
+		controllers.set(
+			renderable,
+			(controller = {
+				_mounted: false,
+				_mount_callbacks: [],
+				_unmount_callbacks: [],
+			}),
+		)
 	return controller
-}
-export function delete_controller(renderable: Renderable): void {
-	controllers.delete(renderable)
 }
 
 const keys: WeakMap<Displayable & object, Key> = new WeakMap()
@@ -44,12 +43,11 @@ export function invalidate(renderable: Renderable): Promise<void> {
 
 export function onMount(renderable: Renderable, callback: () => Cleanup): void {
 	assert(is_renderable(renderable), 'expected a renderable')
-
 	const controller = get_controller(renderable)
-	if (controller._mount_callbacks) {
-		controller._mount_callbacks.add(callback)
+	if (controller._mounted) {
+		controller._unmount_callbacks.push(callback())
 	} else {
-		controller._unmount_callbacks.add(callback())
+		controller._mount_callbacks.push(callback)
 	}
 }
 
