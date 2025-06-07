@@ -4,7 +4,7 @@ import { type Query, createSubscribedQuery } from '#util/query.ts'
 import { createRecycler } from '#util/recycle.ts'
 import { html } from 'dhtml'
 import { Card } from './card'
-import { text } from './text'
+import { textInput } from './text'
 
 export class Column {
 	id: db.ID
@@ -34,7 +34,7 @@ export class Column {
 			<li class="column">
 				<header>
 					<h2>
-						${text({
+						${textInput({
 							value: this.#column().name,
 							onSubmit: name => db.columns.updateName(this.#app, this.id, name),
 						})}
