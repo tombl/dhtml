@@ -8,13 +8,13 @@
 		"preview": "vite preview"
 	},
 	"devDependencies": {
-		"typescript": "~5.8.2",
-		"vite": "^6.2.1",
+		"typescript": "~5.8.3",
+		"vite": "^6.3.5",
 		"vite-tsconfig-paths": "^5.1.4"
 	},
 	"dependencies": {
 		"@tombl/router": "npm:@jsr/tombl__router@^0.1.2",
 		"dhtml": "file:../..",
-		"sqlocal": "^0.14.0"
+		"sqlocal": "^0.14.1"
 	}
 }
