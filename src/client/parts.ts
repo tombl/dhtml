@@ -65,7 +65,7 @@ export function create_child_part(parent_node: Node | Span, parent_span: Span, c
 			const renderable = value
 			const controller = get_controller(renderable)
 
-			controller._invalidate ??= () => {
+			controller._invalidate = () => {
 				assert(current_renderable === renderable, 'could not invalidate an outdated renderable')
 				update(renderable)
 			}
