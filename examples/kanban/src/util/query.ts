@@ -21,7 +21,8 @@ export function createQuery<T>(renderable: Renderable, fn: QueryFn<T>): Query<T>
 	}
 
 	function query() {
-		return suspend(renderable, promise)
+		if (value == null) return suspend(renderable, promise)
+		return value
 	}
 
 	query.revalidate = () => {
