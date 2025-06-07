@@ -1,4 +1,4 @@
-import type { Displayable, Renderable } from 'dhtml'
+import type { Displayable, Renderable } from '../index.ts'
 import { assert, is_renderable } from '../shared.ts'
 import { type Cleanup } from './util.ts'
 
