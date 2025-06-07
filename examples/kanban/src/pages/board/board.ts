@@ -4,7 +4,7 @@ import { type Query, createSubscribedQuery } from '#util/query.ts'
 import { createRecycler } from '#util/recycle.ts'
 import { html } from 'dhtml'
 import { Column } from './column'
-import { text } from './text'
+import { textInput } from './text'
 
 export class Board {
 	id: db.ID
@@ -32,7 +32,7 @@ export class Board {
 	render() {
 		return html`
 			<h1>
-				${text({
+				${textInput({
 					value: this.#board().name,
 					onSubmit: name => db.boards.updateName(this.#app, this.id, name),
 				})}
