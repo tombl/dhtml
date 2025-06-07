@@ -373,6 +373,33 @@ test('onUnmount works externally', async () => {
 	assert.equal(unmounted.mock.calls.length, 1)
 })
 
+test('onMount works for repeated mounts', () => {
+	const { root, el } = setup()
+	let mounted: boolean | null = null
+
+	const app = {
+		render() {
+			return html`${mounted}`
+		},
+	}
+	onMount(app, () => {
+		mounted = true
+		return () => {
+			mounted = false
+		}
+	})
+
+	assert.equal(mounted, null)
+
+	for (let i = 0; i < 10; i++) {
+		root.render(app)
+		assert.equal(mounted, true)
+
+		root.render(null)
+		assert.equal(mounted, false)
+	}
+})
+
 test('getParentNode works externally', () => {
 	const { root, el } = setup()
 
