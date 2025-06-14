@@ -98,6 +98,13 @@ button {
 						padding: 0.5rem;
 						width: 100%;
 					}
+
+					&.dropping-above {
+					    border-top: 1px dashed var(--fg-1);
+					}
+					&.dropping-below {
+					    border-bottom: 1px dashed var(--fg-1);
+					}
 				}
 			}
 
