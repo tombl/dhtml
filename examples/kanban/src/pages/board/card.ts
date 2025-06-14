@@ -20,6 +20,7 @@ export class Card {
 		const card = this.#card()
 		return html`
 			<li
+				data-card-id="${card.id}"
 				class="card"
 				draggable="true"
 				style="display: flex; align-items: center; gap: 8px;"
@@ -30,7 +31,15 @@ export class Card {
 					const self = e.currentTarget as HTMLElement
 					if (focused?.tagName === 'INPUT' && self.contains(focused)) {
 						e.preventDefault()
+						return
 					}
+
+					e.dataTransfer!.setData('application/x-kanban-card', card.id.toString())
+				}}
+				ondragend=${(e: DragEvent) => {
+					const self = e.currentTarget as HTMLElement
+					self.classList.remove('dropping-above')
+					self.classList.remove('dropping-below')
 				}}
 			>
 				<div style="flex: 1;">
