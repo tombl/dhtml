@@ -5,13 +5,11 @@ import type { Key } from './controller.ts'
 import type { Part } from './parts.ts'
 import { create_span, delete_contents, insert_node, type Span } from './span.ts'
 
-export interface RootPublic {
+export interface Root {
 	render(value: Displayable): void
 	detach(): void
-}
-export interface Root extends RootPublic {
-	_span: Span
-	_key: Key | undefined
+	/** @internal */ _span: Span
+	/** @internal */ _key: Key | undefined
 }
 
 export function create_root_into(parent: Node): Root {
