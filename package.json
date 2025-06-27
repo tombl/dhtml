@@ -16,7 +16,7 @@
 		"test:prod": "bun test --define __DEV__=false"
 	},
 	"devDependencies": {
-		"@happy-dom/global-registrator": "^17.6.3",
+		"@happy-dom/global-registrator": "^18.0.0",
 		"@types/node": "^22.15.30",
 		"bun-types": "^1.2.15",
 		"dhtml": ".",
