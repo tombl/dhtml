@@ -40,3 +40,4 @@ if (__DEV__) {
 }
 
 export type { Displayable, Renderable } from './shared.ts'
+export { getParentNode, invalidate, keyed, onMount, onUnmount } from './shared/controller.ts'

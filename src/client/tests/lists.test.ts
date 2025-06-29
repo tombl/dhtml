@@ -1,6 +1,5 @@
 import { test } from 'bun:test'
-import { html, type Displayable } from 'dhtml'
-import { keyed } from 'dhtml/client'
+import { html, keyed, type Displayable } from 'dhtml'
 import assert from 'node:assert/strict'
 import { setup } from './setup.ts'
 

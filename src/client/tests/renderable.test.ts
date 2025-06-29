@@ -1,6 +1,5 @@
 import { mock, test } from 'bun:test'
-import { html, type Renderable } from 'dhtml'
-import { getParentNode, invalidate, onMount, onUnmount } from 'dhtml/client'
+import { getParentNode, html, invalidate, onMount, onUnmount, type Renderable } from 'dhtml'
 import assert from 'node:assert/strict'
 import { setup } from './setup.ts'
 

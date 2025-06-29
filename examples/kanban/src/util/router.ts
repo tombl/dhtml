@@ -4,8 +4,7 @@ import {
 	type RouterConfig as BrowserRouterConfig,
 } from '@tombl/router/browser'
 import type { Params } from '@tombl/router/matcher'
-import { html, type Displayable } from 'dhtml'
-import { onMount } from 'dhtml/client'
+import { html, onMount, type Displayable } from 'dhtml'
 import { state } from './decorators'
 
 type PageClass<Path extends string, Context> = new (ctx: Context, params: Params<Path>) => Displayable

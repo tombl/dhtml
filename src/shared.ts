@@ -35,3 +35,5 @@ export function is_html(value: any): value is HTML {
 export function single_part_template(part: Displayable): HTML {
 	return html`${part}`
 }
+
+export type Cleanup = (() => void) | void | undefined | null

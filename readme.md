@@ -3,8 +3,8 @@
 a post-component library for building user interfaces on the web.
 
 ```javascript
-import { html } from 'https://tombl.github.io/dhtml/dist/index.js'
-import { createRoot, invalidate } from 'https://tombl.github.io/dhtml/dist/client.js'
+import { createRoot } from 'https://tombl.github.io/dhtml/dist/client.js'
+import { html, invalidate } from 'https://tombl.github.io/dhtml/dist/index.js'
 
 const app = {
 	i: 0,

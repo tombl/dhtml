@@ -1,6 +1,5 @@
 import type { Displayable, Renderable } from '../index.ts'
-import { assert, is_renderable } from '../shared.ts'
-import { type Cleanup } from './util.ts'
+import { assert, is_renderable, type Cleanup } from '../shared.ts'
 
 export type Key = string | number | bigint | boolean | symbol | object | null
 

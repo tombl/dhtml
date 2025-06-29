@@ -1,7 +1,6 @@
 import './styles.css'
 
-import { html } from 'dhtml'
-import { onUnmount } from 'dhtml/client'
+import { html, onUnmount } from 'dhtml'
 import { Database, type ID } from './db'
 import { Bus } from './util/bus'
 import { Router } from './util/router'

@@ -1,5 +1,4 @@
-import type { Renderable } from 'dhtml'
-import { invalidate } from 'dhtml/client'
+import { invalidate, type Renderable } from 'dhtml'
 
 export function state<This extends Renderable, Value>(
 	target: ClassAccessorDecoratorTarget<This, Value>,

@@ -1,5 +1,3 @@
-export type Cleanup = (() => void) | void | undefined | null
-
 export function is_element(node: Node): node is Element {
 	return node.nodeType === (1 satisfies typeof Node.ELEMENT_NODE)
 }

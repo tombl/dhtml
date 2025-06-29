@@ -1,17 +1,16 @@
-
 import {
 	assert,
 	is_html,
 	is_iterable,
 	is_renderable,
 	single_part_template,
+	type Cleanup,
 	type Displayable,
 	type Renderable,
 } from '../shared.ts'
-import { get_controller, get_key } from './controller.ts'
+import { get_controller, get_key } from '../shared/controller.ts'
 import { create_root, create_root_after, type Root } from './root.ts'
 import { create_span, delete_contents, extract_contents, insert_node, type Span } from './span.ts'
-import type { Cleanup } from './util.ts'
 
 export type Part = (value: unknown) => void
 
