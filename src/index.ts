@@ -29,12 +29,12 @@ if (__DEV__) {
 			const children: JsonML[] = []
 			for (let i = 0; i < value._dynamics.length; i++)
 				children.push(value._statics[i], ['object', { object: value._dynamics[i] }])
-			children.push(value._statics.at(-1)!)
+			children.push(value._statics[value._statics.length - 1])
 
 			return ['span', {}, 'html`', ...children, '`']
 		},
 		hasBody() {
-			return true
+			return false
 		},
 	})
 }
