@@ -1,0 +1,14 @@
+{
+	"name": "todomvc",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"check": "tsc"
+	},
+	"devDependencies": {
+		"typescript": "~5.8.3"
+	},
+	"dependencies": {
+		"dhtml": "file:../../dist"
+	}
+}
