@@ -1,5 +1,5 @@
 {
-	"name": "todomvc",
+	"name": "@dhtml-examples/todomvc",
 	"private": true,
 	"type": "module",
 	"scripts": {

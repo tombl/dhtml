@@ -1,5 +1,5 @@
 {
-	"name": "uibench",
+	"name": "@dhtml-examples/uibench",
 	"private": true,
 	"type": "module",
 	"scripts": {

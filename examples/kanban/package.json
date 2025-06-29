@@ -1,5 +1,5 @@
 {
-	"name": "kanban",
+	"name": "@dhtml-examples/kanban",
 	"private": true,
 	"type": "module",
 	"scripts": {
