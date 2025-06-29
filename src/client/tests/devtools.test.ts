@@ -1,6 +1,6 @@
 import { test } from 'bun:test'
-import assert from 'node:assert/strict'
 import { html } from 'dhtml'
+import assert from 'node:assert/strict'
 
 type JsonML = string | readonly [tag: string, attrs?: Record<string, any>, ...children: JsonML[]]
 interface Formatter {

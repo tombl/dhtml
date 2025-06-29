@@ -1,5 +1,5 @@
-import type { Board, ID } from '.'
 import type { App } from '~/app'
+import type { Board, ID } from '.'
 import { unwrap } from './database'
 
 export async function list(app: App) {
