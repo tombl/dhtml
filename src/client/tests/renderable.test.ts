@@ -24,13 +24,17 @@ test('renderables work correctly', () => {
 	}
 	root.render(app)
 	assert.equal(el.innerHTML, 'Count: 0')
+
+	// rerendering a valid renderable should noop:
 	root.render(app)
+	assert.equal(el.innerHTML, 'Count: 0')
+
+	// but invalidating it shouldn't:
+	invalidate(app)
 	assert.equal(el.innerHTML, 'Count: 1')
 	invalidate(app)
 	assert.equal(el.innerHTML, 'Count: 2')
-	invalidate(app)
-	assert.equal(el.innerHTML, 'Count: 3')
-	assert.equal(app.i, 4)
+	assert.equal(app.i, 3)
 })
 
 test('renderables handle undefined correctly', () => {
@@ -97,13 +101,13 @@ test('onMount calls in the right order', () => {
 	sequence.length = 0
 
 	outer.show = false
-	root.render(outer)
+	invalidate(outer)
 	assert.equal(el.innerHTML, '')
 	assert.deepStrictEqual(sequence, ['outer render', 'inner cleanup'])
 	sequence.length = 0
 
 	outer.show = true
-	root.render(outer)
+	invalidate(outer)
 	assert.equal(el.innerHTML, 'inner')
 	// inner is mounted a second time because of the above cleanup
 	assert.deepStrictEqual(sequence, ['outer render', 'inner mount', 'inner render'])
@@ -245,19 +249,19 @@ test('onUnmount deep works correctly', () => {
 	sequence.length = 0
 
 	outer.show = false
-	root.render(outer)
+	invalidate(outer)
 	assert.equal(el.innerHTML, '')
 	assert.deepStrictEqual(sequence, ['outer render', 'inner abort'])
 	sequence.length = 0
 
 	outer.show = true
-	root.render(outer)
+	invalidate(outer)
 	assert.equal(el.innerHTML, 'inner')
 	assert.deepStrictEqual(sequence, ['outer render', 'inner render'])
 	sequence.length = 0
 
 	outer.show = false
-	root.render(outer)
+	invalidate(outer)
 	assert.equal(el.innerHTML, '')
 	assert.deepStrictEqual(sequence, ['outer render', 'inner abort'])
 	sequence.length = 0
@@ -302,19 +306,19 @@ test('onUnmount shallow works correctly', () => {
 	sequence.length = 0
 
 	outer.show = false
-	root.render(outer)
+	invalidate(outer)
 	assert.equal(el.innerHTML, '')
 	assert.deepStrictEqual(sequence, ['outer render', 'inner abort'])
 	sequence.length = 0
 
 	outer.show = true
-	root.render(outer)
+	invalidate(outer)
 	assert.equal(el.innerHTML, 'inner')
 	assert.deepStrictEqual(sequence, ['outer render', 'inner render'])
 	sequence.length = 0
 
 	outer.show = false
-	root.render(outer)
+	invalidate(outer)
 	assert.equal(el.innerHTML, '')
 	assert.deepStrictEqual(sequence, ['outer render', 'inner abort'])
 	sequence.length = 0
@@ -503,4 +507,30 @@ test('onMount called on already mounted renderable executes immediately', () => 
 
 	root.render(null)
 	assert.equal(unmounted, 1)
+})
+
+test('invalidating a parent does not re-render a child', () => {
+	const { root, el } = setup()
+
+	let renders = 0
+	const child = {
+		render() {
+			renders++
+			return 'child'
+		},
+	}
+
+	const parent = {
+		render() {
+			return child
+		},
+	}
+
+	root.render(parent)
+	assert.equal(el.innerHTML, 'child')
+	assert.equal(renders, 1)
+
+	invalidate(parent)
+	assert.equal(el.innerHTML, 'child')
+	assert.equal(renders, 1)
 })

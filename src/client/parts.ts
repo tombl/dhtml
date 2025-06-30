@@ -19,6 +19,7 @@ export function create_child_part(parent_node: Node | Span, parent_span: Span, c
 
 	// for when we're rendering a renderable:
 	let current_renderable: Renderable | null = null
+	let needs_revalidate = true
 
 	// for when we're rendering a template:
 	let root: Root | undefined
@@ -61,6 +62,9 @@ export function create_child_part(parent_node: Node | Span, parent_span: Span, c
 		const ends_were_equal = span._parent === parent_span._parent && span._end === parent_span._end
 
 		if (is_renderable(value)) {
+			if (!needs_revalidate && value === current_renderable) return
+			needs_revalidate = false
+
 			switch_renderable(value)
 
 			const renderable = value
@@ -71,6 +75,7 @@ export function create_child_part(parent_node: Node | Span, parent_span: Span, c
 			}
 			controller._invalidate.set(switch_renderable, () => {
 				assert(renderable === current_renderable)
+				needs_revalidate = true
 				update(renderable)
 			})
 
