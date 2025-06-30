@@ -5,11 +5,9 @@ import { type Cleanup } from './util.ts'
 export type Key = string | number | bigint | boolean | symbol | object | null
 
 export interface Controller {
-	_mounted: boolean
-	_mount_callbacks: Cleanup[]
+	_mount_callbacks: (() => Cleanup)[]
 	_unmount_callbacks: Cleanup[]
-
-	_invalidate?: () => void
+	_invalidate: Map<object, () => void>
 }
 
 const controllers: WeakMap<Renderable, Controller> = new WeakMap()
@@ -20,9 +18,9 @@ export function get_controller(renderable: Renderable): Controller {
 		controllers.set(
 			renderable,
 			(controller = {
-				_mounted: false,
 				_mount_callbacks: [],
 				_unmount_callbacks: [],
+				_invalidate: new Map(),
 			}),
 		)
 	return controller
@@ -32,14 +30,27 @@ const keys: WeakMap<Displayable & object, Key> = new WeakMap()
 
 export function invalidate(renderable: Renderable): void {
 	const controller = controllers.get(renderable)
-	assert(controller?._invalidate, 'the renderable has not been rendered')
-	controller._invalidate()
+	assert(controller, 'the renderable has not been rendered')
+	controller._invalidate.forEach(invalidate => invalidate())
+}
+
+export function on_unmounted(renderable: Renderable, id: object): void {
+	const controller = controllers.get(renderable)
+	if (!controller) return
+
+	controller._invalidate.delete(id)
+
+	// If this was the last instance, call unmount callbacks
+	if (!controller._invalidate.size) {
+		controller._unmount_callbacks.forEach(callback => callback?.())
+		controller._unmount_callbacks.length = 0
+	}
 }
 
 export function onMount(renderable: Renderable, callback: () => Cleanup): void {
 	assert(is_renderable(renderable), 'expected a renderable')
 	const controller = get_controller(renderable)
-	if (controller._mounted) {
+	if (controller._invalidate.size) {
 		controller._unmount_callbacks.push(callback())
 	} else {
 		controller._mount_callbacks.push(callback)
