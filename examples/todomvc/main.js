@@ -36,6 +36,7 @@ class TodoItem {
 						onchange=${e => {
 							e.preventDefault()
 							this.completed = e.target.checked
+							invalidate(this)
 							invalidate(this.app)
 						}}
 					/>

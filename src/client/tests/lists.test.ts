@@ -1,6 +1,6 @@
 import { test } from 'bun:test'
 import { html, type Displayable } from 'dhtml'
-import { keyed } from 'dhtml/client'
+import { invalidate, keyed } from 'dhtml/client'
 import assert from 'node:assert/strict'
 import { setup } from './setup.ts'
 
@@ -183,7 +183,7 @@ test('list can disappear when condition changes', () => {
 	assert.equal(el.innerHTML, '<div>1</div><div>2</div><div>3</div>')
 
 	app.show = false
-	root.render(app)
+	invalidate(app)
 	assert.equal(el.innerHTML, '')
 })
 

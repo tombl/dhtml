@@ -7,7 +7,7 @@ import {
 	type Displayable,
 	type Renderable,
 } from '../shared.ts'
-import { get_controller, get_key, on_unmounted } from './controller.ts'
+import { controllers, get_controller, get_key } from './controller.ts'
 import { create_root, create_root_after, type Root } from './root.ts'
 import { create_span, delete_contents, extract_contents, insert_node, type Span } from './span.ts'
 import type { Cleanup } from './util.ts'
@@ -19,6 +19,7 @@ export function create_child_part(parent_node: Node | Span, parent_span: Span, c
 
 	// for when we're rendering a renderable:
 	let current_renderable: Renderable | null = null
+	let needs_revalidate = true
 
 	// for when we're rendering a template:
 	let root: Root | undefined
@@ -32,7 +33,16 @@ export function create_child_part(parent_node: Node | Span, parent_span: Span, c
 
 	function switch_renderable(next: Renderable | null) {
 		if (current_renderable && current_renderable !== next) {
-			on_unmounted(current_renderable, switch_renderable)
+			const controller = controllers.get(current_renderable)
+			if (controller) {
+				controller._invalidate.delete(switch_renderable)
+
+				// If this was the last instance, call unmount callbacks
+				if (!controller._invalidate.size) {
+					controller._unmount_callbacks.forEach(callback => callback?.())
+					controller._unmount_callbacks.length = 0
+				}
+			}
 		}
 		current_renderable = next
 	}
@@ -61,6 +71,9 @@ export function create_child_part(parent_node: Node | Span, parent_span: Span, c
 		const ends_were_equal = span._parent === parent_span._parent && span._end === parent_span._end
 
 		if (is_renderable(value)) {
+			if (!needs_revalidate && value === current_renderable) return
+			needs_revalidate = false
+
 			switch_renderable(value)
 
 			const renderable = value
@@ -71,6 +84,7 @@ export function create_child_part(parent_node: Node | Span, parent_span: Span, c
 			}
 			controller._invalidate.set(switch_renderable, () => {
 				assert(renderable === current_renderable)
+				needs_revalidate = true
 				update(renderable)
 			})
 
