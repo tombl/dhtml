@@ -9,7 +9,6 @@ export interface Controller {
 	_mount_callbacks: Cleanup[]
 	_unmount_callbacks: Cleanup[]
 
-	_invalidate_queued?: Promise<void>
 	_invalidate?: () => void
 	_parent_node?: Node
 }
@@ -32,13 +31,10 @@ export function get_controller(renderable: Renderable): Controller {
 
 const keys: WeakMap<Displayable & object, Key> = new WeakMap()
 
-export function invalidate(renderable: Renderable): Promise<void> {
+export function invalidate(renderable: Renderable): void {
 	const controller = controllers.get(renderable)
 	assert(controller?._invalidate, 'the renderable has not been rendered')
-	return (controller._invalidate_queued ??= Promise.resolve().then(() => {
-		delete controller._invalidate_queued
-		controller._invalidate!()
-	}))
+	controller._invalidate()
 }
 
 export function onMount(renderable: Renderable, callback: () => Cleanup): void {

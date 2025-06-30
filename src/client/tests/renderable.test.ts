@@ -4,7 +4,7 @@ import { getParentNode, invalidate, onMount, onUnmount } from 'dhtml/client'
 import assert from 'node:assert/strict'
 import { setup } from './setup.ts'
 
-test('renderables work correctly', async () => {
+test('renderables work correctly', () => {
 	const { root, el } = setup()
 
 	root.render(
@@ -26,9 +26,9 @@ test('renderables work correctly', async () => {
 	assert.equal(el.innerHTML, 'Count: 0')
 	root.render(app)
 	assert.equal(el.innerHTML, 'Count: 1')
-	await invalidate(app)
+	invalidate(app)
 	assert.equal(el.innerHTML, 'Count: 2')
-	await invalidate(app)
+	invalidate(app)
 	assert.equal(el.innerHTML, 'Count: 3')
 	assert.equal(app.i, 4)
 })
