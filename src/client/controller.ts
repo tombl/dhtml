@@ -10,7 +10,7 @@ export interface Controller {
 	_invalidate: Map<object, () => void>
 }
 
-const controllers: WeakMap<Renderable, Controller> = new WeakMap()
+export const controllers: WeakMap<Renderable, Controller> = new WeakMap()
 
 export function get_controller(renderable: Renderable): Controller {
 	let controller = controllers.get(renderable)
@@ -32,19 +32,6 @@ export function invalidate(renderable: Renderable): void {
 	const controller = controllers.get(renderable)
 	assert(controller, 'the renderable has not been rendered')
 	controller._invalidate.forEach(invalidate => invalidate())
-}
-
-export function on_unmounted(renderable: Renderable, id: object): void {
-	const controller = controllers.get(renderable)
-	if (!controller) return
-
-	controller._invalidate.delete(id)
-
-	// If this was the last instance, call unmount callbacks
-	if (!controller._invalidate.size) {
-		controller._unmount_callbacks.forEach(callback => callback?.())
-		controller._unmount_callbacks.length = 0
-	}
 }
 
 export function onMount(renderable: Renderable, callback: () => Cleanup): void {
