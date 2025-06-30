@@ -127,27 +127,31 @@ export function create_child_part(parent_node: Node | Span, parent_span: Span, c
 				const key = get_key(item)
 				let root = (roots[i] ??= create_root_after(end))
 
-				if (key !== undefined && root._key !== key) {
-					const j = roots.findIndex(r => r._key === key)
-					root._key = key
-					if (j !== -1) {
+				if ((key !== undefined && root._key !== key)) {
+					for (let j = i; j < roots.length; j++) {
 						const root1 = root
 						const root2 = roots[j]
 
-						// swap the contents of the spans
-						const tmp_content = extract_contents(root1._span)
-						insert_node(root1._span, extract_contents(root2._span))
-						insert_node(root2._span, tmp_content)
+						if (root2._key === key) {
+							// swap the contents of the spans
+							const tmp_content = extract_contents(root1._span)
+							insert_node(root1._span, extract_contents(root2._span))
+							insert_node(root2._span, tmp_content)
 
-						// swap the spans back
-						const tmp_span = root1._span
-						root1._span = root2._span
-						root2._span = tmp_span
+							// swap the spans back
+							const tmp_span = root1._span
+							root1._span = root2._span
+							root2._span = tmp_span
 
-						// swap the roots
-						roots[j] = root1
-						root = roots[i] = root2
+							// swap the roots
+							roots[j] = root1
+							root = roots[i] = root2
+
+							break
+						}
 					}
+
+					root._key = key
 				}
 
 				root.render(item as Displayable)

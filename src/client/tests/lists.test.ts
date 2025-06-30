@@ -337,3 +337,17 @@ dev_test('keying something twice throws an error', () => {
 	assert.doesNotThrow(() => keyed(html``, 1))
 	assert.throws(() => keyed(keyed(html``, 1), 1))
 })
+
+test('can render the same item multiple times', () => {
+	const { root, el } = setup()
+
+	const item = html`<p>Item</p>`
+	root.render([item, item])
+	assert.equal(el.innerHTML, '<p>Item</p><p>Item</p>')
+
+	root.render([item, item, item])
+	assert.equal(el.innerHTML, '<p>Item</p><p>Item</p><p>Item</p>')
+
+	root.render([item, item])
+	assert.equal(el.innerHTML, '<p>Item</p><p>Item</p>')
+})
