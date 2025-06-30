@@ -7,7 +7,7 @@ import {
 	type Displayable,
 	type Renderable,
 } from '../shared.ts'
-import { get_controller, get_key } from './controller.ts'
+import { get_controller, get_key, on_unmounted } from './controller.ts'
 import { create_root, create_root_after, type Root } from './root.ts'
 import { create_span, delete_contents, extract_contents, insert_node, type Span } from './span.ts'
 import type { Cleanup } from './util.ts'
@@ -32,11 +32,7 @@ export function create_child_part(parent_node: Node | Span, parent_span: Span, c
 
 	function switch_renderable(next: Renderable | null) {
 		if (current_renderable && current_renderable !== next) {
-			const controller = get_controller(current_renderable)
-			if (controller._mounted) {
-				controller._mounted = false
-				controller._unmount_callbacks.forEach(callback => callback?.())
-			}
+			on_unmounted(current_renderable, switch_renderable)
 		}
 		current_renderable = next
 	}
@@ -53,10 +49,8 @@ export function create_child_part(parent_node: Node | Span, parent_span: Span, c
 	} else {
 		let child = parent_node._start
 		for (let i = 0; i < child_index; i++) {
-			{
-				assert(child.nextSibling !== null, 'expected more siblings')
-				assert(child.nextSibling !== parent_node._end, 'ran out of siblings before the end')
-			}
+			assert(child.nextSibling !== null, 'expected more siblings')
+			assert(child.nextSibling !== parent_node._end, 'ran out of siblings before the end')
 			child = child.nextSibling
 		}
 		span = create_span(child)
@@ -71,11 +65,14 @@ export function create_child_part(parent_node: Node | Span, parent_span: Span, c
 
 			const renderable = value
 			const controller = get_controller(renderable)
-
-			controller._invalidate = () => {
-				assert(current_renderable === renderable, 'could not invalidate an outdated renderable')
-				update(renderable)
+			// If this is the first mounted instance, call mount callbacks
+			if (!controller._invalidate.size) {
+				controller._unmount_callbacks = controller._mount_callbacks.map(callback => callback())
 			}
+			controller._invalidate.set(switch_renderable, () => {
+				assert(renderable === current_renderable)
+				update(renderable)
+			})
 
 			try {
 				value = renderable.render()
@@ -154,14 +151,6 @@ export function create_child_part(parent_node: Node | Span, parent_span: Span, c
 
 			span._end = end
 
-			if (current_renderable) {
-				const controller = get_controller(current_renderable)
-				if (!controller._mounted) {
-					controller._mounted = true
-					controller._unmount_callbacks = controller._mount_callbacks.map(callback => callback?.())
-				}
-			}
-
 			if (ends_were_equal) parent_span._end = span._end
 
 			return
@@ -193,14 +182,6 @@ export function create_child_part(parent_node: Node | Span, parent_span: Span, c
 		}
 
 		old_value = value
-
-		if (current_renderable) {
-			const controller = get_controller(current_renderable)
-			if (!controller._mounted) {
-				controller._mounted = true
-				controller._unmount_callbacks = controller._mount_callbacks.map(callback => callback?.())
-			}
-		}
 
 		if (ends_were_equal) parent_span._end = span._end
 	}

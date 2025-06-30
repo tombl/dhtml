@@ -93,7 +93,7 @@ test('onMount calls in the right order', () => {
 	outer.show = true
 	root.render(outer)
 	assert.equal(el.innerHTML, 'inner')
-	assert.deepStrictEqual(sequence, ['outer render', 'inner render', 'inner mount', 'outer mount'])
+	assert.deepStrictEqual(sequence, ['outer mount', 'outer render', 'inner mount', 'inner render'])
 	sequence.length = 0
 
 	outer.show = false
@@ -106,7 +106,7 @@ test('onMount calls in the right order', () => {
 	root.render(outer)
 	assert.equal(el.innerHTML, 'inner')
 	// inner is mounted a second time because of the above cleanup
-	assert.deepStrictEqual(sequence, ['outer render', 'inner render', 'inner mount'])
+	assert.deepStrictEqual(sequence, ['outer render', 'inner mount', 'inner render'])
 	sequence.length = 0
 })
 
@@ -186,7 +186,7 @@ test('onMount registers callbacks outside of render', () => {
 	assert.deepStrictEqual(sequence, [])
 
 	root.render(app)
-	assert.deepStrictEqual(sequence, ['render', 'mount'])
+	assert.deepStrictEqual(sequence, ['mount', 'render'])
 	sequence.length = 0
 
 	root.render(null)
@@ -342,7 +342,7 @@ test('onUnmount works externally', async () => {
 
 test('onMount works for repeated mounts', () => {
 	const { root } = setup()
-	let mounted: boolean | null = null
+	let mounted = 0
 
 	const app = {
 		render() {
@@ -350,19 +350,157 @@ test('onMount works for repeated mounts', () => {
 		},
 	}
 	onMount(app, () => {
-		mounted = true
+		mounted++
 		return () => {
-			mounted = false
+			mounted--
 		}
 	})
 
-	assert.equal(mounted, null)
+	assert.equal(mounted, 0)
 
 	for (let i = 0; i < 10; i++) {
 		root.render(app)
-		assert.equal(mounted, true)
+		assert.equal(mounted, 1)
 
 		root.render(null)
-		assert.equal(mounted, false)
+		assert.equal(mounted, 0)
 	}
+})
+
+test('renderables can be rendered in multiple places at once', () => {
+	const { root: root1, el: el1 } = setup()
+	const { root: root2, el: el2 } = setup()
+
+	let mounted = 0
+
+	const app = {
+		value: 'shared',
+		render() {
+			return this.value
+		},
+	}
+
+	onMount(app, () => {
+		mounted++
+		return () => mounted--
+	})
+
+	// Render in first location
+	root1.render(app)
+	assert.equal(el1.innerHTML, 'shared')
+	assert.equal(mounted, 1)
+
+	// Render in second location - should NOT mount again (mount only called on first mount)
+	root2.render(app)
+	assert.equal(el2.innerHTML, 'shared')
+	assert.equal(mounted, 1) // Still 1, not 2
+
+	// Update the renderable - both should update
+	app.value = 'updated'
+	invalidate(app)
+	assert.equal(el1.innerHTML, 'updated')
+	assert.equal(el2.innerHTML, 'updated')
+
+	// Remove from first location - should NOT unmount yet
+	root1.render(null)
+	assert.equal(mounted, 1) // Still mounted in second location
+	assert.equal(el2.innerHTML, 'updated') // Second location still works
+
+	// Remove from second location - NOW it should unmount
+	root2.render(null)
+	assert.equal(mounted, 0) // Now unmounted
+})
+
+test('renderables can be rendered in multiple places at once with a single root', () => {
+	const { root, el } = setup()
+
+	let mounted = 0
+
+	const thing = {
+		value: 'shared',
+		render() {
+			return this.value
+		},
+	}
+
+	onMount(thing, () => {
+		mounted++
+		return () => mounted--
+	})
+
+	root.render(html`<span>${thing}</span><span>${thing}</span>`)
+
+	assert.equal(mounted, 1)
+	assert.equal(el.innerHTML, '<span>shared</span><span>shared</span>')
+
+	thing.value = 'updated'
+	invalidate(thing)
+	assert.equal(mounted, 1)
+	assert.equal(el.innerHTML, '<span>updated</span><span>updated</span>')
+
+	root.render(null)
+	assert.equal(mounted, 0)
+})
+
+test('invalidating an unmounted renderable does nothing', () => {
+	const { root, el } = setup()
+
+	const app1 = {
+		render() {
+			return 'app1'
+		},
+	}
+
+	const app2 = {
+		render() {
+			return 'app2'
+		},
+	}
+
+	root.render(app1)
+	assert.equal(el.textContent, 'app1')
+
+	root.render(app2)
+	assert.equal(el.textContent, 'app2')
+
+	invalidate(app1)
+	assert.equal(el.textContent, 'app2')
+})
+
+test('invalidate throws error when renderable has not been rendered', () => {
+	const app = {
+		render() {
+			return 'never rendered'
+		},
+	}
+
+	assert.throws(() => invalidate(app), /the renderable has not been rendered/)
+})
+
+test('onMount called on already mounted renderable executes immediately', () => {
+	const { root } = setup()
+
+	let mounted = 0
+	let unmounted = 0
+
+	const app = {
+		render() {
+			return 'app'
+		},
+	}
+
+	root.render(app)
+
+	onMount(app, () => {
+		mounted++
+		return () => {
+			unmounted++
+		}
+	})
+
+	assert.equal(mounted, 1)
+	assert.equal(unmounted, 0)
+
+	root.render(null)
+	assert.equal(unmounted, 1)
 })
