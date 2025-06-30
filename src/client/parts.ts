@@ -1,4 +1,3 @@
-
 import {
 	assert,
 	is_html,
@@ -8,7 +7,7 @@ import {
 	type Displayable,
 	type Renderable,
 } from '../shared.ts'
-import { get_controller, get_key } from './controller.ts'
+import { controllers, get_controller, get_key } from './controller.ts'
 import { create_root, create_root_after, type Root } from './root.ts'
 import { create_span, delete_contents, extract_contents, insert_node, type Span } from './span.ts'
 import type { Cleanup } from './util.ts'
@@ -20,6 +19,7 @@ export function create_child_part(parent_node: Node | Span, parent_span: Span, c
 
 	// for when we're rendering a renderable:
 	let current_renderable: Renderable | null = null
+	let needs_revalidate = true
 
 	// for when we're rendering a template:
 	let root: Root | undefined
@@ -33,10 +33,15 @@ export function create_child_part(parent_node: Node | Span, parent_span: Span, c
 
 	function switch_renderable(next: Renderable | null) {
 		if (current_renderable && current_renderable !== next) {
-			const controller = get_controller(current_renderable)
-			if (controller._mounted) {
-				controller._mounted = false
-				controller._unmount_callbacks.forEach(callback => callback?.())
+			const controller = controllers.get(current_renderable)
+			if (controller) {
+				controller._invalidate.delete(switch_renderable)
+
+				// If this was the last instance, call unmount callbacks
+				if (!controller._invalidate.size) {
+					controller._unmount_callbacks.forEach(callback => callback?.())
+					controller._unmount_callbacks.length = 0
+				}
 			}
 		}
 		current_renderable = next
@@ -54,10 +59,8 @@ export function create_child_part(parent_node: Node | Span, parent_span: Span, c
 	} else {
 		let child = parent_node._start
 		for (let i = 0; i < child_index; i++) {
-			{
-				assert(child.nextSibling !== null, 'expected more siblings')
-				assert(child.nextSibling !== parent_node._end, 'ran out of siblings before the end')
-			}
+			assert(child.nextSibling !== null, 'expected more siblings')
+			assert(child.nextSibling !== parent_node._end, 'ran out of siblings before the end')
 			child = child.nextSibling
 		}
 		span = create_span(child)
@@ -68,16 +71,22 @@ export function create_child_part(parent_node: Node | Span, parent_span: Span, c
 		const ends_were_equal = span._parent === parent_span._parent && span._end === parent_span._end
 
 		if (is_renderable(value)) {
+			if (!needs_revalidate && value === current_renderable) return
+			needs_revalidate = false
+
 			switch_renderable(value)
 
 			const renderable = value
 			const controller = get_controller(renderable)
-
-			controller._invalidate = () => {
-				assert(current_renderable === renderable, 'could not invalidate an outdated renderable')
-				update(renderable)
+			// If this is the first mounted instance, call mount callbacks
+			if (!controller._invalidate.size) {
+				controller._unmount_callbacks = controller._mount_callbacks.map(callback => callback())
 			}
-			controller._parent_node = span._parent
+			controller._invalidate.set(switch_renderable, () => {
+				assert(renderable === current_renderable)
+				needs_revalidate = true
+				update(renderable)
+			})
 
 			try {
 				value = renderable.render()
@@ -118,27 +127,31 @@ export function create_child_part(parent_node: Node | Span, parent_span: Span, c
 				const key = get_key(item)
 				let root = (roots[i] ??= create_root_after(end))
 
-				if (key !== undefined && root._key !== key) {
-					const j = roots.findIndex(r => r._key === key)
-					root._key = key
-					if (j !== -1) {
+				if ((key !== undefined && root._key !== key)) {
+					for (let j = i; j < roots.length; j++) {
 						const root1 = root
 						const root2 = roots[j]
 
-						// swap the contents of the spans
-						const tmp_content = extract_contents(root1._span)
-						insert_node(root1._span, extract_contents(root2._span))
-						insert_node(root2._span, tmp_content)
+						if (root2._key === key) {
+							// swap the contents of the spans
+							const tmp_content = extract_contents(root1._span)
+							insert_node(root1._span, extract_contents(root2._span))
+							insert_node(root2._span, tmp_content)
 
-						// swap the spans back
-						const tmp_span = root1._span
-						root1._span = root2._span
-						root2._span = tmp_span
+							// swap the spans back
+							const tmp_span = root1._span
+							root1._span = root2._span
+							root2._span = tmp_span
 
-						// swap the roots
-						roots[j] = root1
-						root = roots[i] = root2
+							// swap the roots
+							roots[j] = root1
+							root = roots[i] = root2
+
+							break
+						}
 					}
+
+					root._key = key
 				}
 
 				root.render(item as Displayable)
@@ -155,14 +168,6 @@ export function create_child_part(parent_node: Node | Span, parent_span: Span, c
 			}
 
 			span._end = end
-
-			if (current_renderable) {
-				const controller = get_controller(current_renderable)
-				if (!controller._mounted) {
-					controller._mounted = true
-					controller._unmount_callbacks = controller._mount_callbacks.map(callback => callback?.())
-				}
-			}
 
 			if (ends_were_equal) parent_span._end = span._end
 
@@ -195,14 +200,6 @@ export function create_child_part(parent_node: Node | Span, parent_span: Span, c
 		}
 
 		old_value = value
-
-		if (current_renderable) {
-			const controller = get_controller(current_renderable)
-			if (!controller._mounted) {
-				controller._mounted = true
-				controller._unmount_callbacks = controller._mount_callbacks.map(callback => callback?.())
-			}
-		}
 
 		if (ends_were_equal) parent_span._end = span._end
 	}

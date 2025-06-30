@@ -1,10 +1,10 @@
 import { mock, test } from 'bun:test'
-import { html, type Renderable } from 'dhtml'
-import { getParentNode, invalidate, onMount, onUnmount } from 'dhtml/client'
+import { html } from 'dhtml'
+import { invalidate, onMount, onUnmount } from 'dhtml/client'
 import assert from 'node:assert/strict'
 import { setup } from './setup.ts'
 
-test('renderables work correctly', async () => {
+test('renderables work correctly', () => {
 	const { root, el } = setup()
 
 	root.render(
@@ -24,13 +24,17 @@ test('renderables work correctly', async () => {
 	}
 	root.render(app)
 	assert.equal(el.innerHTML, 'Count: 0')
+
+	// rerendering a valid renderable should noop:
 	root.render(app)
+	assert.equal(el.innerHTML, 'Count: 0')
+
+	// but invalidating it shouldn't:
+	invalidate(app)
 	assert.equal(el.innerHTML, 'Count: 1')
-	await invalidate(app)
+	invalidate(app)
 	assert.equal(el.innerHTML, 'Count: 2')
-	await invalidate(app)
-	assert.equal(el.innerHTML, 'Count: 3')
-	assert.equal(app.i, 4)
+	assert.equal(app.i, 3)
 })
 
 test('renderables handle undefined correctly', () => {
@@ -93,20 +97,20 @@ test('onMount calls in the right order', () => {
 	outer.show = true
 	root.render(outer)
 	assert.equal(el.innerHTML, 'inner')
-	assert.deepStrictEqual(sequence, ['outer render', 'inner render', 'inner mount', 'outer mount'])
+	assert.deepStrictEqual(sequence, ['outer mount', 'outer render', 'inner mount', 'inner render'])
 	sequence.length = 0
 
 	outer.show = false
-	root.render(outer)
+	invalidate(outer)
 	assert.equal(el.innerHTML, '')
 	assert.deepStrictEqual(sequence, ['outer render', 'inner cleanup'])
 	sequence.length = 0
 
 	outer.show = true
-	root.render(outer)
+	invalidate(outer)
 	assert.equal(el.innerHTML, 'inner')
 	// inner is mounted a second time because of the above cleanup
-	assert.deepStrictEqual(sequence, ['outer render', 'inner render', 'inner mount'])
+	assert.deepStrictEqual(sequence, ['outer render', 'inner mount', 'inner render'])
 	sequence.length = 0
 })
 
@@ -186,28 +190,11 @@ test('onMount registers callbacks outside of render', () => {
 	assert.deepStrictEqual(sequence, [])
 
 	root.render(app)
-	assert.deepStrictEqual(sequence, ['render', 'mount'])
+	assert.deepStrictEqual(sequence, ['mount', 'render'])
 	sequence.length = 0
 
 	root.render(null)
 	assert.deepStrictEqual(sequence, ['cleanup'])
-})
-
-test('onMount can access the dom in callback', () => {
-	const { root } = setup()
-
-	const app = {
-		render() {
-			return html`<p>Hello, world!</p>`
-		},
-	}
-
-	onMount(app, () => {
-		const parent = getParentNode(app) as Element
-		assert(parent.firstElementChild instanceof HTMLParagraphElement)
-	})
-
-	root.render(app)
 })
 
 test('onMount is called immediately on a mounted renderable', () => {
@@ -262,19 +249,19 @@ test('onUnmount deep works correctly', () => {
 	sequence.length = 0
 
 	outer.show = false
-	root.render(outer)
+	invalidate(outer)
 	assert.equal(el.innerHTML, '')
 	assert.deepStrictEqual(sequence, ['outer render', 'inner abort'])
 	sequence.length = 0
 
 	outer.show = true
-	root.render(outer)
+	invalidate(outer)
 	assert.equal(el.innerHTML, 'inner')
 	assert.deepStrictEqual(sequence, ['outer render', 'inner render'])
 	sequence.length = 0
 
 	outer.show = false
-	root.render(outer)
+	invalidate(outer)
 	assert.equal(el.innerHTML, '')
 	assert.deepStrictEqual(sequence, ['outer render', 'inner abort'])
 	sequence.length = 0
@@ -319,19 +306,19 @@ test('onUnmount shallow works correctly', () => {
 	sequence.length = 0
 
 	outer.show = false
-	root.render(outer)
+	invalidate(outer)
 	assert.equal(el.innerHTML, '')
 	assert.deepStrictEqual(sequence, ['outer render', 'inner abort'])
 	sequence.length = 0
 
 	outer.show = true
-	root.render(outer)
+	invalidate(outer)
 	assert.equal(el.innerHTML, 'inner')
 	assert.deepStrictEqual(sequence, ['outer render', 'inner render'])
 	sequence.length = 0
 
 	outer.show = false
-	root.render(outer)
+	invalidate(outer)
 	assert.equal(el.innerHTML, '')
 	assert.deepStrictEqual(sequence, ['outer render', 'inner abort'])
 	sequence.length = 0
@@ -359,7 +346,7 @@ test('onUnmount works externally', async () => {
 
 test('onMount works for repeated mounts', () => {
 	const { root } = setup()
-	let mounted: boolean | null = null
+	let mounted = 0
 
 	const app = {
 		render() {
@@ -367,72 +354,183 @@ test('onMount works for repeated mounts', () => {
 		},
 	}
 	onMount(app, () => {
-		mounted = true
+		mounted++
 		return () => {
-			mounted = false
+			mounted--
 		}
 	})
 
-	assert.equal(mounted, null)
+	assert.equal(mounted, 0)
 
 	for (let i = 0; i < 10; i++) {
 		root.render(app)
-		assert.equal(mounted, true)
+		assert.equal(mounted, 1)
 
 		root.render(null)
-		assert.equal(mounted, false)
+		assert.equal(mounted, 0)
 	}
 })
 
-test('getParentNode works externally', () => {
+test('renderables can be rendered in multiple places at once', () => {
+	const { root: root1, el: el1 } = setup()
+	const { root: root2, el: el2 } = setup()
+
+	let mounted = 0
+
+	const app = {
+		value: 'shared',
+		render() {
+			return this.value
+		},
+	}
+
+	onMount(app, () => {
+		mounted++
+		return () => mounted--
+	})
+
+	// Render in first location
+	root1.render(app)
+	assert.equal(el1.innerHTML, 'shared')
+	assert.equal(mounted, 1)
+
+	// Render in second location - should NOT mount again (mount only called on first mount)
+	root2.render(app)
+	assert.equal(el2.innerHTML, 'shared')
+	assert.equal(mounted, 1) // Still 1, not 2
+
+	// Update the renderable - both should update
+	app.value = 'updated'
+	invalidate(app)
+	assert.equal(el1.innerHTML, 'updated')
+	assert.equal(el2.innerHTML, 'updated')
+
+	// Remove from first location - should NOT unmount yet
+	root1.render(null)
+	assert.equal(mounted, 1) // Still mounted in second location
+	assert.equal(el2.innerHTML, 'updated') // Second location still works
+
+	// Remove from second location - NOW it should unmount
+	root2.render(null)
+	assert.equal(mounted, 0) // Now unmounted
+})
+
+test('renderables can be rendered in multiple places at once with a single root', () => {
 	const { root, el } = setup()
+
+	let mounted = 0
+
+	const thing = {
+		value: 'shared',
+		render() {
+			return this.value
+		},
+	}
+
+	onMount(thing, () => {
+		mounted++
+		return () => mounted--
+	})
+
+	root.render(html`<span>${thing}</span><span>${thing}</span>`)
+
+	assert.equal(mounted, 1)
+	assert.equal(el.innerHTML, '<span>shared</span><span>shared</span>')
+
+	thing.value = 'updated'
+	invalidate(thing)
+	assert.equal(mounted, 1)
+	assert.equal(el.innerHTML, '<span>updated</span><span>updated</span>')
+
+	root.render(null)
+	assert.equal(mounted, 0)
+})
+
+test('invalidating an unmounted renderable does nothing', () => {
+	const { root, el } = setup()
+
+	const app1 = {
+		render() {
+			return 'app1'
+		},
+	}
+
+	const app2 = {
+		render() {
+			return 'app2'
+		},
+	}
+
+	root.render(app1)
+	assert.equal(el.textContent, 'app1')
+
+	root.render(app2)
+	assert.equal(el.textContent, 'app2')
+
+	invalidate(app1)
+	assert.equal(el.textContent, 'app2')
+})
+
+test('invalidate throws error when renderable has not been rendered', () => {
+	const app = {
+		render() {
+			return 'never rendered'
+		},
+	}
+
+	assert.throws(() => invalidate(app), /the renderable has not been rendered/)
+})
+
+test('onMount called on already mounted renderable executes immediately', () => {
+	const { root } = setup()
+
+	let mounted = 0
+	let unmounted = 0
 
 	const app = {
 		render() {
-			return html`<div></div>`
+			return 'app'
 		},
 	}
 
 	root.render(app)
-	assert.equal(el.innerHTML, '<div></div>')
-	assert.equal(getParentNode(app), el)
+
+	onMount(app, () => {
+		mounted++
+		return () => {
+			unmounted++
+		}
+	})
+
+	assert.equal(mounted, 1)
+	assert.equal(unmounted, 0)
+
+	root.render(null)
+	assert.equal(unmounted, 1)
 })
 
-test('getParentNode works internally', () => {
+test('invalidating a parent does not re-render a child', () => {
 	const { root, el } = setup()
 
-	root.render({
+	let renders = 0
+	const child = {
 		render() {
-			return html`<div>${getParentNode(this) === el}</div>`
-		},
-	} satisfies Renderable)
-
-	assert.equal(el.innerHTML, '<div>true</div>')
-})
-
-test('getParentNode handles nesting', () => {
-	const { root, el } = setup()
-
-	const inner = {
-		render() {
-			const parent = getParentNode(this)
-
-			assert(parent instanceof HTMLDivElement)
-			assert.equal((parent as HTMLDivElement).outerHTML, '<div class="the-app"><!----></div>')
-			assert.equal(parent.parentNode, el)
-
-			return null
+			renders++
+			return 'child'
 		},
 	}
 
-	const spy = mock(inner.render)
-	inner.render = spy
-
-	root.render({
+	const parent = {
 		render() {
-			return html`<div class="the-app">${inner}</div>`
+			return child
 		},
-	})
+	}
 
-	assert.equal(spy.mock.calls.length, 1)
+	root.render(parent)
+	assert.equal(el.innerHTML, 'child')
+	assert.equal(renders, 1)
+
+	invalidate(parent)
+	assert.equal(el.innerHTML, 'child')
+	assert.equal(renders, 1)
 })

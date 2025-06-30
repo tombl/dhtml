@@ -1,6 +1,6 @@
 import { test } from 'bun:test'
 import { html, type Displayable } from 'dhtml'
-import { keyed } from 'dhtml/client'
+import { invalidate, keyed } from 'dhtml/client'
 import assert from 'node:assert/strict'
 import { setup } from './setup.ts'
 
@@ -183,7 +183,7 @@ test('list can disappear when condition changes', () => {
 	assert.equal(el.innerHTML, '<div>1</div><div>2</div><div>3</div>')
 
 	app.show = false
-	root.render(app)
+	invalidate(app)
 	assert.equal(el.innerHTML, '')
 })
 
@@ -336,4 +336,18 @@ test('many items can be reordered', () => {
 dev_test('keying something twice throws an error', () => {
 	assert.doesNotThrow(() => keyed(html``, 1))
 	assert.throws(() => keyed(keyed(html``, 1), 1))
+})
+
+test('can render the same item multiple times', () => {
+	const { root, el } = setup()
+
+	const item = html`<p>Item</p>`
+	root.render([item, item])
+	assert.equal(el.innerHTML, '<p>Item</p><p>Item</p>')
+
+	root.render([item, item, item])
+	assert.equal(el.innerHTML, '<p>Item</p><p>Item</p><p>Item</p>')
+
+	root.render([item, item])
+	assert.equal(el.innerHTML, '<p>Item</p><p>Item</p>')
 })
