@@ -10,7 +10,6 @@ export interface Controller {
 	_unmount_callbacks: Cleanup[]
 
 	_invalidate?: () => void
-	_parent_node?: Node
 }
 
 const controllers: WeakMap<Renderable, Controller> = new WeakMap()
@@ -49,12 +48,6 @@ export function onMount(renderable: Renderable, callback: () => Cleanup): void {
 
 export function onUnmount(renderable: Renderable, callback: () => void): void {
 	onMount(renderable, () => callback)
-}
-
-export function getParentNode(renderable: Renderable): Node {
-	const controller = get_controller(renderable)
-	assert(controller._parent_node, 'the renderable has not been rendered')
-	return controller._parent_node
 }
 
 export function keyed<T extends Displayable & object>(displayable: T, key: Key): T {

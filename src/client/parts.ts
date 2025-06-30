@@ -1,4 +1,3 @@
-
 import {
 	assert,
 	is_html,
@@ -77,7 +76,6 @@ export function create_child_part(parent_node: Node | Span, parent_span: Span, c
 				assert(current_renderable === renderable, 'could not invalidate an outdated renderable')
 				update(renderable)
 			}
-			controller._parent_node = span._parent
 
 			try {
 				value = renderable.render()

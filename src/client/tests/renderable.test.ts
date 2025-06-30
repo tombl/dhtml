@@ -1,6 +1,6 @@
 import { mock, test } from 'bun:test'
-import { html, type Renderable } from 'dhtml'
-import { getParentNode, invalidate, onMount, onUnmount } from 'dhtml/client'
+import { html } from 'dhtml'
+import { invalidate, onMount, onUnmount } from 'dhtml/client'
 import assert from 'node:assert/strict'
 import { setup } from './setup.ts'
 
@@ -193,23 +193,6 @@ test('onMount registers callbacks outside of render', () => {
 	assert.deepStrictEqual(sequence, ['cleanup'])
 })
 
-test('onMount can access the dom in callback', () => {
-	const { root } = setup()
-
-	const app = {
-		render() {
-			return html`<p>Hello, world!</p>`
-		},
-	}
-
-	onMount(app, () => {
-		const parent = getParentNode(app) as Element
-		assert(parent.firstElementChild instanceof HTMLParagraphElement)
-	})
-
-	root.render(app)
-})
-
 test('onMount is called immediately on a mounted renderable', () => {
 	const { root } = setup()
 
@@ -382,57 +365,4 @@ test('onMount works for repeated mounts', () => {
 		root.render(null)
 		assert.equal(mounted, false)
 	}
-})
-
-test('getParentNode works externally', () => {
-	const { root, el } = setup()
-
-	const app = {
-		render() {
-			return html`<div></div>`
-		},
-	}
-
-	root.render(app)
-	assert.equal(el.innerHTML, '<div></div>')
-	assert.equal(getParentNode(app), el)
-})
-
-test('getParentNode works internally', () => {
-	const { root, el } = setup()
-
-	root.render({
-		render() {
-			return html`<div>${getParentNode(this) === el}</div>`
-		},
-	} satisfies Renderable)
-
-	assert.equal(el.innerHTML, '<div>true</div>')
-})
-
-test('getParentNode handles nesting', () => {
-	const { root, el } = setup()
-
-	const inner = {
-		render() {
-			const parent = getParentNode(this)
-
-			assert(parent instanceof HTMLDivElement)
-			assert.equal((parent as HTMLDivElement).outerHTML, '<div class="the-app"><!----></div>')
-			assert.equal(parent.parentNode, el)
-
-			return null
-		},
-	}
-
-	const spy = mock(inner.render)
-	inner.render = spy
-
-	root.render({
-		render() {
-			return html`<div class="the-app">${inner}</div>`
-		},
-	})
-
-	assert.equal(spy.mock.calls.length, 1)
 })
