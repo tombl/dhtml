@@ -128,7 +128,7 @@ export function create_child_part(parent_node: Node | Span, parent_span: Span, c
 				let root = (roots[i] ??= create_root_after(end))
 
 				if (key !== undefined && root._key !== key) {
-					const j = roots.findIndex(r => r._key === key)
+					const j = roots.findIndex((r, k) => k >= i && r._key === key)
 					root._key = key
 					if (j !== -1) {
 						const root1 = root
