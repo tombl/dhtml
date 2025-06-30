@@ -2,6 +2,7 @@
 /// <reference types="bun-types" />
 
 import { html } from 'dhtml'
+import { invalidate } from 'dhtml/client'
 import { bench, run } from 'mitata'
 import { setup } from './setup.ts'
 
@@ -38,6 +39,7 @@ class TableState {
 	activate(nth: number) {
 		for (let i = 0; i < this.items.length; i++) {
 			this.items[i].active = (i + 1) % nth === 0
+			invalidate(this.items[i])
 		}
 	}
 
@@ -102,6 +104,7 @@ class AnimState {
 		for (let i = 0; i < this.items.length; i++) {
 			if ((i + 1) % nth === 0) {
 				this.items[i].time++
+				invalidate(this.items[i])
 			}
 		}
 	}
@@ -176,6 +179,7 @@ class TreeState {
 						reverse_children(child)
 					}
 				}
+				invalidate(node)
 			}
 		}
 
@@ -196,6 +200,7 @@ class TreeState {
 						insert_at_containers(child, id_counter)
 					}
 				}
+				invalidate(node)
 			}
 		}
 
@@ -230,6 +235,7 @@ class TreeState {
 						insert_at_containers(child, id_counter)
 					}
 				}
+				invalidate(node)
 			}
 		}
 
@@ -260,6 +266,8 @@ class TreeState {
 						remove_from_containers(child)
 					}
 				}
+
+				invalidate(node)
 			}
 		}
 
@@ -277,6 +285,8 @@ class TreeState {
 						remove_from_containers(child)
 					}
 				}
+
+				invalidate(node)
 			}
 		}
 
@@ -295,6 +305,8 @@ class TreeState {
 						move_in_containers(child)
 					}
 				}
+
+				invalidate(node)
 			}
 		}
 
@@ -312,6 +324,8 @@ class TreeState {
 						move_in_containers(child)
 					}
 				}
+
+				invalidate(node)
 			}
 		}
 
@@ -339,6 +353,8 @@ class TreeState {
 						transform(child)
 					}
 				}
+
+				invalidate(node)
 			}
 		}
 
@@ -400,7 +416,7 @@ bench('table/small/removeAll', () => {
 	const state = new TableState(15, 4)
 	root.render(state)
 	state.remove_all()
-	root.render(state)
+	invalidate(state)
 })
 
 bench('table/small/sort', () => {
@@ -408,7 +424,7 @@ bench('table/small/sort', () => {
 	const state = new TableState(15, 4)
 	root.render(state)
 	state.sort_by_column(1)
-	root.render(state)
+	invalidate(state)
 })
 
 bench('table/small/filter', () => {
@@ -416,7 +432,7 @@ bench('table/small/filter', () => {
 	const state = new TableState(15, 4)
 	root.render(state)
 	state.filter(4)
-	root.render(state)
+	invalidate(state)
 })
 
 bench('table/small/activate', () => {
@@ -424,7 +440,7 @@ bench('table/small/activate', () => {
 	const state = new TableState(15, 4)
 	root.render(state)
 	state.activate(4)
-	root.render(state)
+	invalidate(state)
 })
 
 bench('table/large/render', () => {
@@ -438,7 +454,7 @@ bench('table/large/removeAll', () => {
 	const state = new TableState(100, 4)
 	root.render(state)
 	state.remove_all()
-	root.render(state)
+	invalidate(state)
 })
 
 bench('table/large/sort', () => {
@@ -446,7 +462,7 @@ bench('table/large/sort', () => {
 	const state = new TableState(100, 4)
 	root.render(state)
 	state.sort_by_column(1)
-	root.render(state)
+	invalidate(state)
 })
 
 bench('table/large/filter', () => {
@@ -454,7 +470,7 @@ bench('table/large/filter', () => {
 	const state = new TableState(100, 4)
 	root.render(state)
 	state.filter(16)
-	root.render(state)
+	invalidate(state)
 })
 
 bench('table/large/activate', () => {
@@ -462,7 +478,7 @@ bench('table/large/activate', () => {
 	const state = new TableState(100, 4)
 	root.render(state)
 	state.activate(16)
-	root.render(state)
+	invalidate(state)
 })
 
 // Animation Benchmark Cases
@@ -471,7 +487,7 @@ bench('anim/small/advance', () => {
 	const state = new AnimState(30)
 	root.render(state)
 	state.advance_each(4)
-	root.render(state)
+	invalidate(state)
 })
 
 bench('anim/large/advance', () => {
@@ -479,7 +495,7 @@ bench('anim/large/advance', () => {
 	const state = new AnimState(100)
 	root.render(state)
 	state.advance_each(16)
-	root.render(state)
+	invalidate(state)
 })
 
 // Tree Benchmark Cases - Small
@@ -494,7 +510,7 @@ bench('tree/small/removeAll', () => {
 	const state = new TreeState([5, 10])
 	root.render(state)
 	state.remove_all()
-	root.render(state)
+	invalidate(state)
 })
 
 bench('tree/small/reverse', () => {
@@ -502,7 +518,7 @@ bench('tree/small/reverse', () => {
 	const state = new TreeState([5, 10])
 	root.render(state)
 	state.reverse()
-	root.render(state)
+	invalidate(state)
 })
 
 bench('tree/small/insertFirst', () => {
@@ -510,7 +526,7 @@ bench('tree/small/insertFirst', () => {
 	const state = new TreeState([5, 10])
 	root.render(state)
 	state.insert_first(2)
-	root.render(state)
+	invalidate(state)
 })
 
 bench('tree/small/insertLast', () => {
@@ -518,7 +534,7 @@ bench('tree/small/insertLast', () => {
 	const state = new TreeState([5, 10])
 	root.render(state)
 	state.insert_last(2)
-	root.render(state)
+	invalidate(state)
 })
 
 bench('tree/small/removeFirst', () => {
@@ -526,7 +542,7 @@ bench('tree/small/removeFirst', () => {
 	const state = new TreeState([5, 10])
 	root.render(state)
 	state.remove_first(2)
-	root.render(state)
+	invalidate(state)
 })
 
 bench('tree/small/removeLast', () => {
@@ -534,7 +550,7 @@ bench('tree/small/removeLast', () => {
 	const state = new TreeState([5, 10])
 	root.render(state)
 	state.remove_last(2)
-	root.render(state)
+	invalidate(state)
 })
 
 bench('tree/small/moveFromEndToStart', () => {
@@ -542,7 +558,7 @@ bench('tree/small/moveFromEndToStart', () => {
 	const state = new TreeState([5, 10])
 	root.render(state)
 	state.move_from_end_to_start(2)
-	root.render(state)
+	invalidate(state)
 })
 
 bench('tree/small/moveFromStartToEnd', () => {
@@ -550,14 +566,14 @@ bench('tree/small/moveFromStartToEnd', () => {
 	const state = new TreeState([5, 10])
 	root.render(state)
 	state.move_from_start_to_end(2)
-	root.render(state)
+	invalidate(state)
 })
 
 bench('tree/small/no_change', () => {
 	const { root } = setup()
 	const state = new TreeState([5, 10])
 	root.render(state)
-	root.render(state)
+	invalidate(state)
 })
 
 // Tree Benchmark Cases - Large
@@ -572,7 +588,7 @@ bench('tree/large/removeAll', () => {
 	const state = new TreeState([50, 10])
 	root.render(state)
 	state.remove_all()
-	root.render(state)
+	invalidate(state)
 })
 
 bench('tree/large/reverse', () => {
@@ -580,7 +596,7 @@ bench('tree/large/reverse', () => {
 	const state = new TreeState([50, 10])
 	root.render(state)
 	state.reverse()
-	root.render(state)
+	invalidate(state)
 })
 
 // Worst Case Scenarios
@@ -589,7 +605,7 @@ bench('tree/worst_case/kivi', () => {
 	const state = new TreeState([10, 10])
 	root.render(state)
 	state.kivi_worst_case()
-	root.render(state)
+	invalidate(state)
 })
 
 bench('tree/worst_case/snabbdom', () => {
@@ -597,7 +613,7 @@ bench('tree/worst_case/snabbdom', () => {
 	const state = new TreeState([10, 10])
 	root.render(state)
 	state.snabbdom_worst_case()
-	root.render(state)
+	invalidate(state)
 })
 
 bench('tree/worst_case/react', () => {
@@ -605,7 +621,7 @@ bench('tree/worst_case/react', () => {
 	const state = new TreeState([10, 10])
 	root.render(state)
 	state.react_worst_case()
-	root.render(state)
+	invalidate(state)
 })
 
 bench('tree/worst_case/virtual_dom', () => {
@@ -613,7 +629,7 @@ bench('tree/worst_case/virtual_dom', () => {
 	const state = new TreeState([10, 10])
 	root.render(state)
 	state.virtual_dom_worst_case()
-	root.render(state)
+	invalidate(state)
 })
 
 const { benchmarks } = await run()
