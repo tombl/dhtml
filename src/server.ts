@@ -210,28 +210,3 @@ export function renderToReadableStream(value: Displayable): ReadableStream<Uint8
 		},
 	}).pipeThrough(new TextEncoderStream())
 }
-
-// {
-// 	const displayable = html`
-// 		<!-- ${'z'} -->
-// 		<p>a${'text'}b</p>
-// 		<a href=${'attr'} onclick=${() => {}}></a>
-// 		<button ${() => 'directive'}>but</button>
-// 		<script>
-// 			;<span>z</span>
-// 		</script>
-// 		${{
-// 			render() {
-// 				return html`<div>${[1, 2, 3]}</div>`
-// 			},
-// 		}}
-// 		${html`[${'A'}|${'B'}]`}
-// 	`
-
-// 	const stream = renderToReadableStream(displayable).pipeThrough(new TextEncoderStream())
-
-// 	new Response(stream).text().then(rendered => {
-// 		console.log(rendered)
-// 		console.log(rendered === renderToString(displayable))
-// 	})
-// }
