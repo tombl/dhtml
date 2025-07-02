@@ -1,8 +1,8 @@
+import type { App } from '#app'
+import * as db from '#db'
+import { type Query, createSubscribedQuery } from '#util/query.ts'
+import { createRecycler } from '#util/recycle.ts'
 import { html } from 'dhtml'
-import type { App } from '~/app'
-import * as db from '~/db'
-import { type Query, createSubscribedQuery } from '~/util/query'
-import { createRecycler } from '~/util/recycle'
 import { Column } from './column'
 import { text } from './text'
 

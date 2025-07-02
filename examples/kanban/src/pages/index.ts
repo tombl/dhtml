@@ -1,7 +1,7 @@
+import type { App, PageContext } from '#app'
+import * as db from '#db'
+import { type Query, createSubscribedQuery } from '#util/query.ts'
 import { html } from 'dhtml'
-import type { App, PageContext } from '~/app'
-import * as db from '~/db'
-import { type Query, createSubscribedQuery } from '~/util/query'
 
 export default class Page {
 	#app: App

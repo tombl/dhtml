@@ -1,4 +1,4 @@
-import type { App } from '~/app.ts'
+import type { App } from '#app'
 import { unwrap } from './database.ts'
 import type { Column, ID } from './index.ts'
 
