@@ -46,17 +46,17 @@ function compile_template(statics: TemplateStringsArray): CompiledTemplate {
 
 				attribname = [start, end]
 			},
-			onattribdata(start, end) {
+			onattribdata(start_value, end_value) {
 				assert(attribname)
 
-				const [nameStart, nameEnd] = attribname
-				const name = html.slice(nameStart, nameEnd)
-				const value = html.slice(start, end)
+				const [start_name, end_name] = attribname
+				const name = html.slice(start_name, end_name)
+				const value = html.slice(start_value, end_value)
 
 				const match = value.match(DYNAMIC_WHOLE)
 				if (match) {
 					const idx = parseInt(match[1])
-					parts.push({ start: nameStart, end, render: values => render_attribute(name, values[idx]) })
+					parts.push({ start: start_name, end: end_value, render: values => render_attribute(name, values[idx]) })
 					return
 				}
 
@@ -214,7 +214,7 @@ export function renderToString(value: Displayable): string {
 }
 
 export function renderToReadableStream(value: Displayable): ReadableStream {
-	const iter = render_to_iterable(value)[Symbol.iterator]()
+	const iter = render_to_iterable(value)
 	return new ReadableStream({
 		pull(controller) {
 			const { done, value } = iter.next()
@@ -226,28 +226,3 @@ export function renderToReadableStream(value: Displayable): ReadableStream {
 		},
 	})
 }
-
-// {
-// 	const displayable = html`
-// 		<!-- ${'z'} -->
-// 		<p>a${'text'}b</p>
-// 		<a href=${'attr'} onclick=${() => {}}></a>
-// 		<button ${() => 'directive'}>but</button>
-// 		<script>
-// 			;<span>z</span>
-// 		</script>
-// 		${{
-// 			render() {
-// 				return html`<div>${[1, 2, 3]}</div>`
-// 			},
-// 		}}
-// 		${html`[${'A'}|${'B'}]`}
-// 	`
-
-// 	const stream = renderToReadableStream(displayable).pipeThrough(new TextEncoderStream())
-
-// 	new Response(stream).text().then(rendered => {
-// 		console.log(rendered)
-// 		console.log(rendered === renderToString(displayable))
-// 	})
-// }
