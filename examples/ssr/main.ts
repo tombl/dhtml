@@ -1,5 +1,6 @@
 import { serve } from '@hono/node-server'
 import { serveStatic } from '@hono/node-server/serve-static'
+import { transformSync } from 'amaro'
 import { html } from 'dhtml'
 import { renderToString } from 'dhtml/server'
 import { Hono } from 'hono'
@@ -7,6 +8,15 @@ import { Hono } from 'hono'
 const app = new Hono()
 
 app.use('/node_modules/*', serveStatic({ root: './' }))
+
+app.get('/app/:script{.+.ts}', async (c, next) => {
+	await next()
+	const { code } = transformSync(await c.res.text(), { mode: 'strip-only' })
+	c.res = c.body(code)
+	c.res.headers.set('content-type', 'text/javascript')
+	c.res.headers.delete('content-length')
+})
+app.get('/app/*', serveStatic())
 
 app.get('/example', c =>
 	c.html(
@@ -27,20 +37,25 @@ app.get('/example', c =>
 		`),
 	),
 )
-app.get('/', c =>
+app.get('/', async c =>
 	c.html(
 		renderToString(html`
 			<!doctype html>
 			<html>
 				<head>
 					<title>dhtml ssr</title>
+					<script type="importmap">
+						{
+							"imports": {
+								"dhtml": "/node_modules/dhtml/index.js",
+								"dhtml/client": "/node_modules/dhtml/client.js"
+							}
+						}
+					</script>
 				</head>
 				<body>
-					<script type="module">
-						import { html } from '/node_modules/dhtml/index.js'
-						import { createRoot } from '/node_modules/dhtml/client.js'
-						createRoot(document.body).render(html\`<div>Hello, world!</div>\`)
-					</script>
+					${(await import('./app/main.ts')).app}
+					<script type="module" src="/app/main.ts"></script>
 				</body>
 			</html>
 		`),
