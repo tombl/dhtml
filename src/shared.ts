@@ -10,7 +10,7 @@ export interface ToString {
 	toString(): string
 }
 
-export type Displayable = null | undefined | ToString | Node | Renderable | Iterable<Displayable> | HTML
+export type Displayable = null | undefined | ToString | Node | Renderable | Iterable<Displayable> | HTML | Keyed
 export interface Renderable {
 	render(): Displayable
 }
@@ -35,4 +35,16 @@ export function is_html(value: any): value is HTML {
 
 export function single_part_template(part: Displayable): HTML {
 	return html`${part}`
+}
+
+export type Key = string | number | bigint | boolean | symbol | object | null
+export interface Keyed {
+	[keyed_tag]: true
+	/** @internal */ _key: Key
+	/** @internal */ _displayable: Displayable
+}
+
+export const keyed_tag: unique symbol = Symbol()
+export function is_keyed(value: any): value is Keyed {
+	return typeof value === 'object' && value !== null && keyed_tag in value
 }
