@@ -2,12 +2,13 @@ import {
 	assert,
 	is_html,
 	is_iterable,
+	is_keyed,
 	is_renderable,
 	single_part_template,
 	type Displayable,
 	type Renderable,
 } from '../shared.ts'
-import { controllers, get_controller, get_key } from './controller.ts'
+import { controllers, get_controller } from './controller.ts'
 import { create_root, create_root_after, type Root } from './root.ts'
 import { create_span, delete_contents, extract_contents, insert_node, type Span } from './span.ts'
 import type { Cleanup } from './util.ts'
@@ -70,6 +71,8 @@ export function create_child_part(parent_node: Node | Span, parent_span: Span, c
 		assert(span)
 		const ends_were_equal = span._parent === parent_span._parent && span._end === parent_span._end
 
+		if (is_keyed(value)) value = value._displayable
+
 		if (is_renderable(value)) {
 			if (!needs_revalidate && value === current_renderable) return
 			needs_revalidate = false
@@ -124,10 +127,10 @@ export function create_child_part(parent_node: Node | Span, parent_span: Span, c
 			let i = 0
 			let end = span._start
 			for (const item of value) {
-				const key = get_key(item)
+				const key = is_keyed(item) ? item._key : item
 				let root = (roots[i] ??= create_root_after(end))
 
-				if ((key !== undefined && root._key !== key)) {
+				if (key !== undefined && root._key !== key) {
 					for (let j = i; j < roots.length; j++) {
 						const root1 = root
 						const root2 = roots[j]
