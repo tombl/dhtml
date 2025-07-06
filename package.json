@@ -9,6 +9,7 @@
 	"scripts": {
 		"postinstall": "patch-package",
 		"build": "node build.js",
+		"build:watch": "node --watch build.js --watch",
 		"format": "prettier --write . --cache",
 		"check": "tsc",
 		"test": "bun test --coverage --define __DEV__=true",

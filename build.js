@@ -1,10 +1,17 @@
 import MagicString from 'magic-string'
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { parseArgs, styleText } from 'node:util'
 import { brotliCompressSync, gzipSync } from 'node:zlib'
-import { build } from 'rolldown'
+import * as rolldown from 'rolldown'
 import { dts } from 'rolldown-plugin-dts'
 import { minify_sync } from 'terser'
 import { walk } from 'zimmerframe'
+
+const args = parseArgs({
+	options: {
+		watch: { type: 'boolean', short: 'w', default: false },
+	},
+})
 
 await rm('dist', { recursive: true, force: true })
 await mkdir('dist')
@@ -50,6 +57,39 @@ async function bundle_code() {
 		},
 	}
 
+	/** @type {Record<string, number>} */
+	const old_sizes = {}
+	/** @type {import('rolldown').Plugin} */
+	const print_size_plugin = {
+		name: 'print-size',
+		generateBundle(_options, bundle) {
+			for (const [name, file] of Object.entries(bundle)) {
+				if (file.type === 'asset') continue
+				const normal = file.code.length
+				const gzip = gzipSync(file.code).length
+				const brotli = brotliCompressSync(file.code).length
+
+				const line = [
+					name.padEnd(14),
+					normal.toString().padStart(8),
+					gzip.toString().padStart(8),
+					brotli.toString().padStart(8),
+				]
+				if (name in old_sizes) {
+					const old = old_sizes[name]
+					const diff = brotli - old
+					if (diff !== 0) {
+						line.push(`${diff > 0 ? '+' : '-'}${Math.abs(diff)}`)
+						console.log(line.join(' '))
+					}
+				} else {
+					console.log(line.join(' '))
+				}
+				old_sizes[name] = brotli
+			}
+		},
+	}
+
 	/** @returns {import('rolldown').BuildOptions} */
 	function define_bundle(env) {
 		const input = {
@@ -69,6 +109,7 @@ async function bundle_code() {
 				minify: !is_dev,
 				plugins: [!is_dev && terser_plugin],
 				sourcemap: is_dev ? true : 'hidden',
+				plugins: [print_size_plugin],
 			},
 			define: {
 				__DEV__: JSON.stringify(is_dev),
@@ -76,24 +117,10 @@ async function bundle_code() {
 		}
 	}
 
-	const bundles = await build([define_bundle('dev'), define_bundle('prod')])
-
-	console.table(
-		Object.fromEntries(
-			bundles.flatMap(bundle =>
-				bundle.output
-					.filter(file => file.code)
-					.map(file => [
-						file.fileName,
-						{
-							normal: file.code.length,
-							gzip: gzipSync(file.code).length,
-							brotli: brotliCompressSync(file.code).length,
-						},
-					]),
-			),
-		),
+	console.log(
+		styleText(['bold'], ['name'.padEnd(14), 'size'.padStart(8), 'gzip'.padStart(8), 'brotli'.padStart(8)].join(' ')),
 	)
+	await (args.values.watch ? rolldown.watch : rolldown.build)([define_bundle('dev'), define_bundle('prod')])
 }
 
 async function write_package_json() {
@@ -102,6 +129,7 @@ async function write_package_json() {
 	delete pkg.scripts
 	delete pkg.devDependencies
 	delete pkg.prettier
+	delete pkg.workspaces
 	;(function walk(exports) {
 		if (typeof exports === 'string') {
 			if (exports.startsWith('./src/')) exports = exports.slice('./src/'.length)
