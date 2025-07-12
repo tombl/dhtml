@@ -7,7 +7,7 @@ import {
 	type Part,
 } from './parts.ts'
 import type { Span } from './span.ts'
-import { is_comment, is_document_fragment, is_element, is_text } from './util.ts'
+import { is_comment, is_document_fragment, is_element } from './util.ts'
 
 export interface CompiledTemplate {
 	_content: DocumentFragment
@@ -15,9 +15,30 @@ export interface CompiledTemplate {
 	_root_parts: number[]
 }
 
-const DYNAMIC_WHOLE = /^dyn-\$(\d+)\$$/i
-const DYNAMIC_GLOBAL = /dyn-\$(\d+)\$/gi
+const DYNAMIC_WHOLE_INNER = /^dyn(\d+)$/
+const DYNAMIC_WHOLE = /^<!--dyn(\d+)-->$/
+const DYNAMIC_GLOBAL = /<!--dyn(\d+)-->/g
 const FORCE_ATTRIBUTES = /-|^class$|^for$/i
+
+function generate_html(statics: TemplateStringsArray) {
+	let s = ''
+
+	for (let i = 0; i < statics.length - 1; i++) {
+		let unquoted = false
+		s += statics[i]
+
+		if (s[s.length - 1] === '=') {
+			unquoted = true
+		}
+
+		if (unquoted) s += '"'
+		s += `<!--dyn${i}-->`
+		if (unquoted) s += '"'
+	}
+	s += statics[statics.length - 1]
+
+	return s
+}
 
 const templates: WeakMap<TemplateStringsArray, CompiledTemplate> = new WeakMap()
 export function compile_template(statics: TemplateStringsArray): CompiledTemplate {
@@ -25,7 +46,7 @@ export function compile_template(statics: TemplateStringsArray): CompiledTemplat
 	if (cached) return cached
 
 	const template_element = document.createElement('template')
-	template_element.innerHTML = statics.reduce((a, v, i) => a + v + (i === statics.length - 1 ? '' : `dyn-$${i}$`), '')
+	template_element.innerHTML = generate_html(statics)
 
 	let next_part = 0
 
@@ -48,25 +69,15 @@ export function compile_template(statics: TemplateStringsArray): CompiledTemplat
 		compiled._parts[next_part++] = [idx, create_part]
 	}
 
-	const walker = document.createTreeWalker(template_element.content, __DEV__ ? 133 : 5)
-	assert((NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT | NodeFilter.SHOW_COMMENT) === 133)
-	assert((NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT) === 5)
+	const walker = document.createTreeWalker(template_element.content, 129)
+	assert((NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_COMMENT) === 129)
 
 	// stop iterating once we've hit the last part, but if we're in dev mode, keep going to check for mistakes.
 	while ((next_part < compiled._parts.length || __DEV__) && walker.nextNode()) {
 		const node = walker.currentNode
-		if (is_text(node)) {
-			// reverse the order because we'll be supplying ChildPart with its index in the parent node.
-			// and if we apply the parts forwards, indicies will be wrong if some prior part renders more than one node.
-			// also reverse it because that's the correct order for splitting.
-			const nodes = [...node.data.matchAll(DYNAMIC_GLOBAL)].reverse().map(match => {
-				node.splitText(match.index + match[0].length)
-				const dyn = new Comment()
-				node.splitText(match.index).replaceWith(dyn)
-				return [dyn, parseInt(match[1])] as const
-			})
-
-			if (nodes.length) {
+		if (is_comment(node)) {
+			const match = DYNAMIC_WHOLE_INNER.exec(node.data)
+			if (match !== null) {
 				const parent_node = node.parentNode
 				assert(parent_node !== null, 'all text nodes should have a parent node')
 				assert(
@@ -74,19 +85,8 @@ export function compile_template(statics: TemplateStringsArray): CompiledTemplat
 						parent_node instanceof HTMLElement ||
 						parent_node instanceof SVGElement,
 				)
-				let siblings = [...parent_node.childNodes]
-				for (const [node, idx] of nodes) {
-					const child = siblings.indexOf(node)
-					patch(parent_node, idx, (node, span) => create_child_part(node, span, child))
-				}
-			}
-		} else if (__DEV__ && is_comment(node)) {
-			// just in dev, stub out a fake part for every interpolation in a comment.
-			// this means you can comment out code inside a template and not run into
-			// issues with incorrect part counts.
-			// in production the check is skipped, so we can also skip this.
-			for (const _match of node.data.matchAll(DYNAMIC_GLOBAL)) {
-				compiled._parts[next_part++] = [parseInt(_match[1]), () => () => {}]
+				const child = [...parent_node.childNodes].indexOf(node)
+				patch(parent_node, parseInt(match[1]), (node, span) => create_child_part(node, span, child))
 			}
 		} else {
 			assert(is_element(node))

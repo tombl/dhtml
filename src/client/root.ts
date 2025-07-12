@@ -43,10 +43,9 @@ export function create_root(span: Span): Root {
 			const { _dynamics: dynamics, _statics: statics } = is_html(value) ? value : single_part_template(value)
 			const template = compile_template(statics)
 
-			assert(
-				template._parts.length === dynamics.length,
-				'expected the same number of dynamics as parts. do you have a ${...} in an unsupported place?',
-			)
+			if (__DEV__ && template._parts.length !== dynamics.length) {
+				console.warn('expected the same number of dynamics as parts. do you have a ${...} in an unsupported place?', value)
+			}
 
 			if (old_template !== template) {
 				detach()
