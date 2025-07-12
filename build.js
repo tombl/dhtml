@@ -107,9 +107,8 @@ async function bundle_code() {
 				entryFileNames: is_dev ? '[name].js' : '[name].min.js',
 				chunkFileNames: is_dev ? '[name].js' : '[name].min.js',
 				minify: !is_dev,
-				plugins: [!is_dev && terser_plugin],
 				sourcemap: is_dev ? true : 'hidden',
-				plugins: [print_size_plugin],
+				plugins: [!is_dev && terser_plugin, print_size_plugin],
 			},
 			define: {
 				__DEV__: JSON.stringify(is_dev),
