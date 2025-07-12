@@ -24,8 +24,16 @@ function generate_html(statics: TemplateStringsArray) {
 	let s = ''
 
 	for (let i = 0; i < statics.length - 1; i++) {
+		let unquoted = false
 		s += statics[i]
+
+		if (s[s.length - 1] === '=') {
+			unquoted = true
+		}
+
+		if (unquoted) s += '"'
 		s += `<!--dyn${i}-->`
+		if (unquoted) s += '"'
 	}
 	s += statics[statics.length - 1]
 

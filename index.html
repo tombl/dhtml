@@ -13,7 +13,7 @@
 			const root = createRoot(document.body)
 			Object.assign(globalThis, { createRoot, html, root })
 
-			const url = ({ href }) => html`<a href="${href}">${href}</a>`
+			const url = ({ href }) => html`<a href=${href}>${href}</a>`
 
 			root.render({
 				i: 0,
@@ -54,10 +54,10 @@ createRoot(document.body).render(app)`,
 								]}</pre
 							>
 							<button
-								onclick="${() => {
+								onclick=${() => {
 									this.i++
 									invalidate(this)
-								}}"
+								}}
 							>
 								Count: ${this.i}
 							</button>
