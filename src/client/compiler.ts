@@ -11,7 +11,7 @@ import { is_comment, is_document_fragment, is_element, is_text } from './util.ts
 
 export interface CompiledTemplate {
 	_content: DocumentFragment
-	_parts: [idx: number, createPart: (node: Node | Span, span: Span) => Part][]
+	_parts: [idx: number, create_part: (node: Node | Span, span: Span) => Part][]
 	_root_parts: number[]
 }
 

@@ -74,9 +74,9 @@ export function create_root(span: Span): Root {
 				delete_contents(span)
 				insert_node(span, doc)
 
-				parts = template._parts.map(([dynamic_index, createPart], element_index) => [
+				parts = template._parts.map(([dynamic_index, create_part], element_index) => [
 					dynamic_index,
-					createPart(node_by_part[element_index], span),
+					create_part(node_by_part[element_index], span),
 				])
 			}
 
