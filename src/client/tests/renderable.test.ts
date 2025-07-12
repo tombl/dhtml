@@ -4,6 +4,8 @@ import { invalidate, onMount, onUnmount } from 'dhtml/client'
 import assert from 'node:assert/strict'
 import { setup } from './setup.ts'
 
+const dev_test = test.skipIf(!__DEV__)
+
 test('renderables work correctly', () => {
 	const { root, el } = setup()
 
@@ -471,7 +473,7 @@ test('invalidating an unmounted renderable does nothing', () => {
 	assert.equal(el.textContent, 'app2')
 })
 
-test('invalidate throws error when renderable has not been rendered', () => {
+dev_test('invalidate throws error when renderable has not been rendered', () => {
 	const app = {
 		render() {
 			return 'never rendered'

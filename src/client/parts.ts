@@ -68,6 +68,7 @@ export function create_child_part(parent_node: Node | Span, parent_span: Span, c
 
 	return function update(value) {
 		assert(span)
+		const starts_were_equal = span._parent === parent_span._parent && span._start === parent_span._start
 		const ends_were_equal = span._parent === parent_span._parent && span._end === parent_span._end
 
 		if (is_renderable(value)) {
@@ -127,7 +128,7 @@ export function create_child_part(parent_node: Node | Span, parent_span: Span, c
 				const key = get_key(item)
 				let root = (roots[i] ??= create_root_after(end))
 
-				if ((key !== undefined && root._key !== key)) {
+				if (key !== undefined && root._key !== key) {
 					for (let j = i; j < roots.length; j++) {
 						const root1 = root
 						const root2 = roots[j]
@@ -169,6 +170,7 @@ export function create_child_part(parent_node: Node | Span, parent_span: Span, c
 
 			span._end = end
 
+			if (starts_were_equal) parent_span._start = span._start
 			if (ends_were_equal) parent_span._end = span._end
 
 			return
@@ -201,6 +203,7 @@ export function create_child_part(parent_node: Node | Span, parent_span: Span, c
 
 		old_value = value
 
+		if (starts_were_equal) parent_span._start = span._start
 		if (ends_were_equal) parent_span._end = span._end
 	}
 }

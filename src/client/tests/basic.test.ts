@@ -139,7 +139,7 @@ test('errors are thrown cleanly', () => {
 	assert.equal(thrown, oops)
 
 	// on an error, don't leave any visible artifacts
-	assert.equal(el.innerHTML, '<!---->')
+	assert.equal(el.innerHTML, '<!--dyn-$0$-->')
 })
 
 dev_test('invalid part placement raises error', () => {
@@ -151,19 +151,15 @@ dev_test('invalid part placement raises error', () => {
 	assert.equal(el.innerHTML, '')
 })
 
-test('parts in comments do not throw', () => {
-	const { root, el } = setup()
-
-	root.render(html`<!-- ${'text'} -->`)
-	assert.equal(el.innerHTML, '<!-- dyn-$0$ -->')
-})
-
 dev_test('manually specifying internal template syntax throws', () => {
 	const { root, el } = setup()
 
 	assert.throws(
 		() => {
-			root.render(html`${1} dyn-$0$`)
+			root.render(
+				html`${1}
+					<!--dyn-$0$-->`,
+			)
 		},
 		{ message: 'got more parts than expected' },
 	)

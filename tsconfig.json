@@ -12,6 +12,7 @@
 		"stripInternal": true,
 		"isolatedDeclarations": true,
 		"declaration": true,
+		"noFallthroughCasesInSwitch": true,
 		"types": ["bun-types"]
 	},
 	"include": ["src"]

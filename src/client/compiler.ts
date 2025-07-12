@@ -7,7 +7,7 @@ import {
 	type Part,
 } from './parts.ts'
 import type { Span } from './span.ts'
-import { is_comment, is_document_fragment, is_element, is_text } from './util.ts'
+import { is_comment, is_document_fragment, is_element } from './util.ts'
 
 export interface CompiledTemplate {
 	_content: DocumentFragment
@@ -15,9 +15,213 @@ export interface CompiledTemplate {
 	_root_parts: number[]
 }
 
-const DYNAMIC_WHOLE = /^dyn-\$(\d+)\$$/i
-const DYNAMIC_GLOBAL = /dyn-\$(\d+)\$/gi
+const ALPHA = /[a-z]/i
+const DYNAMIC_WHOLE = /^dyn-\$(\d+)\$$/
+const DYNAMIC_GLOBAL = /dyn-\$(\d+)\$/g
 const FORCE_ATTRIBUTES = /-|^class$|^for$/i
+
+function generate_html(statics: TemplateStringsArray) {
+	assert(!statics.some(s => s.includes('\0')))
+
+	const input = statics.join('\0')
+	let output = ''
+
+	const DATA = 0
+	const TAG_OPEN = 1
+	const END_TAG_OPEN = 2
+	const TAG_NAME = 3
+	const BEFORE_ATTR_NAME = 4
+	const ATTR_NAME = 5
+	const AFTER_ATTR_NAME = 6
+	const BEFORE_ATTR_VALUE = 7
+	const ATTR_VALUE_DOUBLE_QUOTED = 8
+	const ATTR_VALUE_SINGLE_QUOTED = 9
+	const ATTR_VALUE_UNQUOTED = 10
+	const AFTER_ATTR_VALUE = 11
+	const SELF_CLOSING_START_TAG = 12
+	const COMMENT2 = 13 // a comment2 is any type of comment that ends with ">" and not "-->"
+	const EXCLAIM = 14
+	const COMMENT = 15
+
+	type State =
+		| typeof DATA
+		| typeof TAG_OPEN
+		| typeof END_TAG_OPEN
+		| typeof TAG_NAME
+		| typeof BEFORE_ATTR_NAME
+		| typeof ATTR_NAME
+		| typeof AFTER_ATTR_NAME
+		| typeof BEFORE_ATTR_VALUE
+		| typeof ATTR_VALUE_DOUBLE_QUOTED
+		| typeof ATTR_VALUE_SINGLE_QUOTED
+		| typeof ATTR_VALUE_UNQUOTED
+		| typeof AFTER_ATTR_VALUE
+		| typeof SELF_CLOSING_START_TAG
+		| typeof COMMENT2
+		| typeof EXCLAIM
+		| typeof COMMENT
+
+	let state: State = DATA
+	let i = 0
+	let dyn_i = 0
+	let skip = false
+
+	function pop() {
+		const c = input[i++]
+
+		if (skip) {
+			skip = false
+			return
+		}
+
+		if (c === '\0') {
+			output += state === DATA ? `<!--dyn-$${dyn_i++}$-->` : `dyn-$${dyn_i++}$`
+			return
+		}
+
+		output += c
+		return c
+	}
+	function rewind() {
+		i--
+		skip = true
+	}
+
+	while (i < input.length) {
+		const c = pop()
+		if (c === undefined) continue
+
+		switch (state) {
+			case DATA: // https://html.spec.whatwg.org/multipage/parsing.html#data-state
+				if (c === '<') state = TAG_OPEN
+				break
+
+			case TAG_OPEN: // https://html.spec.whatwg.org/multipage/parsing.html#tag-open-state
+				if (c === '!') state = EXCLAIM
+				else if (c === '/') state = END_TAG_OPEN
+				else if (c === '?') state = COMMENT2
+				else {
+					rewind()
+					state = TAG_NAME
+				}
+				break
+
+			case END_TAG_OPEN: // https://html.spec.whatwg.org/multipage/parsing.html#end-tag-open-state
+				if (c === '>') state = DATA
+				else if (ALPHA.test(c)) {
+					rewind()
+					state = TAG_NAME
+				} else {
+					rewind()
+					state = COMMENT2
+				}
+				break
+
+			case TAG_NAME: // https://html.spec.whatwg.org/multipage/parsing.html#tag-name-state
+				if (c === '\t' || c === '\n' || c === '\f' || c === ' ') state = BEFORE_ATTR_NAME
+				else if (c === '/') state = SELF_CLOSING_START_TAG
+				else if (c === '>') state = DATA
+				break
+
+			case BEFORE_ATTR_NAME: // https://html.spec.whatwg.org/multipage/parsing.html#before-attribute-name-state
+				if (c === '\t' || c === '\n' || c === '\f' || c === ' ') {
+				} else if (c === '/' || c === '>') {
+					rewind()
+					state = AFTER_ATTR_NAME
+				} else {
+					rewind()
+					state = ATTR_NAME
+				}
+				break
+
+			case ATTR_NAME: // https://html.spec.whatwg.org/multipage/parsing.html#attribute-name-state
+				if (c === '\t' || c === '\n' || c === '\f' || c === ' ' || c === '/' || c === '>') {
+					rewind()
+					state = AFTER_ATTR_NAME
+				} else if (c === '=') state = BEFORE_ATTR_VALUE
+				break
+
+			case AFTER_ATTR_NAME: // https://html.spec.whatwg.org/multipage/parsing.html#after-attribute-name-state
+				if (c === '\t' || c === '\n' || c === '\f' || c === ' ' || c === '/') {
+				} else if (c === '/') state = SELF_CLOSING_START_TAG
+				else if (c === '=') state = BEFORE_ATTR_VALUE
+				else if (c === '>') state = DATA
+				else {
+					rewind()
+					state = ATTR_NAME
+				}
+				break
+
+			case BEFORE_ATTR_VALUE: // https://html.spec.whatwg.org/multipage/parsing.html#before-attribute-value-state
+				if (c === '\t' || c === '\n' || c === '\f' || c === ' ') {
+				} else if (c === '"') state = ATTR_VALUE_DOUBLE_QUOTED
+				else if (c === "'") state = ATTR_VALUE_SINGLE_QUOTED
+				else if (c === '>') state = DATA
+				else if (c === '=') {
+					rewind()
+					state = ATTR_VALUE_UNQUOTED
+				}
+				break
+
+			case ATTR_VALUE_DOUBLE_QUOTED: // https://html.spec.whatwg.org/multipage/parsing.html#attribute-value-(double-quoted)-state
+				if (c === '"') state = AFTER_ATTR_VALUE
+				break
+
+			case ATTR_VALUE_SINGLE_QUOTED: // https://html.spec.whatwg.org/multipage/parsing.html#attribute-value-(single-quoted)-state
+				if (c === "'") state = AFTER_ATTR_VALUE
+				break
+
+			case ATTR_VALUE_UNQUOTED: // https://html.spec.whatwg.org/multipage/parsing.html#attribute-value-(unquoted)-state
+				if (c === '\t' || c === '\n' || c === '\f' || c === ' ') state = BEFORE_ATTR_NAME
+				else if (c === '>') state = DATA
+				break
+
+			case AFTER_ATTR_VALUE: // https://html.spec.whatwg.org/multipage/parsing.html#after-attribute-value-(quoted)-state
+				if (c === '\t' || c === '\n' || c === '\f' || c === ' ') state = BEFORE_ATTR_NAME
+				else if (c === '/') state = SELF_CLOSING_START_TAG
+				else if (c === '>') state = DATA
+				else {
+					rewind()
+					state = BEFORE_ATTR_NAME
+				}
+				break
+
+			case SELF_CLOSING_START_TAG: // https://html.spec.whatwg.org/multipage/parsing.html#self-closing-start-tag-state
+				if (c === '>') state = DATA
+				else {
+					rewind()
+					state = BEFORE_ATTR_NAME
+				}
+				break
+
+			case COMMENT2: // https://html.spec.whatwg.org/multipage/parsing.html#bogus-comment-state
+				if (c === '>') state = DATA
+				break
+
+			case EXCLAIM: // https://html.spec.whatwg.org/multipage/parsing.html#markup-declaration-open-state
+				if (c === '-' && input[i] === '-') {
+					pop()
+					state = COMMENT
+				} else {
+					state = COMMENT2
+				}
+				break
+
+			case COMMENT: // https://html.spec.whatwg.org/multipage/parsing.html#comment-state
+				if (c === '-' && input[i] === '-' && input[i + 1] === '>') {
+					pop()
+					pop()
+					state = DATA
+				}
+				break
+
+			default:
+				state satisfies never
+		}
+	}
+
+	return output
+}
 
 const templates: WeakMap<TemplateStringsArray, CompiledTemplate> = new WeakMap()
 export function compile_template(statics: TemplateStringsArray): CompiledTemplate {
@@ -25,7 +229,7 @@ export function compile_template(statics: TemplateStringsArray): CompiledTemplat
 	if (cached) return cached
 
 	const template_element = document.createElement('template')
-	template_element.innerHTML = statics.reduce((a, v, i) => a + v + (i === statics.length - 1 ? '' : `dyn-$${i}$`), '')
+	template_element.innerHTML = generate_html(statics)
 
 	let next_part = 0
 
@@ -48,25 +252,15 @@ export function compile_template(statics: TemplateStringsArray): CompiledTemplat
 		compiled._parts[next_part++] = [idx, create_part]
 	}
 
-	const walker = document.createTreeWalker(template_element.content, __DEV__ ? 133 : 5)
-	assert((NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT | NodeFilter.SHOW_COMMENT) === 133)
-	assert((NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT) === 5)
+	const walker = document.createTreeWalker(template_element.content, 129)
+	assert((NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_COMMENT) === 129)
 
 	// stop iterating once we've hit the last part, but if we're in dev mode, keep going to check for mistakes.
 	while ((next_part < compiled._parts.length || __DEV__) && walker.nextNode()) {
 		const node = walker.currentNode
-		if (is_text(node)) {
-			// reverse the order because we'll be supplying ChildPart with its index in the parent node.
-			// and if we apply the parts forwards, indicies will be wrong if some prior part renders more than one node.
-			// also reverse it because that's the correct order for splitting.
-			const nodes = [...node.data.matchAll(DYNAMIC_GLOBAL)].reverse().map(match => {
-				node.splitText(match.index + match[0].length)
-				const dyn = new Comment()
-				node.splitText(match.index).replaceWith(dyn)
-				return [dyn, parseInt(match[1])] as const
-			})
-
-			if (nodes.length) {
+		if (is_comment(node)) {
+			const match = DYNAMIC_WHOLE.exec(node.data)
+			if (match !== null) {
 				const parent_node = node.parentNode
 				assert(parent_node !== null, 'all text nodes should have a parent node')
 				assert(
@@ -74,19 +268,8 @@ export function compile_template(statics: TemplateStringsArray): CompiledTemplat
 						parent_node instanceof HTMLElement ||
 						parent_node instanceof SVGElement,
 				)
-				let siblings = [...parent_node.childNodes]
-				for (const [node, idx] of nodes) {
-					const child = siblings.indexOf(node)
-					patch(parent_node, idx, (node, span) => create_child_part(node, span, child))
-				}
-			}
-		} else if (__DEV__ && is_comment(node)) {
-			// just in dev, stub out a fake part for every interpolation in a comment.
-			// this means you can comment out code inside a template and not run into
-			// issues with incorrect part counts.
-			// in production the check is skipped, so we can also skip this.
-			for (const _match of node.data.matchAll(DYNAMIC_GLOBAL)) {
-				compiled._parts[next_part++] = [parseInt(_match[1]), () => () => {}]
+				const child = [...parent_node.childNodes].indexOf(node)
+				patch(parent_node, parseInt(match[1]), (node, span) => create_child_part(node, span, child))
 			}
 		} else {
 			assert(is_element(node))
