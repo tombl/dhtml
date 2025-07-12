@@ -14,8 +14,8 @@ import type { Cleanup } from './util.ts'
 
 export type Part = (value: unknown) => void
 
-export function create_child_part(parent_node: Node | Span, parent_span: Span, child_index: number): Part {
-	let span: Span
+export function create_child_part(parent_node: Node | Span, child_index: number): Part {
+	let span: Span | undefined
 
 	// for when we're rendering a renderable:
 	let current_renderable: Renderable | null = null
@@ -53,23 +53,22 @@ export function create_child_part(parent_node: Node | Span, parent_span: Span, c
 		root = undefined
 	}
 
+	let child: ChildNode | null
 	if (parent_node instanceof Node) {
-		const child = parent_node.childNodes[child_index]
-		span = create_span(child)
+		child = parent_node.childNodes[child_index]
+		assert(child)
 	} else {
-		let child = parent_node._start
+		child = parent_node._start.nextSibling
+		assert(child)
 		for (let i = 0; i < child_index; i++) {
-			assert(child.nextSibling !== null, 'expected more siblings')
-			assert(child.nextSibling !== parent_node._end, 'ran out of siblings before the end')
 			child = child.nextSibling
+			assert(child !== null, 'expected more siblings')
+			assert(child !== parent_node._end, 'ran out of siblings before the end')
 		}
-		span = create_span(child)
 	}
 
 	return function update(value) {
-		assert(span)
-		const starts_were_equal = span._parent === parent_span._parent && span._start === parent_span._start
-		const ends_were_equal = span._parent === parent_span._parent && span._end === parent_span._end
+		span ??= create_span(child)
 
 		if (is_renderable(value)) {
 			if (!needs_revalidate && value === current_renderable) return
@@ -168,11 +167,6 @@ export function create_child_part(parent_node: Node | Span, parent_span: Span, c
 				delete_contents(root._span)
 			}
 
-			span._end = end
-
-			if (starts_were_equal) parent_span._start = span._start
-			if (ends_were_equal) parent_span._end = span._end
-
 			return
 		} else if (roots) {
 			for (const root of roots) root.detach()
@@ -193,8 +187,8 @@ export function create_child_part(parent_node: Node | Span, parent_span: Span, c
 
 			if (old_value != null && value !== null && !(old_value instanceof Node) && !(value instanceof Node)) {
 				// we previously rendered a string, and we're rendering a string again.
-				assert(span._start === span._end && span._start instanceof Text)
-				span._start.data = '' + value
+				assert(span._start.nextSibling?.nextSibling === span._end && span._start.nextSibling instanceof Text)
+				span._start.nextSibling.data = '' + value
 			} else {
 				delete_contents(span)
 				if (value !== null) insert_node(span, value instanceof Node ? value : new Text('' + value))
@@ -202,9 +196,6 @@ export function create_child_part(parent_node: Node | Span, parent_span: Span, c
 		}
 
 		old_value = value
-
-		if (starts_were_equal) parent_span._start = span._start
-		if (ends_were_equal) parent_span._end = span._end
 	}
 }
 

@@ -2,60 +2,54 @@ import { assert } from '../shared.ts'
 import { is_document_fragment } from './util.ts'
 
 export interface Span {
-	_parent: Node
-	_start: Node
-	_end: Node
-	_marker: Node | null
+	readonly _parent: Node
+	readonly _start: Node
+	readonly _end: Node
 }
 
 export function create_span(node: Node): Span {
 	assert(node.parentNode !== null)
+	const start = new Text()
+	const end = new Text()
+
+	node.parentNode.insertBefore(start, node)
+	node.parentNode.insertBefore(end, node.nextSibling)
+
 	return {
 		_parent: node.parentNode,
-		_start: node,
-		_end: node,
-		_marker: null,
+		_start: start,
+		_end: end,
 	}
 }
 
 export function insert_node(span: Span, node: Node): void {
 	const end = is_document_fragment(node) ? node.lastChild : node
 	if (end === null) return // empty fragment
-	span._parent.insertBefore(node, span._end.nextSibling)
-	span._end = end
-
-	if (span._start === span._marker) {
-		assert(span._start.nextSibling)
-		span._start = span._start.nextSibling
-
-		span._parent.removeChild(span._marker)
-		span._marker = null
-	}
+	span._parent.insertBefore(node, span._end)
 }
 
 export function extract_contents(span: Span): DocumentFragment {
-	span._marker = new Text()
-	span._parent.insertBefore(span._marker, span._start)
-
 	const fragment = document.createDocumentFragment()
 
-	for (let node = span._start, next; (next = node.nextSibling); node = next) {
-		fragment.appendChild(node)
+	let node = span._start.nextSibling
+	for (;;) {
+		assert(node)
 		if (node === span._end) break
+		const next = node.nextSibling
+		fragment.appendChild(node)
+		node = next
 	}
 
-	span._start = span._end = span._marker
 	return fragment
 }
 
 export function delete_contents(span: Span): void {
-	span._marker = new Text()
-	span._parent.insertBefore(span._marker, span._start)
-
-	for (let node = span._start, next; (next = node.nextSibling); node = next) {
-		span._parent.removeChild(node)
+	let node = span._start.nextSibling
+	for (;;) {
+		assert(node)
 		if (node === span._end) break
+		const next = node.nextSibling
+		span._parent.removeChild(node)
+		node = next
 	}
-
-	span._start = span._end = span._marker
 }

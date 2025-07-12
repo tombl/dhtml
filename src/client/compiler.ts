@@ -11,7 +11,7 @@ import { is_comment, is_document_fragment, is_element } from './util.ts'
 
 export interface CompiledTemplate {
 	_content: DocumentFragment
-	_parts: [idx: number, create_part: (node: Node | Span, span: Span) => Part][]
+	_parts: [idx: number, create_part: (node: Node | Span) => Part][]
 	_root_parts: number[]
 }
 
@@ -242,7 +242,7 @@ export function compile_template(statics: TemplateStringsArray): CompiledTemplat
 	function patch(
 		node: DocumentFragment | HTMLElement | SVGElement,
 		idx: number,
-		create_part: (node: Node | Span, span: Span) => Part,
+		create_part: (node: Node | Span) => Part,
 	) {
 		assert(next_part < compiled._parts.length, 'got more parts than expected')
 		if (is_document_fragment(node)) compiled._root_parts.push(next_part)
@@ -269,7 +269,7 @@ export function compile_template(statics: TemplateStringsArray): CompiledTemplat
 						parent_node instanceof SVGElement,
 				)
 				const child = [...parent_node.childNodes].indexOf(node)
-				patch(parent_node, parseInt(match[1]), (node, span) => create_child_part(node, span, child))
+				patch(parent_node, parseInt(match[1]), node => create_child_part(node, child))
 			}
 		} else {
 			assert(is_element(node))
