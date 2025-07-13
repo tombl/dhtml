@@ -52,6 +52,7 @@ async function bundle_code() {
 			return minify_sync(code, {
 				mangle: { properties: { regex: /^_/ } },
 				nameCache: terser_name_cache,
+				sourceMap: true,
 				module: true,
 			})
 		},
