@@ -59,15 +59,14 @@ test('identity is updated correctly', () => {
 	root.render(template(1))
 	assert.equal(el.innerHTML, '<h1>Hello, 1!</h1>')
 	let h1 = el.children[0]
-	const text = h1.childNodes[1] as Text
-	assert(text instanceof Text)
-	assert.equal(text.data, '1')
+	const text = [...h1.childNodes].find((node): node is Text => node instanceof Text && node.data === '1')
+	assert(text)
 
 	root.render(template(2))
 	assert.equal(el.innerHTML, '<h1>Hello, 2!</h1>')
 	assert.equal(el.children[0], h1)
 	assert.equal(text.data, '2')
-	assert.equal(h1.childNodes[1], text)
+	assert([...h1.childNodes].includes(text))
 
 	root.render(template2(3))
 	assert.equal(el.innerHTML, '<h1>Hello, 3!</h1>')

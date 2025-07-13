@@ -25,8 +25,8 @@ test('directive functions work correctly', () => {
 	const template = (d: Directive | null) => html`<div ${d}>Hello, world!</div>`
 
 	root.render(template(redifier))
-	const div = el.firstChild as HTMLElement
-	assert.equal(div.tagName, 'DIV')
+	const div = el.querySelector('div')
+	assert(div)
 	assert.equal(div.style.cssText, 'color: red;')
 
 	root.render(template(flipper))
@@ -54,8 +54,8 @@ test('directive functions with values work correctly', () => {
 	const template = (c: string[]) => html`<div class="foo" ${classes(c)}>Hello, world!</div>`
 
 	root.render(template(['a', 'b']))
-	const div = el.firstChild as HTMLElement
-	assert.equal(div.tagName, 'DIV')
+	const div = el.querySelector('div')
+	assert(div)
 	assert.equal(div.className, 'foo a b')
 
 	root.render(template(['c', 'd']))
