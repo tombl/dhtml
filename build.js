@@ -111,6 +111,9 @@ async function bundle_code() {
 				plugins: [!is_dev && terser_plugin, print_size_plugin],
 				minifyInternalExports: !is_dev,
 			},
+			optimization: {
+				inlineConst: !is_dev,
+			},
 			define: {
 				__DEV__: JSON.stringify(is_dev),
 			},
