@@ -1,10 +1,13 @@
+import replace from '@rollup/plugin-replace'
 import MagicString from 'magic-string'
 import assert from 'node:assert'
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { parseArgs, styleText } from 'node:util'
 import { brotliCompressSync, gzipSync } from 'node:zlib'
-import * as rolldown from 'rolldown'
-import { dts } from 'rolldown-plugin-dts'
+import { minify } from 'oxc-minify'
+import { transform } from 'oxc-transform'
+import * as rollup from 'rollup'
+import { dts } from 'rollup-plugin-dts'
 import { minify_sync } from 'terser'
 import { walk } from 'zimmerframe'
 
@@ -20,17 +23,42 @@ await mkdir('dist')
 await Promise.all([bundle_code(), write_package_json()])
 
 async function bundle_code() {
-	const strip_asserts_plugin: rolldown.Plugin = {
+	const oxc_transform_plugin: rollup.Plugin = {
+		name: 'oxc-transform',
+		transform(code, id) {
+			return transform(id, code, { sourcemap: true })
+		},
+	}
+	const oxc_transform_types_plugin: rollup.Plugin = {
+		name: 'oxc-transform-types',
+		transform(code, id) {
+			const { declaration, declarationMap } = transform(id, code, {
+				sourcemap: true,
+				typescript: { declaration: { stripInternal: true, sourcemap: true } },
+			})
+			return { code: declaration, map: declarationMap }
+		},
+	}
+	const oxc_minify_plugin: rollup.OutputPlugin = {
+		name: 'oxc-minify',
+		renderChunk(code, { fileName }) {
+			return minify(fileName, code, {
+				sourcemap: true,
+				mangle: { toplevel: true },
+			})
+		},
+	}
+
+	const strip_asserts_plugin: rollup.Plugin = {
 		name: 'strip-asserts',
-		transform(code, id, { moduleType }) {
+		transform(code, id) {
 			if (id.includes('node_modules')) return
 
-			assert(moduleType === 'js' || moduleType === 'ts')
-			const ast = this.parse(code, { lang: moduleType })
+			const ast = this.parse(code)
 			const source = new MagicString(code, { filename: id })
 
-			walk<import('@oxc-project/types').Node, null>(ast, null, {
-				CallExpression(node, { next }) {
+			walk<rollup.AstNode, null>(ast, null, {
+				CallExpression(node: rollup.RollupAstNode<import('estree').CallExpression>, { next }) {
 					if (node.callee.type === 'Identifier' && node.callee.name === 'assert') {
 						source.update(node.start, node.end, ';')
 						return
@@ -45,8 +73,7 @@ async function bundle_code() {
 	}
 
 	const terser_name_cache = {}
-
-	const terser_plugin: rolldown.Plugin = {
+	const terser_plugin: rollup.OutputPlugin = {
 		name: 'terser',
 		renderChunk(code) {
 			const result = minify_sync(code, {
@@ -62,7 +89,7 @@ async function bundle_code() {
 	}
 
 	const old_sizes: Record<string, number> = {}
-	const print_size_plugin: rolldown.Plugin = {
+	const print_size_plugin: rollup.OutputPlugin = {
 		name: 'print-size',
 		generateBundle(_options, bundle) {
 			for (const [name, file] of Object.entries(bundle)) {
@@ -92,37 +119,60 @@ async function bundle_code() {
 		},
 	}
 
-	function define_bundle(env: 'dev' | 'prod'): rolldown.BuildOptions {
+	function define_bundle(env: 'dev' | 'prod') {
 		const is_dev = env === 'dev'
+		const is_prod = env === 'prod'
+		const is_dts = env === 'dts'
+		const ext = {
+			dev: 'js',
+			prod: 'min.js',
+			dts: 'd.ts',
+		}[env]
+
 		return {
 			input: {
 				client: './src/client.ts',
 				server: './src/server.ts',
 				index: './src/index.ts',
 			},
-			plugins: [!is_dev && strip_asserts_plugin, is_dev && dts({ sourcemap: true })],
+			plugins: is_dts
+				? [oxc_transform_types_plugin, dts()]
+				: [
+						oxc_transform_plugin,
+						replace({
+							preventAssignment: true,
+							values: {
+								__DEV__: JSON.stringify(is_dev),
+							},
+						}),
+						is_prod && strip_asserts_plugin,
+					],
 			output: {
 				dir: 'dist',
-				entryFileNames: is_dev ? '[name].js' : '[name].min.js',
-				chunkFileNames: is_dev ? '[name].js' : '[name].min.js',
-				minify: !is_dev,
+				entryFileNames: `[name].${ext}`,
+				chunkFileNames: `[name].${ext}`,
 				sourcemap: is_dev ? true : 'hidden',
-				plugins: [!is_dev && terser_plugin, print_size_plugin],
-				minifyInternalExports: !is_dev,
+				plugins: [is_prod && terser_plugin, is_prod && oxc_minify_plugin, print_size_plugin],
 			},
-			optimization: {
-				inlineConst: !is_dev,
-			},
-			define: {
-				__DEV__: JSON.stringify(is_dev),
-			},
-		}
+		} satisfies rollup.RollupOptions
 	}
 
 	console.log(
 		styleText(['bold'], ['name'.padEnd(14), 'size'.padStart(8), 'gzip'.padStart(8), 'brotli'.padStart(8)].join(' ')),
 	)
-	await (args.values.watch ? rolldown.watch : rolldown.build)([define_bundle('dev'), define_bundle('prod')])
+
+	if (args.values.watch) {
+		rollup.watch([define_bundle('dev'), define_bundle('prod'), define_bundle('dts')])
+	} else {
+		const prod = define_bundle('prod')
+		const dev = define_bundle('dev')
+		const dts = define_bundle('dts')
+		await Promise.all([
+			rollup.rollup(prod).then(bundle => bundle.write(prod.output)),
+			rollup.rollup(dev).then(bundle => bundle.write(dev.output)),
+			rollup.rollup(dts).then(bundle => bundle.write(dts.output)),
+		])
+	}
 }
 
 async function write_package_json() {
