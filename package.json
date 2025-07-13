@@ -24,7 +24,6 @@
 		"@happy-dom/global-registrator": "^18.0.0",
 		"@types/node": "^22.15.30",
 		"bun-types": "^1.2.15",
-		"htmlparser2": "^10.0.0",
 		"magic-string": "^0.30.17",
 		"mitata": "^1.0.34",
 		"patch-package": "^8.0.0",

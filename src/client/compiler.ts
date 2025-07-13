@@ -1,4 +1,4 @@
-import { assert } from '../shared.ts'
+import { assert, lexer } from '../shared.ts'
 import {
 	create_attribute_part,
 	create_child_part,
@@ -15,213 +15,9 @@ export interface CompiledTemplate {
 	_root_parts: number[]
 }
 
-const ALPHA = /[a-z]/i
 const DYNAMIC_WHOLE = /^dyn-\$(\d+)\$$/
 const DYNAMIC_GLOBAL = /dyn-\$(\d+)\$/g
 const FORCE_ATTRIBUTES = /-|^class$|^for$/i
-
-function generate_html(statics: TemplateStringsArray) {
-	assert(!statics.some(s => s.includes('\0')))
-
-	const input = statics.join('\0')
-	let output = ''
-
-	const DATA = 0
-	const TAG_OPEN = 1
-	const END_TAG_OPEN = 2
-	const TAG_NAME = 3
-	const BEFORE_ATTR_NAME = 4
-	const ATTR_NAME = 5
-	const AFTER_ATTR_NAME = 6
-	const BEFORE_ATTR_VALUE = 7
-	const ATTR_VALUE_DOUBLE_QUOTED = 8
-	const ATTR_VALUE_SINGLE_QUOTED = 9
-	const ATTR_VALUE_UNQUOTED = 10
-	const AFTER_ATTR_VALUE = 11
-	const SELF_CLOSING_START_TAG = 12
-	const COMMENT2 = 13 // a comment2 is any type of comment that ends with ">" and not "-->"
-	const EXCLAIM = 14
-	const COMMENT = 15
-
-	type State =
-		| typeof DATA
-		| typeof TAG_OPEN
-		| typeof END_TAG_OPEN
-		| typeof TAG_NAME
-		| typeof BEFORE_ATTR_NAME
-		| typeof ATTR_NAME
-		| typeof AFTER_ATTR_NAME
-		| typeof BEFORE_ATTR_VALUE
-		| typeof ATTR_VALUE_DOUBLE_QUOTED
-		| typeof ATTR_VALUE_SINGLE_QUOTED
-		| typeof ATTR_VALUE_UNQUOTED
-		| typeof AFTER_ATTR_VALUE
-		| typeof SELF_CLOSING_START_TAG
-		| typeof COMMENT2
-		| typeof EXCLAIM
-		| typeof COMMENT
-
-	let state: State = DATA
-	let i = 0
-	let dyn_i = 0
-	let skip = false
-
-	function pop() {
-		const c = input[i++]
-
-		if (skip) {
-			skip = false
-			return
-		}
-
-		if (c === '\0') {
-			output += state === DATA ? `<!--dyn-$${dyn_i++}$-->` : `dyn-$${dyn_i++}$`
-			return
-		}
-
-		output += c
-		return c
-	}
-	function rewind() {
-		i--
-		skip = true
-	}
-
-	while (i < input.length) {
-		const c = pop()
-		if (c === undefined) continue
-
-		switch (state) {
-			case DATA: // https://html.spec.whatwg.org/multipage/parsing.html#data-state
-				if (c === '<') state = TAG_OPEN
-				break
-
-			case TAG_OPEN: // https://html.spec.whatwg.org/multipage/parsing.html#tag-open-state
-				if (c === '!') state = EXCLAIM
-				else if (c === '/') state = END_TAG_OPEN
-				else if (c === '?') state = COMMENT2
-				else {
-					rewind()
-					state = TAG_NAME
-				}
-				break
-
-			case END_TAG_OPEN: // https://html.spec.whatwg.org/multipage/parsing.html#end-tag-open-state
-				if (c === '>') state = DATA
-				else if (ALPHA.test(c)) {
-					rewind()
-					state = TAG_NAME
-				} else {
-					rewind()
-					state = COMMENT2
-				}
-				break
-
-			case TAG_NAME: // https://html.spec.whatwg.org/multipage/parsing.html#tag-name-state
-				if (c === '\t' || c === '\n' || c === '\f' || c === ' ') state = BEFORE_ATTR_NAME
-				else if (c === '/') state = SELF_CLOSING_START_TAG
-				else if (c === '>') state = DATA
-				break
-
-			case BEFORE_ATTR_NAME: // https://html.spec.whatwg.org/multipage/parsing.html#before-attribute-name-state
-				if (c === '\t' || c === '\n' || c === '\f' || c === ' ') {
-				} else if (c === '/' || c === '>') {
-					rewind()
-					state = AFTER_ATTR_NAME
-				} else {
-					rewind()
-					state = ATTR_NAME
-				}
-				break
-
-			case ATTR_NAME: // https://html.spec.whatwg.org/multipage/parsing.html#attribute-name-state
-				if (c === '\t' || c === '\n' || c === '\f' || c === ' ' || c === '/' || c === '>') {
-					rewind()
-					state = AFTER_ATTR_NAME
-				} else if (c === '=') state = BEFORE_ATTR_VALUE
-				break
-
-			case AFTER_ATTR_NAME: // https://html.spec.whatwg.org/multipage/parsing.html#after-attribute-name-state
-				if (c === '\t' || c === '\n' || c === '\f' || c === ' ' || c === '/') {
-				} else if (c === '/') state = SELF_CLOSING_START_TAG
-				else if (c === '=') state = BEFORE_ATTR_VALUE
-				else if (c === '>') state = DATA
-				else {
-					rewind()
-					state = ATTR_NAME
-				}
-				break
-
-			case BEFORE_ATTR_VALUE: // https://html.spec.whatwg.org/multipage/parsing.html#before-attribute-value-state
-				if (c === '\t' || c === '\n' || c === '\f' || c === ' ') {
-				} else if (c === '"') state = ATTR_VALUE_DOUBLE_QUOTED
-				else if (c === "'") state = ATTR_VALUE_SINGLE_QUOTED
-				else if (c === '>') state = DATA
-				else if (c === '=') {
-					rewind()
-					state = ATTR_VALUE_UNQUOTED
-				}
-				break
-
-			case ATTR_VALUE_DOUBLE_QUOTED: // https://html.spec.whatwg.org/multipage/parsing.html#attribute-value-(double-quoted)-state
-				if (c === '"') state = AFTER_ATTR_VALUE
-				break
-
-			case ATTR_VALUE_SINGLE_QUOTED: // https://html.spec.whatwg.org/multipage/parsing.html#attribute-value-(single-quoted)-state
-				if (c === "'") state = AFTER_ATTR_VALUE
-				break
-
-			case ATTR_VALUE_UNQUOTED: // https://html.spec.whatwg.org/multipage/parsing.html#attribute-value-(unquoted)-state
-				if (c === '\t' || c === '\n' || c === '\f' || c === ' ') state = BEFORE_ATTR_NAME
-				else if (c === '>') state = DATA
-				break
-
-			case AFTER_ATTR_VALUE: // https://html.spec.whatwg.org/multipage/parsing.html#after-attribute-value-(quoted)-state
-				if (c === '\t' || c === '\n' || c === '\f' || c === ' ') state = BEFORE_ATTR_NAME
-				else if (c === '/') state = SELF_CLOSING_START_TAG
-				else if (c === '>') state = DATA
-				else {
-					rewind()
-					state = BEFORE_ATTR_NAME
-				}
-				break
-
-			case SELF_CLOSING_START_TAG: // https://html.spec.whatwg.org/multipage/parsing.html#self-closing-start-tag-state
-				if (c === '>') state = DATA
-				else {
-					rewind()
-					state = BEFORE_ATTR_NAME
-				}
-				break
-
-			case COMMENT2: // https://html.spec.whatwg.org/multipage/parsing.html#bogus-comment-state
-				if (c === '>') state = DATA
-				break
-
-			case EXCLAIM: // https://html.spec.whatwg.org/multipage/parsing.html#markup-declaration-open-state
-				if (c === '-' && input[i] === '-') {
-					pop()
-					state = COMMENT
-				} else {
-					state = COMMENT2
-				}
-				break
-
-			case COMMENT: // https://html.spec.whatwg.org/multipage/parsing.html#comment-state
-				if (c === '-' && input[i] === '-' && input[i + 1] === '>') {
-					pop()
-					pop()
-					state = DATA
-				}
-				break
-
-			default:
-				state satisfies never
-		}
-	}
-
-	return output
-}
 
 const templates: WeakMap<TemplateStringsArray, CompiledTemplate> = new WeakMap()
 export function compile_template(statics: TemplateStringsArray): CompiledTemplate {
@@ -229,9 +25,18 @@ export function compile_template(statics: TemplateStringsArray): CompiledTemplat
 	if (cached) return cached
 
 	const template_element = document.createElement('template')
-	template_element.innerHTML = generate_html(statics)
-
 	let next_part = 0
+	template_element.innerHTML = [...lexer.lex(statics)]
+		.map(([char, state]) => {
+			if (char === '\0') {
+				if (state === lexer.DATA) return `<!--dyn-$${next_part++}$-->`
+				else return `dyn-$${next_part++}$`
+			}
+			return char
+		})
+		.join('')
+
+	next_part = 0
 
 	const compiled: CompiledTemplate = {
 		_content: template_element.content,

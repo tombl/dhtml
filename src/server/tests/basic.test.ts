@@ -45,12 +45,10 @@ test('parts in comments do not throw', () => {
 
 dev_test('manually specifying internal template syntax throws', () => {
 	assert.throws(() => {
-		renderToString(html`${1} dyn-$0$`)
+		// why is prettier deleting null bytes?
+		// prettier-ignore
+		renderToString(html`${1} \0`)
 	})
-})
-
-test('syntax close but not exact does not throw', () => {
-	assert.equal(renderToString(html`dyn-$${0}1$`), 'dyn-$01$')
 })
 
 test('directives', () => {
@@ -60,10 +58,17 @@ test('directives', () => {
 	assert.deepEqual(directive.mock.calls[0], [])
 })
 
-test('attributes', () => {
+test('unquoted attributes', () => {
 	assert.equal(renderToString(html`<a href=${'/url'}></a>`), '<a href="/url"></a>')
 	assert.equal(renderToString(html`<details hidden=${false}></details>`), '<details ></details>')
 	assert.equal(renderToString(html`<details hidden=${true}></details>`), '<details hidden></details>')
+})
+
+test('quoted attributes', () => {
+	assert.equal(renderToString(html`<a href="${'/url'}"></a>`), '<a href="/url"></a>')
+	assert.equal(renderToString(html`<details hidden="${false}"></details>`), '<details ></details>')
+	// prettier-ignore
+	assert.equal(renderToString(html`<details hidden='${true}'></details>`), '<details hidden></details>')
 })
 
 test('collapses whitespace', () => {
@@ -71,5 +76,12 @@ test('collapses whitespace', () => {
 	assert.equal(renderToString(html`      <p>         </p>      `), ' <p> </p> ')
 
 	// prettier-ignore
-	assert.equal(renderToString(html`      <p>    x    </p>      `), ' <p>    x    </p> ')
+	assert.equal(renderToString(html`      <p>    x    </p>      `), ' <p> x </p> ')
+})
+
+test('lexer edge cases', () => {
+	// prettier-ignore
+	assert.equal(renderToString(html`<div attr="value"x>`), '<div attr="value"x>')
+	assert.equal(renderToString(html`<img/attr="value">`), '<img/attr="value">')
+	assert.equal(renderToString(html`<div attr /other="value"></div>`), '<div attr /other="value"></div>')
 })

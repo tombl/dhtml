@@ -1,134 +1,115 @@
-import { Tokenizer } from 'htmlparser2'
-import { assert, is_html, is_iterable, is_renderable, single_part_template, type Displayable } from './shared.ts'
+import { assert, is_html, is_iterable, is_renderable, lexer, single_part_template, type Displayable } from './shared.ts'
 
-type PartRenderer = (values: unknown[]) => string | Generator<string, void, void>
+interface PartRenderer {
+	replace_start: number
+	replace_end: number
+	render: (values: unknown[]) => string | Generator<string, void, void>
+}
 
 interface CompiledTemplate {
-	statics: string[]
+	source: string
 	parts: PartRenderer[]
 	extra_parts: number
 }
 
-const WHITESPACE_WHOLE = /^\s+$/
-const DYNAMIC_WHOLE = /^dyn-\$(\d+)\$$/i
-const DYNAMIC_GLOBAL = /dyn-\$(\d+)\$/gi
+const WHITESPACE = /\s/
 
 const templates = new WeakMap<TemplateStringsArray, CompiledTemplate>()
 function compile_template(statics: TemplateStringsArray): CompiledTemplate {
 	const cached = templates.get(statics)
 	if (cached) return cached
 
-	const html = statics.reduce((a, v, i) => a + v + (i === statics.length - 1 ? '' : `dyn-$${i}$`), '')
-	const parts: {
-		start: number
-		end: number
-		render: PartRenderer
-	}[] = []
-	let attribname: [start: number, end: number] | null = null
-	function noop() {}
-
-	// count of parts that don't directly correspond to inputs
-	let extra_parts = 0
-
-	const tokenizer = new Tokenizer(
-		{},
-		{
-			onattribname(start, end) {
-				const name = html.slice(start, end)
-				const match = name.match(DYNAMIC_WHOLE)
-				if (match) {
-					const idx = parseInt(match[1])
-					parts.push({ start, end, render: values => render_directive(values[idx]) })
-					return
-				}
-
-				// assert(!DYNAMIC_GLOBAL.test(name), `expected a whole dynamic value for ${name}, got a partial one`)
-
-				attribname = [start, end]
-			},
-			onattribdata(start, end) {
-				assert(attribname)
-
-				const [nameStart, nameEnd] = attribname
-				const name = html.slice(nameStart, nameEnd)
-				const value = html.slice(start, end)
-
-				const match = value.match(DYNAMIC_WHOLE)
-				if (match) {
-					const idx = parseInt(match[1])
-					parts.push({ start: nameStart, end, render: values => render_attribute(name, values[idx]) })
-					return
-				}
-
-				// assert(!DYNAMIC_GLOBAL.test(value), `expected a whole dynamic value for ${name}, got a partial one`)
-			},
-			onattribentity: noop,
-			onattribend() {
-				attribname = null
-			},
-
-			onopentagname(start, end) {},
-			onopentagend() {},
-			onclosetag(start, end) {},
-			onselfclosingtag: noop,
-
-			ontext(start, end) {
-				const value = html.slice(start, end)
-
-				for (const match of value.matchAll(DYNAMIC_GLOBAL)) {
-					const idx = parseInt(match[1])
-					parts.push({
-						start: start + match.index,
-						end: start + match.index + match[0].length,
-						render: values => render_child(values[idx]),
-					})
-				}
-
-				if (WHITESPACE_WHOLE.test(value)) {
-					extra_parts++
-					parts.push({ start, end, render: () => ' ' })
-					return
-				}
-			},
-			ontextentity: noop,
-
-			oncomment(start, end) {
-				const value = html.slice(start, end)
-
-				for (const match of value.matchAll(DYNAMIC_GLOBAL)) {
-					const idx = parseInt(match[1])
-					parts.push({
-						start: start + match.index,
-						end: start + match.index + match[0].length,
-						render: values => escape(values[idx]),
-					})
-				}
-			},
-
-			oncdata(start, end) {},
-			ondeclaration(start, end) {},
-			onprocessinginstruction(start, end) {},
-
-			onend: noop,
-		},
-	)
-
-	tokenizer.write(html)
-	tokenizer.end()
-
 	const compiled: CompiledTemplate = {
-		statics: [],
+		source: statics.join('\0'),
 		parts: [],
-		extra_parts,
+		extra_parts: 0,
+	}
+	let offset = 0
+	let dyn_i = 0
+
+	let whitespace_count = 0
+	let prev_state: lexer.State | undefined
+	let attr_name: string = ''
+	let attr_start: number | undefined
+
+	function collapse_whitespace() {
+		if (whitespace_count > 1) {
+			compiled.extra_parts++
+			compiled.parts.push({
+				replace_start: offset - whitespace_count,
+				replace_end: offset,
+				render: () => ' ',
+			})
+		}
+		whitespace_count = 0
 	}
 
-	compiled.statics.push(html.slice(0, parts[0]?.start))
+	for (const [char, state] of lexer.lex(statics)) {
+		if (state === lexer.ATTR_NAME) {
+			if (prev_state !== lexer.ATTR_NAME) {
+				attr_name = ''
+				attr_start = offset
+			}
+			attr_name += char
+		}
 
-	for (let i = 0; i < parts.length; i++) {
-		const part = parts[i]
-		const next_part = parts[i + 1]
-		compiled.parts.push(part.render)
-		compiled.statics.push(html.slice(part.end, next_part?.start))
+		if (state === lexer.DATA && WHITESPACE.test(char)) {
+			whitespace_count++
+		} else {
+			collapse_whitespace()
+		}
+
+		if (char === '\0') {
+			const i = dyn_i++
+
+			switch (state) {
+				case lexer.DATA:
+				case lexer.COMMENT:
+				case lexer.COMMENT2:
+					compiled.parts.push({
+						replace_start: offset,
+						replace_end: offset + 1,
+						render: values => render_child(values[i]),
+					})
+					break
+
+				case lexer.ATTR_VALUE_UNQUOTED:
+				case lexer.ATTR_VALUE_DOUBLE_QUOTED:
+				case lexer.ATTR_VALUE_SINGLE_QUOTED:
+					const name = attr_name
+					assert(attr_start !== undefined)
+					compiled.parts.push({
+						replace_start: attr_start,
+						replace_end: offset + 1 + (state === lexer.ATTR_VALUE_UNQUOTED ? 0 : 1),
+						render: values => render_attribute(name, values[i]),
+					})
+					break
+
+				case lexer.ATTR_NAME:
+					compiled.parts.push({
+						replace_start: offset,
+						replace_end: offset + 1,
+						render: values => render_directive(values[i]),
+					})
+					break
+
+				default:
+					assert(false, `unexpected state ${state}`)
+			}
+		}
+
+		prev_state = state
+		offset++
+	}
+	collapse_whitespace()
+
+	if (__DEV__) {
+		let prev_end = -1
+		for (const { replace_start, replace_end } of compiled.parts) {
+			assert(replace_start >= prev_end)
+			assert(replace_start < replace_end)
+			prev_end = replace_end
+		}
 	}
 
 	templates.set(statics, compiled)
@@ -200,11 +181,14 @@ function* render_to_iterable(value: Displayable) {
 		'expected the same number of dynamics as parts. do you have a ${...} in an unsupported place?',
 	)
 
-	for (let i = 0; i < template.statics.length - 1; i++) {
-		yield template.statics[i]
-		yield* template.parts[i](dynamics)
+	let str = template.source
+	let prev_end = 0
+	for (const { replace_start, replace_end, render } of template.parts) {
+		yield str.slice(prev_end, replace_start)
+		yield* render(dynamics)
+		prev_end = replace_end
 	}
-	yield template.statics[template.statics.length - 1]
+	yield str.slice(prev_end)
 }
 
 export function renderToString(value: Displayable): string {
@@ -214,7 +198,7 @@ export function renderToString(value: Displayable): string {
 }
 
 export function renderToReadableStream(value: Displayable): ReadableStream {
-	const iter = render_to_iterable(value)[Symbol.iterator]()
+	const iter = render_to_iterable(value)
 	return new ReadableStream({
 		pull(controller) {
 			const { done, value } = iter.next()

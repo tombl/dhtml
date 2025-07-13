@@ -1,4 +1,5 @@
 import { html, type HTML } from './index.ts'
+export * as lexer from './shared/lexer.ts'
 
 /** @internal */
 declare global {
