@@ -48,8 +48,8 @@ export function create_child_part(parent_node: Node | Span, child_index: number)
 	}
 
 	function disconnect_root() {
-		// root.detach and part.detach are mutually recursive, so this detaches children too.
-		root?.detach()
+		// root.render will clear old parts on change, so this disconnects children too.
+		root?.render(null)
 		root = undefined
 	}
 
@@ -139,9 +139,9 @@ export function create_child_part(parent_node: Node | Span, child_index: number)
 							insert_node(root2._span, tmp_content)
 
 							// swap the spans back
-							const tmp_span = root1._span
-							root1._span = root2._span
-							root2._span = tmp_span
+							const tmp_span = { ...root1._span }
+							Object.assign(root1._span, root2._span)
+							Object.assign(root2._span, tmp_span)
 
 							// swap the roots
 							roots[j] = root1
@@ -163,13 +163,12 @@ export function create_child_part(parent_node: Node | Span, child_index: number)
 			while (roots.length > i) {
 				const root = roots.pop()
 				assert(root)
-				root.detach()
-				delete_contents(root._span)
+				root.render(null)
 			}
 
 			return
 		} else if (roots) {
-			for (const root of roots) root.detach()
+			for (const root of roots) root.render(null)
 			roots = undefined
 		}
 
@@ -178,7 +177,7 @@ export function create_child_part(parent_node: Node | Span, child_index: number)
 
 		if (is_html(value)) {
 			root ??= create_root(span)
-			root.render(value) // root.render will detach the previous tree if the template has changed.
+			root.render(value) // root.render will clear the parts from the previous tree if the template has changed.
 		} else {
 			// if we previously rendered a tree that might contain renderables,
 			// and the template has changed (or we're not even rendering a template anymore),

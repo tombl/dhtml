@@ -11,7 +11,7 @@ export function setup(initial_html = ''): { root: Root; el: HTMLDivElement } {
 
 	const root = createRoot(el)
 
-	afterAll(() => root.detach())
+	afterAll(() => root.render(null))
 
 	return { root, el }
 }

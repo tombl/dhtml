@@ -6,7 +6,6 @@ import { create_span, delete_contents, insert_node, type Span } from './span.ts'
 
 export interface Root {
 	render(value: Displayable): void
-	detach(): void
 	/** @internal */ _span: Span
 	/** @internal */ _key: Key | undefined
 }
@@ -28,13 +27,6 @@ export function create_root(span: Span): Root {
 	let old_template: CompiledTemplate
 	let parts: [number, Part][] | undefined
 
-	function detach() {
-		if (!parts) return
-		// scan through all the parts of the previous tree, and clear any renderables.
-		for (const [_idx, part] of parts) part(null)
-		parts = undefined
-	}
-
 	return {
 		_span: span,
 		_key: undefined,
@@ -49,7 +41,11 @@ export function create_root(span: Span): Root {
 			)
 
 			if (old_template !== template) {
-				detach()
+				if (parts !== undefined) {
+					// scan through all the parts of the previous tree, and clear any renderables.
+					for (const [_idx, part] of parts) part(null)
+					parts = undefined
+				}
 
 				old_template = template
 
@@ -83,7 +79,5 @@ export function create_root(span: Span): Root {
 			assert(parts)
 			for (const [idx, part] of parts) part(dynamics[idx])
 		},
-
-		detach,
 	}
 }
