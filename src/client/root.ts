@@ -5,7 +5,6 @@ import { create_span_into, delete_contents, insert_node, type Span } from './spa
 
 export interface Root {
 	render(value: Displayable): void
-	/** @internal */ _span: Span
 }
 
 export function createRoot(parent: Node): Root {
@@ -17,8 +16,6 @@ export function create_root(span: Span): Root {
 	let parts: [number, Part][] | undefined
 
 	return {
-		_span: span,
-
 		render: (value: Displayable) => {
 			const { _dynamics: dynamics, _statics: statics } = is_html(value) ? value : single_part_template(value)
 			const template = compile_template(statics)

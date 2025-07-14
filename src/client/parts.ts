@@ -25,6 +25,7 @@ export function create_child_part(parent_node: Node | Span, child_index: number)
 	let root: Root | undefined
 
 	// for when we're rendering multiple values:
+	let spans: Span[] | undefined
 	let roots: Root[] | undefined
 	let keys: Key[] | undefined
 
@@ -118,9 +119,11 @@ export function create_child_part(parent_node: Node | Span, child_index: number)
 				disconnect_root()
 				delete_contents(span)
 
+				spans = []
 				roots = []
 				keys = []
 			}
+			assert(spans)
 			assert(keys)
 
 			// create or update a root for every item.
@@ -128,25 +131,30 @@ export function create_child_part(parent_node: Node | Span, child_index: number)
 			let end = span._start
 			for (const item of value) {
 				const key = get_key(item)
-				let root = (roots[i] ??= create_root(create_span_after(end)))
+				let span = (spans[i] ??= create_span_after(end))
+				let root = (roots[i] ??= create_root(span))
 
 				if (key !== undefined && keys[i] !== key) {
 					for (let j = i; j < roots.length; j++) {
 						const root1 = root
 						const root2 = roots[j]
+						const span1 = spans[i]
+						const span2 = spans[j]
 
 						if (keys[j] === key) {
 							// swap the contents of the spans
-							const tmp_content = extract_contents(root1._span)
-							insert_node(root1._span, extract_contents(root2._span))
-							insert_node(root2._span, tmp_content)
+							const tmp_content = extract_contents(span1)
+							insert_node(span1, extract_contents(span2))
+							insert_node(span2, tmp_content)
 
 							// swap the spans back
-							const tmp_span = { ...root1._span }
-							Object.assign(root1._span, root2._span)
-							Object.assign(root2._span, tmp_span)
+							const tmp_span = { ...span1 }
+							Object.assign(span1, span2)
+							Object.assign(span2, tmp_span)
 
 							// swap the roots
+							spans[j] = span1
+							span = spans[i] = span2
 							roots[j] = root1
 							root = roots[i] = root2
 							keys[j] = keys[i]
@@ -160,7 +168,7 @@ export function create_child_part(parent_node: Node | Span, child_index: number)
 				}
 
 				root.render(item as Displayable)
-				end = root._span._end
+				end = span._end
 				i++
 			}
 
@@ -174,6 +182,7 @@ export function create_child_part(parent_node: Node | Span, child_index: number)
 			return
 		} else if (roots) {
 			for (const root of roots) root.render(null)
+			spans = undefined
 			roots = undefined
 			keys = undefined
 		}
