@@ -1,13 +1,11 @@
 import { assert, is_html, single_part_template, type Displayable } from '../shared.ts'
 import { compile_template, type CompiledTemplate } from './compiler.ts'
-import type { Key } from './controller.ts'
 import type { Part } from './parts.ts'
 import { create_span_into, delete_contents, insert_node, type Span } from './span.ts'
 
 export interface Root {
 	render(value: Displayable): void
 	/** @internal */ _span: Span
-	/** @internal */ _key: Key | undefined
 }
 
 export function createRoot(parent: Node): Root {
@@ -20,7 +18,6 @@ export function create_root(span: Span): Root {
 
 	return {
 		_span: span,
-		_key: undefined,
 
 		render: (value: Displayable) => {
 			const { _dynamics: dynamics, _statics: statics } = is_html(value) ? value : single_part_template(value)

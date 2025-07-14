@@ -7,7 +7,7 @@ import {
 	type Displayable,
 	type Renderable,
 } from '../shared.ts'
-import { controllers, get_controller, get_key } from './controller.ts'
+import { controllers, get_controller, get_key, type Key } from './controller.ts'
 import { create_root, type Root } from './root.ts'
 import { create_span, create_span_after, delete_contents, extract_contents, insert_node, type Span } from './span.ts'
 import type { Cleanup } from './util.ts'
@@ -26,6 +26,7 @@ export function create_child_part(parent_node: Node | Span, child_index: number)
 
 	// for when we're rendering multiple values:
 	let roots: Root[] | undefined
+	let keys: Key[] | undefined
 
 	// for when we're rendering a string/single dom node:
 	// undefined means no previous value, because a user-specified undefined is remapped to null
@@ -118,7 +119,9 @@ export function create_child_part(parent_node: Node | Span, child_index: number)
 				delete_contents(span)
 
 				roots = []
+				keys = []
 			}
+			assert(keys)
 
 			// create or update a root for every item.
 			let i = 0
@@ -127,12 +130,12 @@ export function create_child_part(parent_node: Node | Span, child_index: number)
 				const key = get_key(item)
 				let root = (roots[i] ??= create_root(create_span_after(end)))
 
-				if (key !== undefined && root._key !== key) {
+				if (key !== undefined && keys[i] !== key) {
 					for (let j = i; j < roots.length; j++) {
 						const root1 = root
 						const root2 = roots[j]
 
-						if (root2._key === key) {
+						if (keys[j] === key) {
 							// swap the contents of the spans
 							const tmp_content = extract_contents(root1._span)
 							insert_node(root1._span, extract_contents(root2._span))
@@ -146,12 +149,14 @@ export function create_child_part(parent_node: Node | Span, child_index: number)
 							// swap the roots
 							roots[j] = root1
 							root = roots[i] = root2
+							keys[j] = keys[i]
+							keys[i] = key
 
 							break
 						}
 					}
 
-					root._key = key
+					keys[i] = key
 				}
 
 				root.render(item as Displayable)
@@ -170,6 +175,7 @@ export function create_child_part(parent_node: Node | Span, child_index: number)
 		} else if (roots) {
 			for (const root of roots) root.render(null)
 			roots = undefined
+			keys = undefined
 		}
 
 		// now early return if the value hasn't changed.
