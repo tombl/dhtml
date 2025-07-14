@@ -2,7 +2,7 @@ import { assert, is_html, single_part_template, type Displayable } from '../shar
 import { compile_template, type CompiledTemplate } from './compiler.ts'
 import type { Key } from './controller.ts'
 import type { Part } from './parts.ts'
-import { create_span, delete_contents, insert_node, type Span } from './span.ts'
+import { create_span_into, delete_contents, insert_node, type Span } from './span.ts'
 
 export interface Root {
 	render(value: Displayable): void
@@ -10,17 +10,8 @@ export interface Root {
 	/** @internal */ _key: Key | undefined
 }
 
-export function create_root_into(parent: Node): Root {
-	const marker = new Text()
-	parent.appendChild(marker)
-	return create_root(create_span(marker))
-}
-
-export function create_root_after(node: Node): Root {
-	assert(node.parentNode, 'expected a parent node')
-	const marker = new Text()
-	node.parentNode.insertBefore(marker, node.nextSibling)
-	return create_root(create_span(marker))
+export function createRoot(parent: Node): Root {
+	return create_root(create_span_into(parent))
 }
 
 export function create_root(span: Span): Root {

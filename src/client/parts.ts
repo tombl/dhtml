@@ -8,8 +8,8 @@ import {
 	type Renderable,
 } from '../shared.ts'
 import { controllers, get_controller, get_key } from './controller.ts'
-import { create_root, create_root_after, type Root } from './root.ts'
-import { create_span, delete_contents, extract_contents, insert_node, type Span } from './span.ts'
+import { create_root, type Root } from './root.ts'
+import { create_span, create_span_after, delete_contents, extract_contents, insert_node, type Span } from './span.ts'
 import type { Cleanup } from './util.ts'
 
 export type Part = (value: unknown) => void
@@ -125,7 +125,7 @@ export function create_child_part(parent_node: Node | Span, child_index: number)
 			let end = span._start
 			for (const item of value) {
 				const key = get_key(item)
-				let root = (roots[i] ??= create_root_after(end))
+				let root = (roots[i] ??= create_root(create_span_after(end)))
 
 				if (key !== undefined && root._key !== key) {
 					for (let j = i; j < roots.length; j++) {

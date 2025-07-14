@@ -22,6 +22,35 @@ export function create_span(node: Node): Span {
 	}
 }
 
+export function create_span_into(parent: Node): Span {
+	const start = new Text()
+	const end = new Text()
+
+	parent.appendChild(start)
+	parent.appendChild(end)
+
+	return {
+		_parent: parent,
+		_start: start,
+		_end: end,
+	}
+}
+
+export function create_span_after(node: Node): Span {
+	assert(node.parentNode !== null)
+	const start = new Text()
+	const end = new Text()
+
+	node.parentNode.insertBefore(end, node.nextSibling)
+	node.parentNode.insertBefore(start, end)
+
+	return {
+		_parent: node.parentNode,
+		_start: start,
+		_end: end,
+	}
+}
+
 export function insert_node(span: Span, node: Node): void {
 	const end = is_document_fragment(node) ? node.lastChild : node
 	if (end === null) return // empty fragment
