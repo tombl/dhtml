@@ -7,8 +7,8 @@ import {
 	type Displayable,
 	type Renderable,
 } from '../shared.ts'
+import { compile_template, type CompiledTemplate } from './compiler.ts'
 import { controllers, get_controller, get_key, type Key } from './controller.ts'
-import { create_root, type Root } from './root.ts'
 import { create_span, create_span_after, delete_contents, extract_contents, insert_node, type Span } from './span.ts'
 import type { Cleanup } from './util.ts'
 
@@ -33,7 +33,7 @@ export function create_child_part(parent_node: Node | Span, child_index: number)
 	return create_child_part_inner(() => create_span(child))
 }
 
-function create_child_part_inner(get_span: () => Span): Part {
+export function create_child_part_inner(get_span: () => Span): Part {
 	let span: Span | undefined
 
 	// for when we're rendering a renderable:
@@ -41,7 +41,8 @@ function create_child_part_inner(get_span: () => Span): Part {
 	let needs_revalidate = true
 
 	// for when we're rendering a template:
-	let root: Root | undefined
+	let old_template: CompiledTemplate | undefined
+	let template_parts: [number, Part][] | undefined
 
 	// for when we're rendering multiple values:
 	let entries: Array<{ _span: Span; _part: Part; _key: Key }> | undefined
@@ -67,9 +68,11 @@ function create_child_part_inner(get_span: () => Span): Part {
 	}
 
 	function disconnect_root() {
-		// root.render will clear old parts on change, so this disconnects children too.
-		root?.render(null)
-		root = undefined
+		if (template_parts !== undefined) {
+			for (const [, part] of template_parts) part(null)
+			old_template = undefined
+			template_parts = undefined
+		}
 	}
 
 	return function update(value) {
@@ -179,13 +182,54 @@ function create_child_part_inner(get_span: () => Span): Part {
 			entries = undefined
 		}
 
-		// now early return if the value hasn't changed.
-		if (Object.is(old_value, value)) return
-
 		if (is_html(value)) {
-			root ??= create_root(span)
-			root.render(value) // root.render will clear the parts from the previous tree if the template has changed.
-		} else {
+			const { _dynamics: dynamics, _statics: statics } = value
+			const template = compile_template(statics)
+
+			assert(
+				template._parts.length === dynamics.length,
+				'expected the same number of dynamics as parts. do you have a ${...} in an unsupported place?',
+			)
+
+			if (old_template !== template) {
+				if (template_parts !== undefined) {
+					// scan through all the parts of the previous tree, and clear any renderables.
+					for (const [_idx, part] of template_parts) part(null)
+					template_parts = undefined
+				}
+
+				old_template = template
+
+				const doc = old_template._content.cloneNode(true) as DocumentFragment
+
+				const node_by_part: Array<Node | Span> = []
+
+				for (const node of doc.querySelectorAll('[data-dynparts]')) {
+					const parts = node.getAttribute('data-dynparts')
+					assert(parts)
+					node.removeAttribute('data-dynparts')
+					// @ts-expect-error -- is part a number, is part a string, who cares?
+					for (const part of parts.split(' ')) node_by_part[part] = node
+				}
+
+				for (const part of old_template._root_parts) node_by_part[part] = span
+
+				// the fragment must be inserted before the parts are constructed,
+				// because they need to know their final location.
+				// this also ensures that custom elements are upgraded before we do things
+				// to them, like setting properties or attributes.
+				delete_contents(span)
+				insert_node(span, doc)
+
+				template_parts = template._parts.map(([dynamic_index, create_part], element_index) => [
+					dynamic_index,
+					create_part(node_by_part[element_index]),
+				])
+			}
+
+			assert(template_parts)
+			for (const [idx, part] of template_parts) part(dynamics[idx])
+		} else if (!Object.is(old_value, value)) {
 			// if we previously rendered a tree that might contain renderables,
 			// and the template has changed (or we're not even rendering a template anymore),
 			// we need to clear the old renderables.
