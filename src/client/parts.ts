@@ -15,6 +15,25 @@ import type { Cleanup } from './util.ts'
 export type Part = (value: unknown) => void
 
 export function create_child_part(parent_node: Node | Span, child_index: number): Part {
+	let child: ChildNode | null
+
+	if (parent_node instanceof Node) {
+		child = parent_node.childNodes[child_index]
+		assert(child)
+	} else {
+		child = parent_node._start.nextSibling
+		assert(child)
+		for (let i = 0; i < child_index; i++) {
+			child = child.nextSibling
+			assert(child !== null, 'expected more siblings')
+			assert(child !== parent_node._end, 'ran out of siblings before the end')
+		}
+	}
+
+	return create_child_part_inner(() => create_span(child))
+}
+
+function create_child_part_inner(get_span: () => Span): Part {
 	let span: Span | undefined
 
 	// for when we're rendering a renderable:
@@ -25,9 +44,7 @@ export function create_child_part(parent_node: Node | Span, child_index: number)
 	let root: Root | undefined
 
 	// for when we're rendering multiple values:
-	let spans: Span[] | undefined
-	let roots: Root[] | undefined
-	let keys: Key[] | undefined
+	let entries: Array<{ _span: Span; _part: Part; _key: Key }> | undefined
 
 	// for when we're rendering a string/single dom node:
 	// undefined means no previous value, because a user-specified undefined is remapped to null
@@ -55,22 +72,8 @@ export function create_child_part(parent_node: Node | Span, child_index: number)
 		root = undefined
 	}
 
-	let child: ChildNode | null
-	if (parent_node instanceof Node) {
-		child = parent_node.childNodes[child_index]
-		assert(child)
-	} else {
-		child = parent_node._start.nextSibling
-		assert(child)
-		for (let i = 0; i < child_index; i++) {
-			child = child.nextSibling
-			assert(child !== null, 'expected more siblings')
-			assert(child !== parent_node._end, 'ran out of siblings before the end')
-		}
-	}
-
 	return function update(value) {
-		span ??= create_span(child)
+		span ??= get_span()
 
 		if (is_renderable(value)) {
 			if (!needs_revalidate && value === current_renderable) return
@@ -114,77 +117,66 @@ export function create_child_part(parent_node: Node | Span, child_index: number)
 		// NOTE: we're explicitly not caching/diffing the value when it's an iterable,
 		// given it can yield different values but have the same identity. (e.g. arrays)
 		if (is_iterable(value)) {
-			if (!roots) {
+			if (!entries) {
 				// we previously rendered a single value, so we need to clear it.
 				disconnect_root()
 				delete_contents(span)
-
-				spans = []
-				roots = []
-				keys = []
+				entries = []
 			}
-			assert(spans)
-			assert(keys)
 
 			// create or update a root for every item.
 			let i = 0
 			let end = span._start
 			for (const item of value) {
-				const key = get_key(item)
-				let span = (spans[i] ??= create_span_after(end))
-				let root = (roots[i] ??= create_root(span))
+				const key = get_key(item) as Key
+				if (entries.length <= i) {
+					const span = create_span_after(end)
+					entries[i] = { _span: span, _part: create_child_part_inner(() => span), _key: key }
+				}
 
-				if (key !== undefined && keys[i] !== key) {
-					for (let j = i; j < roots.length; j++) {
-						const root1 = root
-						const root2 = roots[j]
-						const span1 = spans[i]
-						const span2 = spans[j]
+				if (key !== undefined && entries[i]._key !== key) {
+					for (let j = i + 1; j < entries.length; j++) {
+						const entry1 = entries[i]
+						const entry2 = entries[j]
 
-						if (keys[j] === key) {
+						if (entry2._key === key) {
 							// swap the contents of the spans
-							const tmp_content = extract_contents(span1)
-							insert_node(span1, extract_contents(span2))
-							insert_node(span2, tmp_content)
+							const tmp_content = extract_contents(entry1._span)
+							insert_node(entry1._span, extract_contents(entry2._span))
+							insert_node(entry2._span, tmp_content)
 
 							// swap the spans back
-							const tmp_span = { ...span1 }
-							Object.assign(span1, span2)
-							Object.assign(span2, tmp_span)
+							const tmp_span = { ...entry1._span }
+							Object.assign(entry1._span, entry2._span)
+							Object.assign(entry2._span, tmp_span)
 
 							// swap the roots
-							spans[j] = span1
-							span = spans[i] = span2
-							roots[j] = root1
-							root = roots[i] = root2
-							keys[j] = keys[i]
-							keys[i] = key
+							entries[j] = entry1
+							entries[i] = entry2
 
 							break
 						}
 					}
 
-					keys[i] = key
+					entries[i]._key = key
 				}
 
-				root.render(item as Displayable)
-				end = span._end
+				entries[i]._part(item as Displayable)
+				end = entries[i]._span._end
 				i++
 			}
 
-			// and now remove excess roots if the iterable has shrunk.
-			while (roots.length > i) {
-				const root = roots.pop()
-				assert(root)
-				root.render(null)
+			// and now remove excess parts if the iterable has shrunk.
+			while (entries.length > i) {
+				const entry = entries.pop()
+				assert(entry)
+				entry._part(null)
 			}
 
 			return
-		} else if (roots) {
-			for (const root of roots) root.render(null)
-			spans = undefined
-			roots = undefined
-			keys = undefined
+		} else if (entries) {
+			for (const entry of entries) entry._part(null)
+			entries = undefined
 		}
 
 		// now early return if the value hasn't changed.
