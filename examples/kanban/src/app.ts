@@ -1,7 +1,6 @@
 import './styles.css'
 
 import { html } from 'dhtml'
-import { onUnmount } from 'dhtml/client'
 import { Database, type ID } from './db'
 import { Bus } from './util/bus'
 import { Router } from './util/router'
@@ -23,11 +22,10 @@ export class App {
 	bus = new Bus<BusEvent>('app')
 	db = new Database()
 
-	constructor() {
-		onUnmount(this, async () => {
-			this.bus.close()
-			await this.db.close()
-		})
+	async stop() {
+		this.router.stop()
+		this.bus.close()
+		await this.db.close()
 	}
 
 	render() {

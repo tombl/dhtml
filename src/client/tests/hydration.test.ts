@@ -1,5 +1,5 @@
 import { html, type Displayable, type Renderable } from 'dhtml'
-import { attr, hydrate, invalidate, keyed, onMount, type Directive, type Root } from 'dhtml/client'
+import { attr, hydrate, invalidate, keyed, type Directive, type Root } from 'dhtml/client'
 import { renderToString } from 'dhtml/server'
 import { assert, assert_deep_eq, assert_eq, test } from '../../../scripts/test/test.ts'
 
@@ -327,18 +327,12 @@ test('renderables with lifecycle hooks hydrate correctly', () => {
 		},
 	}
 
-	onMount(app, () => {
-		sequence.push(`mount ${phase}`)
-		return () => sequence.push('cleanup')
-	})
-
 	const { root, el } = setup(app)
 
 	assert_eq(el.innerHTML, '<!--?[--><div>Component</div><!--?]-->')
 	assert_deep_eq(sequence, [
 		'render server', // render on the server
 		'render client', // render on the client for hydration
-		'mount client', // mount on the client
 		'render client', // rerender on the client
 	])
 
