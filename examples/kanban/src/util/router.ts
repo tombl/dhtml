@@ -5,7 +5,6 @@ import {
 } from '@tombl/router/browser'
 import type { Params } from '@tombl/router/matcher'
 import { html, type Displayable } from 'dhtml'
-import { onMount } from 'dhtml/client'
 import { state } from './decorators'
 
 type PageClass<Path extends string, Context> = new (ctx: Context, params: Params<Path>) => Displayable
@@ -51,12 +50,11 @@ export class Router<Context, Routes extends { [Path in keyof Routes & string]: P
 			},
 		})
 
-		onMount(this, () => {
-			this.#router.start()
-			return () => {
-				this.#router.stop()
-			}
-		})
+		this.#router.start()
+	}
+
+	stop() {
+		this.#router.stop()
 	}
 
 	navigate(pathname: string) {
