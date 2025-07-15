@@ -53,23 +53,13 @@ export function create_child_part_inner(get_span: () => Span): Part {
 
 	function switch_renderable(next: Renderable | null) {
 		if (current_renderable && current_renderable !== next) {
-			const controller = controllers.get(current_renderable)
-			if (controller) {
-				controller._invalidate.delete(switch_renderable)
-
-				// If this was the last instance, call unmount callbacks
-				if (!controller._invalidate.size) {
-					controller._unmount_callbacks.forEach(callback => callback?.())
-					controller._unmount_callbacks.length = 0
-				}
-			}
+			controllers.get(current_renderable)?.delete(switch_renderable)
 		}
 		current_renderable = next
 	}
 
 	function disconnect_root() {
 		if (template_parts !== undefined) {
-			for (const [, part] of template_parts) part(null)
 			old_template = undefined
 			template_parts = undefined
 		}
@@ -85,12 +75,7 @@ export function create_child_part_inner(get_span: () => Span): Part {
 			switch_renderable(value)
 
 			const renderable = value
-			const controller = get_controller(renderable)
-			// If this is the first mounted instance, call mount callbacks
-			if (!controller._invalidate.size) {
-				controller._unmount_callbacks = controller._mount_callbacks.map(callback => callback())
-			}
-			controller._invalidate.set(switch_renderable, () => {
+			get_controller(renderable).set(switch_renderable, () => {
 				assert(renderable === current_renderable)
 				needs_revalidate = true
 				update(renderable)
@@ -177,10 +162,7 @@ export function create_child_part_inner(get_span: () => Span): Part {
 			}
 
 			return
-		} else if (entries) {
-			for (const entry of entries) entry._part(null)
-			entries = undefined
-		}
+		} else entries = undefined
 
 		if (is_html(value)) {
 			const { _dynamics: dynamics, _statics: statics } = value
@@ -192,12 +174,6 @@ export function create_child_part_inner(get_span: () => Span): Part {
 			)
 
 			if (old_template !== template) {
-				if (template_parts !== undefined) {
-					// scan through all the parts of the previous tree, and clear any renderables.
-					for (const [_idx, part] of template_parts) part(null)
-					template_parts = undefined
-				}
-
 				old_template = template
 
 				const doc = old_template._content.cloneNode(true) as DocumentFragment
