@@ -1,5 +1,5 @@
 import type { Renderable } from 'dhtml'
-import { invalidate, onMount } from 'dhtml/client'
+import { invalidate } from 'dhtml/client'
 import type { Bus } from './bus'
 import { suspend } from './suspense'
 
@@ -39,6 +39,6 @@ export function createSubscribedQuery<T, Event extends string>(
 	fn: QueryFn<T>,
 ): Query<T> {
 	const query = createQuery(renderable, fn)
-	onMount(renderable, () => bus.subscribe(event, query.revalidate))
+	bus.subscribe(event, query.revalidate)
 	return query
 }
