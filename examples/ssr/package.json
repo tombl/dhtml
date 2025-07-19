@@ -1,0 +1,18 @@
+{
+	"name": "@dhtml-examples/ssr",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"start": "node --watch main.ts",
+		"check": "tsc"
+	},
+	"devDependencies": {
+		"typescript": "~5.8.3"
+	},
+	"dependencies": {
+		"@hono/node-server": "^1.15.0",
+		"amaro": "^1.1.0",
+		"dhtml": "file:../../dist",
+		"hono": "^4.8.3"
+	}
+}
