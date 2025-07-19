@@ -1,10 +1,8 @@
 import { test } from 'bun:test'
-import { html, type Displayable } from 'dhtml'
-import { invalidate, keyed } from 'dhtml/client'
+import { html, keyed, type Displayable } from 'dhtml'
+import { invalidate } from 'dhtml/client'
 import assert from 'node:assert/strict'
 import { setup } from './setup.ts'
-
-const dev_test = test.skipIf(!__DEV__)
 
 function shuffle<T>(array: T[]) {
 	for (let i = 0; i < array.length; i++) {
@@ -331,11 +329,6 @@ test('many items can be reordered', () => {
 
 	root.render(items.map(([item]) => item))
 	assert.equal(el.innerHTML, items.map(([, html]) => html).join(''))
-})
-
-dev_test('keying something twice throws an error', () => {
-	assert.doesNotThrow(() => keyed(html``, 1))
-	assert.throws(() => keyed(keyed(html``, 1), 1))
 })
 
 test('can render the same item multiple times', () => {
