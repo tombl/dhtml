@@ -7,10 +7,16 @@ const names = Object.fromEntries(
 		.map(([name, value]) => [value, name]),
 )
 
+function tsa(...strings: string[]): TemplateStringsArray {
+	return Object.assign(strings, { raw: strings })
+}
+
 for (const entry of process.argv.slice(2)) {
 	const statics = entry.split('$')
 	console.log(statics)
-	for (const [char, state] of lexer.lex(statics)) {
+	for (const [char, state] of lexer.lex(tsa(...statics))) {
 		console.log(JSON.stringify(char), names[state])
 	}
 }
+
+export {}

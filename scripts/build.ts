@@ -1,4 +1,5 @@
 import MagicString from 'magic-string'
+import assert from 'node:assert'
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { parseArgs, styleText } from 'node:util'
 import { brotliCompressSync, gzipSync } from 'node:zlib'
@@ -19,16 +20,16 @@ await mkdir('dist')
 await Promise.all([bundle_code(), write_package_json()])
 
 async function bundle_code() {
-	/** @type {import('rolldown').Plugin} */
-	const strip_asserts_plugin = {
+	const strip_asserts_plugin: rolldown.Plugin = {
 		name: 'strip-asserts',
 		transform(code, id, { moduleType }) {
 			if (id.includes('node_modules')) return
 
+			assert(moduleType === 'js' || moduleType === 'ts')
 			const ast = this.parse(code, { lang: moduleType })
 			const source = new MagicString(code, { filename: id })
 
-			walk(/** @type {import('@oxc-project/types').Node} */ (ast), null, {
+			walk<import('@oxc-project/types').Node, null>(ast, null, {
 				CallExpression(node, { next }) {
 					if (node.callee.type === 'Identifier' && node.callee.name === 'assert') {
 						source.update(node.start, node.end, ';')
@@ -45,23 +46,23 @@ async function bundle_code() {
 
 	const terser_name_cache = {}
 
-	/** @type {import('rolldown').Plugin} */
-	const terser_plugin = {
+	const terser_plugin: rolldown.Plugin = {
 		name: 'terser',
 		renderChunk(code) {
-			return minify_sync(code, {
+			const result = minify_sync(code, {
 				mangle: { properties: { regex: /^_/ } },
 				nameCache: terser_name_cache,
 				sourceMap: true,
 				module: true,
 			})
+			assert(result.code)
+			assert(typeof result.map === 'string')
+			return { code: result.code, map: result.map }
 		},
 	}
 
-	/** @type {Record<string, number>} */
-	const old_sizes = {}
-	/** @type {import('rolldown').Plugin} */
-	const print_size_plugin = {
+	const old_sizes: Record<string, number> = {}
+	const print_size_plugin: rolldown.Plugin = {
 		name: 'print-size',
 		generateBundle(_options, bundle) {
 			for (const [name, file] of Object.entries(bundle)) {
@@ -91,8 +92,7 @@ async function bundle_code() {
 		},
 	}
 
-	/** @returns {import('rolldown').BuildOptions} */
-	function define_bundle(env) {
+	function define_bundle(env): rolldown.BuildOptions {
 		const input = {
 			client: './src/client.ts',
 			server: './src/server.ts',

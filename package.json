@@ -8,8 +8,8 @@
 	},
 	"scripts": {
 		"postinstall": "patch-package",
-		"build": "node scripts/build.js",
-		"build:watch": "node --watch scripts/build.js --watch",
+		"build": "node scripts/build.ts",
+		"build:watch": "node --watch scripts/build.ts --watch",
 		"format": "prettier --write . --cache",
 		"check": "tsc",
 		"test": "bun test --coverage --define __DEV__=true",
