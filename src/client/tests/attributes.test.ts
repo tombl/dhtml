@@ -1,13 +1,12 @@
-import { mock, test } from 'bun:test'
 import { html } from 'dhtml'
-import assert from 'node:assert/strict'
+import { assert, assert_eq, test } from '../../../scripts/test/test.ts'
 import { setup } from './setup.ts'
 
 test('regular attributes', () => {
 	const { root, el } = setup()
 
 	root.render(html`<h1 style=${'color: red'}>Hello, world!</h1>`)
-	assert.equal(el.querySelector('h1')!.getAttribute('style'), 'color: red;')
+	assert_eq(el.querySelector('h1')!.getAttribute('style'), 'color: red;')
 })
 
 test('can toggle attributes', () => {
@@ -44,27 +43,27 @@ test('infers the case of properties', () => {
 	const innerHTML = '<h1>Hello, world!</h1>'
 
 	root.render(html`<div innerhtml=${innerHTML}></div>`)
-	assert.equal(el.querySelector('div')!.innerHTML, innerHTML)
+	assert_eq(el.querySelector('div')!.innerHTML, innerHTML)
 
 	root.render(html`<span innerHTML=${innerHTML}></span>`)
-	assert.equal(el.querySelector('span')!.innerHTML, innerHTML)
+	assert_eq(el.querySelector('span')!.innerHTML, innerHTML)
 })
 
 test('treats class/for specially', () => {
 	const { root, el } = setup()
 
 	root.render(html`<h1 class=${'foo'}>Hello, world!</h1>`)
-	assert.equal(el.querySelector('h1')!.className, 'foo')
+	assert_eq(el.querySelector('h1')!.className, 'foo')
 
 	root.render(html`<label for=${'foo'}>Hello, world!</label>`)
-	assert.equal(el.querySelector('label')!.htmlFor, 'foo')
+	assert_eq(el.querySelector('label')!.htmlFor, 'foo')
 })
 
 test('handles data attributes', () => {
 	const { root, el } = setup()
 
 	root.render(html`<h1 data-foo=${'bar'}>Hello, world!</h1>`)
-	assert.equal(el.querySelector('h1')!.dataset.foo, 'bar')
+	assert_eq(el.querySelector('h1')!.dataset.foo, 'bar')
 })
 
 test('supports events', () => {
@@ -81,11 +80,11 @@ test('supports events', () => {
 		</button>
 	`)
 
-	assert.equal(clicks, 0)
+	assert_eq(clicks, 0)
 	el.querySelector('button')!.click()
-	assert.equal(clicks, 1)
+	assert_eq(clicks, 1)
 	el.querySelector('button')!.click()
-	assert.equal(clicks, 2)
+	assert_eq(clicks, 2)
 })
 
 test('supports event handlers that change', () => {
@@ -93,16 +92,16 @@ test('supports event handlers that change', () => {
 
 	const template = (handler: ((event: Event) => void) | null) => html`<input onblur=${handler}>Click me</input>`
 
-	const handler = mock((_event: Event) => {})
-	root.render(template(handler))
-	assert.equal(handler.mock.calls.length, 0)
+	const calls: Event[] = []
+	root.render(template(event => calls.push(event)))
+	assert_eq(calls.length, 0)
 
 	const event = new Event('blur')
 	el.querySelector('input')!.dispatchEvent(event)
-	assert.equal(handler.mock.calls.length, 1)
-	assert.equal(handler.mock.calls[0][0], event)
+	assert_eq(calls.length, 1)
+	assert_eq(calls[0], event)
 
 	root.render(template(null))
 	el.querySelector('input')!.dispatchEvent(new Event('blur'))
-	assert.equal(handler.mock.calls.length, 1)
+	assert_eq(calls.length, 1)
 })

@@ -12,9 +12,7 @@
 		"build:watch": "node --watch scripts/build.ts --watch",
 		"format": "prettier --write . --cache",
 		"check": "tsc",
-		"test": "bun test --coverage --define __DEV__=true",
-		"test:watch": "npm test -- --watch",
-		"test:prod": "bun test --define __DEV__=false"
+		"test": "node scripts/test/main.ts 'src/{client,server}/tests/*.test.ts'"
 	},
 	"workspaces": [
 		".",
@@ -27,6 +25,7 @@
 		"amaro": "^1.1.0",
 		"birpc": "^2.5.0",
 		"bun-types": "^1.2.15",
+		"devalue": "^5.1.1",
 		"hono": "^4.8.5",
 		"magic-string": "^0.30.17",
 		"mitata": "^1.0.34",

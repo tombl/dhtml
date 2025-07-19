@@ -1,6 +1,5 @@
-import { test } from 'bun:test'
 import { html } from 'dhtml'
-import assert from 'node:assert/strict'
+import { assert_eq, test } from '../../../scripts/test/test.ts'
 import { setup } from './setup.ts'
 
 const DEPTH = 10
@@ -16,7 +15,7 @@ test('basic recursion is handled correctly', () => {
 		},
 	}
 	root.render(app)
-	assert.equal(el.innerHTML, 'hello!')
+	assert_eq(el.innerHTML, 'hello!')
 })
 
 test('nested recursion is handled correctly', () => {
@@ -30,5 +29,5 @@ test('nested recursion is handled correctly', () => {
 		},
 	}
 	root.render(app)
-	assert.equal(el.innerHTML, '<span>'.repeat(DEPTH) + 'hello!' + '</span>'.repeat(DEPTH))
+	assert_eq(el.innerHTML, '<span>'.repeat(DEPTH) + 'hello!' + '</span>'.repeat(DEPTH))
 })
