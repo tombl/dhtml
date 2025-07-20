@@ -36,51 +36,33 @@ for (const arg of args.positionals) {
 	}
 }
 
-const runs = (
-	await Promise.all(
-		Object.entries(all_files).map(async ([runtime, files]) => {
-			const rt = runtime === 'node' ? await create_node_runtime() : await create_browser_runtime()
-			await using _ = rt // workaround for https://issues.chromium.org/issues/409478039
+const results: TestResult[] = []
+for (const [runtime, files] of Object.entries(all_files)) {
+	const rt = runtime === 'node' ? await create_node_runtime() : await create_browser_runtime()
+	await using _ = rt // workaround for https://issues.chromium.org/issues/409478039
 
-			let results: TestResult[] = []
+	const client = createBirpc<ClientFunctions, ServerFunctions>(
+		{
+			report_result(run) {
+				if (run.result === 'pass') {
+					console.log(styleText('green', 'PASS'), run.name, styleText('dim', `(${run.duration.toFixed(1)}ms)`))
+				} else {
+					console.log(styleText('red', 'FAIL'), run.name)
+					console.log(run.reason)
+					console.log()
+				}
 
-			const client = createBirpc<ClientFunctions, ServerFunctions>(
-				{
-					report_result(run) {
-						if (run.result === 'pass') {
-							console.log(styleText('green', 'PASS'), run.name, styleText('dim', `(${run.duration.toFixed(1)}ms)`))
-						} else {
-							console.log(styleText('red', 'FAIL'), run.name)
-							console.log(run.reason)
-							console.log()
-						}
-
-						results.push(run)
-					},
-				},
-				{
-					post: data => rt.port.postMessage(data),
-					on: fn => {
-						rt.port.onmessage = e => fn(e.data)
-					},
-					serialize: devalue.stringify,
-					deserialize: devalue.parse,
-				},
-			)
-
-			await client.define('__DEV__', !args.values.prod)
-
-			const here = path.join(fileURLToPath(import.meta.url), '..')
-			await Promise.all(files.map(file => client.import('./' + path.relative(here, file))))
-
-			if (args.values.bench) {
-				await client.run_benchmarks({ filter })
-			} else {
-				await client.run_tests({ filter })
-			}
-
-			return results
-		}),
+				results.push(run)
+			},
+		},
+		{
+			post: data => rt.port.postMessage(data),
+			on: fn => {
+				rt.port.onmessage = e => fn(e.data)
+			},
+			serialize: devalue.stringify,
+			deserialize: devalue.parse,
+		},
 	)
 
 	await client.define('__DEV__', !args.values.prod)
