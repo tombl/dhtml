@@ -4,7 +4,7 @@ import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseArgs, styleText } from 'node:util'
 import { create_browser_runtime } from './browser-runtime.ts'
-import type { Coverage } from './coverage.ts'
+import { v8_to_lcov, type Coverage } from './coverage.ts'
 import * as devalue from './devalue.ts'
 import { create_node_runtime } from './node-runtime.ts'
 import type { ClientFunctions, TestResult } from './runtime.ts'
@@ -39,6 +39,8 @@ for (const arg of args.positionals) {
 }
 
 const results: TestResult[] = []
+const coverage: Coverage[] = []
+
 for (const [runtime, files] of Object.entries(all_files)) {
 	const rt = runtime === 'node' ? await create_node_runtime() : await create_browser_runtime()
 	await using _ = rt // workaround for https://issues.chromium.org/issues/409478039
@@ -79,12 +81,14 @@ for (const [runtime, files] of Object.entries(all_files)) {
 	}
 
 	await client.stop_coverage()
-	const coverage = await rt.coverage()
-	console.log(JSON.stringify(coverage, null, 2))
+	coverage.push(...(await rt.coverage()))
 }
 
 if (args.values.bench) {
 } else {
+	const lcov = await v8_to_lcov(coverage)
+	await fs.writeFile('lcov.info', lcov)
+
 	if (results.length === 0) {
 		console.log('no tests found')
 		process.exitCode = 1
