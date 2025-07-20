@@ -197,9 +197,9 @@ export function renderToString(value: Displayable): string {
 	return str
 }
 
-export function renderToReadableStream(value: Displayable): ReadableStream {
+export function renderToReadableStream(value: Displayable): ReadableStream<Uint8Array> {
 	const iter = render_to_iterable(value)
-	return new ReadableStream({
+	return new ReadableStream<string>({
 		pull(controller) {
 			const { done, value } = iter.next()
 			if (done) {
@@ -208,7 +208,7 @@ export function renderToReadableStream(value: Displayable): ReadableStream {
 			}
 			controller.enqueue(value)
 		},
-	})
+	}).pipeThrough(new TextEncoderStream())
 }
 
 // {
