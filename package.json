@@ -7,29 +7,26 @@
 		"./server": "./src/server.ts"
 	},
 	"scripts": {
-		"postinstall": "patch-package",
 		"build": "node scripts/build.ts",
 		"build:watch": "node --watch scripts/build.ts --watch",
 		"format": "prettier --write . --cache",
 		"check": "tsc",
-		"test": "node scripts/test/main.ts 'src/{client,server}/tests/*.test.ts'"
+		"test": "node scripts/test/main.ts 'src/{client,server}/tests/*.test.ts'",
+		"bench": "node scripts/test/main.ts --bench 'src/{client,server}/tests/bench.ts'"
 	},
 	"workspaces": [
 		".",
 		"examples/*"
 	],
 	"devDependencies": {
-		"@happy-dom/global-registrator": "^18.0.0",
 		"@hono/node-server": "^1.17.0",
 		"@types/node": "^22.15.30",
 		"amaro": "^1.1.0",
 		"birpc": "^2.5.0",
-		"bun-types": "^1.2.15",
 		"devalue": "^5.1.1",
 		"hono": "^4.8.5",
 		"magic-string": "^0.30.17",
 		"mitata": "^1.0.34",
-		"patch-package": "^8.0.0",
 		"prettier": "^3.5.3",
 		"prettier-plugin-organize-imports": "^4.1.0",
 		"puppeteer": "^24.14.0",

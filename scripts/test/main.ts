@@ -44,6 +44,7 @@ async function create_browser_runtime(): Promise<Runtime> {
 					'dhtml/server': '/dist/server.js',
 					birpc: '/node_modules/birpc/dist/index.mjs',
 					devalue: '/node_modules/devalue/index.js',
+					mitata: '/node_modules/mitata/src/main.mjs',
 				},
 			})}</script>
       <script type="module" src="/scripts/test/runtime.ts"></script>
@@ -60,6 +61,12 @@ async function create_browser_runtime(): Promise<Runtime> {
 		}
 	})
 	app.use(serveStatic({ root: './' }))
+	app.use(async (c, next) => {
+		await next()
+		c.header('Cross-Origin-Opener-Policy', 'same-origin')
+    c.header('Cross-Origin-Embedder-Policy', 'require-corp')
+    c.header('Cross-Origin-Resource-Policy', 'same-origin')
+	})
 
 	const server = serve({
 		fetch: app.fetch,
@@ -137,6 +144,7 @@ async function create_node_runtime(): Promise<Runtime> {
 
 const args = parseArgs({
 	options: {
+		bench: { type: 'boolean', short: 'b', default: false },
 		filter: { type: 'string', short: 'f' },
 	},
 	allowPositionals: true,
@@ -163,10 +171,13 @@ const runs = (
 			const client = createBirpc<ClientFunctions, ServerFunctions>(
 				{
 					report_result(run) {
-						const PASS = styleText(['green'], 'PASS')
-						const FAIL = styleText(['red'], 'FAIL')
-						console.log(run.result === 'pass' ? PASS : FAIL, run.name)
-						if (run.result === 'fail') console.log(run.reason)
+						if (run.result === 'pass') {
+							console.log(styleText('green', 'PASS'), run.name, styleText('dim', `(${run.duration.toFixed(1)}ms)`))
+						} else {
+							console.log(styleText('red', 'FAIL'), run.name)
+							console.log(run.reason)
+							console.log()
+						}
 
 						results.push(run)
 					},
@@ -183,7 +194,12 @@ const runs = (
 
 			const here = path.join(fileURLToPath(import.meta.url), '..')
 			await Promise.all(files.map(file => client.import('./' + path.relative(here, file))))
-			await client.run_tests({ filter: filter })
+
+			if (args.values.bench) {
+				await client.run_benchmarks({ filter })
+			} else {
+				await client.run_tests({ filter })
+			}
 
 			return results
 		}),

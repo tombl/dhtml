@@ -1,11 +1,10 @@
 import { tests } from './runtime.ts'
 
 export function test(name: string, fn: () => void | Promise<void>): void {
-	tests.push({ type: 'test', name, fn })
+	tests.push({ name, fn })
 }
-export function bench(name: string, fn: () => void | Promise<void>): void {
-	tests.push({ type: 'bench', name, fn })
-}
+
+export { bench } from 'mitata'
 
 export function assert(value: unknown, message?: string): asserts value {
 	if (!value) throw new Error(message ?? 'assertion failed')

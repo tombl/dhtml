@@ -1,9 +1,6 @@
-#!/usr/bin/env -S bun run --define __DEV__=false
-/// <reference types="bun-types" />
-
 import { html } from 'dhtml'
 import { invalidate } from 'dhtml/client'
-import { bench, run } from 'mitata'
+import { bench } from '../../../scripts/test/test.ts'
 import { setup } from './setup.ts'
 
 // ==============================
@@ -631,37 +628,3 @@ bench('tree/worst_case/virtual_dom', () => {
 	state.virtual_dom_worst_case()
 	invalidate(state)
 })
-
-const { benchmarks } = await run()
-
-if (process.argv.includes('--bencher')) {
-	// https://bencher.dev/docs/reference/bencher-metric-format/
-	interface BencherMetrics {
-		[benchmark: string]: {
-			[metric: string]: {
-				value: number
-				lower_value?: number
-				upper_value?: number
-			}
-		}
-	}
-
-	const metrics: BencherMetrics = {}
-
-	for (const trial of benchmarks) {
-		for (const run of trial.runs as any[]) {
-			const metric = (metric: { min: number; max: number; avg: number }) => ({
-				value: metric.avg,
-				lower_value: metric.min,
-				upper_value: metric.max,
-			})
-
-			metrics[run.name] = {
-				duration: metric(run.stats),
-				heap: metric(run.stats.heap),
-			}
-		}
-	}
-
-	await Bun.write('results.json', JSON.stringify(metrics, null, 2))
-}
