@@ -3,17 +3,19 @@ import * as mitata from 'mitata'
 import * as devalue from './devalue.ts'
 import type { ServerFunctions } from './main.ts'
 
-globalThis.__DEV__ = true
-
 export type TestResult = { name: string } & ({ result: 'pass'; duration: number } | { result: 'fail'; reason: unknown })
 
 export interface ClientFunctions {
+	define<K extends keyof typeof globalThis>(name: K, value: (typeof globalThis)[K]): void
 	import(path: string): Promise<unknown>
 	run_tests(options: { filter?: RegExp }): Promise<void>
 	run_benchmarks(options: { filter?: RegExp }): Promise<mitata.trial[]>
 }
 
 const client: ClientFunctions = {
+	define(name, value) {
+		globalThis[name] = value
+	},
 	import(path) {
 		return import(path)
 	},

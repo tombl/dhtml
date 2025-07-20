@@ -20,6 +20,7 @@ export interface Runtime {
 const args = parseArgs({
 	options: {
 		bench: { type: 'boolean', short: 'b', default: false },
+		prod: { type: 'boolean', short: 'p', default: false },
 		filter: { type: 'string', short: 'f' },
 	},
 	allowPositionals: true,
@@ -66,6 +67,8 @@ const runs = (
 					deserialize: devalue.parse,
 				},
 			)
+
+			await client.define('__DEV__', !args.values.prod)
 
 			const here = path.join(fileURLToPath(import.meta.url), '..')
 			await Promise.all(files.map(file => client.import('./' + path.relative(here, file))))
