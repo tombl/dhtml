@@ -7,8 +7,6 @@ import type { Runtime } from './main.ts'
 
 export async function create_browser_runtime(): Promise<Runtime> {
 	const browser = await puppeteer.launch({
-		executablePath:
-			'/nix/store/nrzjaz51mg3dznpzfkzr24yk12izda2a-google-chrome-dev-140.0.7299.0/bin/google-chrome-unstable',
 		// headless: false,
 		// devtools: true,
 	})
