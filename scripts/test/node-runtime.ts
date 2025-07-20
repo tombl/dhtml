@@ -21,6 +21,11 @@ export async function create_node_runtime(): Promise<Runtime> {
 
 	return {
 		port: port2,
+		async coverage() {
+			const [filename] = await fs.readdir(coverage_dir)
+			const { result } = JSON.parse(await fs.readFile(path.join(coverage_dir, filename), 'utf8'))
+			return result
+		},
 		async [Symbol.asyncDispose]() {
 			port1.close()
 			child.kill()

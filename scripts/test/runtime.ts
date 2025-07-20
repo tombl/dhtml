@@ -10,6 +10,7 @@ export interface ClientFunctions {
 	import(path: string): Promise<unknown>
 	run_tests(options: { filter?: RegExp }): Promise<void>
 	run_benchmarks(options: { filter?: RegExp }): Promise<mitata.trial[]>
+	stop_coverage(): Promise<void>
 }
 
 const client: ClientFunctions = {
@@ -36,6 +37,12 @@ const client: ClientFunctions = {
 	async run_benchmarks(options) {
 		const { benchmarks } = await mitata.run({ filter: options.filter })
 		return benchmarks
+	},
+	async stop_coverage() {
+		if (typeof process === 'undefined') return
+		const v8 = await import('node:v8')
+		v8.takeCoverage()
+		v8.stopCoverage()
 	},
 }
 

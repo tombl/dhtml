@@ -86,6 +86,7 @@ export async function create_browser_runtime(): Promise<Runtime> {
 	const { port1, port2 } = new MessageChannel()
 	await page.exposeFunction('__postMessage', (data: any) => port1.postMessage(data))
 
+	await page.coverage.startJSCoverage({ includeRawScriptCoverage: true })
 	await page.goto(`http://${addr}/@runner`)
 
 	const onmessage = await page.waitForFunction(() => window.__onmessage)
@@ -93,6 +94,10 @@ export async function create_browser_runtime(): Promise<Runtime> {
 
 	return {
 		port: port2,
+		async coverage() {
+			const coverage = await page.coverage.stopJSCoverage()
+			return coverage.map(c => c.rawScriptCoverage!)
+		},
 		async [Symbol.asyncDispose]() {
 			port1.close()
 			server.close()

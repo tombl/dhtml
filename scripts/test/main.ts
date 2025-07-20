@@ -4,6 +4,7 @@ import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseArgs, styleText } from 'node:util'
 import { create_browser_runtime } from './browser-runtime.ts'
+import type { Coverage } from './coverage.ts'
 import * as devalue from './devalue.ts'
 import { create_node_runtime } from './node-runtime.ts'
 import type { ClientFunctions, TestResult } from './runtime.ts'
@@ -14,6 +15,7 @@ export interface ServerFunctions {
 
 export interface Runtime {
 	port: MessagePort
+	coverage(): Promise<Coverage[]>
 	[Symbol.asyncDispose](): Promise<void>
 }
 
@@ -75,6 +77,10 @@ for (const [runtime, files] of Object.entries(all_files)) {
 	} else {
 		await client.run_tests({ filter })
 	}
+
+	await client.stop_coverage()
+	const coverage = await rt.coverage()
+	console.log(JSON.stringify(coverage, null, 2))
 }
 
 if (args.values.bench) {
