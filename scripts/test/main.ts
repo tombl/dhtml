@@ -4,7 +4,7 @@ import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseArgs, styleText } from 'node:util'
 import { create_browser_runtime } from './browser-runtime.ts'
-import { v8_to_lcov, type Coverage } from './coverage.ts'
+import { handle_coverage, type Coverage } from './coverage.ts'
 import * as devalue from './devalue.ts'
 import { create_node_runtime } from './node-runtime.ts'
 import type { ClientFunctions, TestResult } from './runtime.ts'
@@ -86,8 +86,7 @@ for (const [runtime, files] of Object.entries(all_files)) {
 
 if (args.values.bench) {
 } else {
-	const lcov = await v8_to_lcov(coverage)
-	await fs.writeFile('lcov.info', lcov)
+	await handle_coverage(coverage)
 
 	if (results.length === 0) {
 		console.log('no tests found')
