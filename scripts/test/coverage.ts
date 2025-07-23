@@ -24,6 +24,8 @@ export async function v8_to_lcov(coverage: Coverage[]): Promise<string> {
 	const files: Record<string, LcovFile> = {}
 
 	for (const script of coverage) {
+	  if (script.url.includes('node_modules')) continue
+
 		const path = url_to_file_path(script.url)
 		if (!path) continue
 
