@@ -1,6 +1,5 @@
-import { test } from 'bun:test'
 import { html } from 'dhtml'
-import assert from 'node:assert/strict'
+import { assert_eq, test } from '../../../scripts/test/test.ts'
 
 type JsonML = string | readonly [tag: string, attrs?: Record<string, any>, ...children: JsonML[]]
 interface Formatter {
@@ -39,7 +38,8 @@ function format(value: unknown): string {
 	return JSON.stringify(value)
 }
 
-const dev_test = test.skipIf(!__DEV__)
-dev_test('devtools formatter', () => {
-	assert.equal(format(html`<p>Count is ${1}</p>`), '<span>html`<p>Count is 1</p>`</span>')
-})
+if (__DEV__) {
+	test('devtools formatter', () => {
+		assert_eq(format(html`<p>Count is ${1}</p>`), '<span>html`<p>Count is 1</p>`</span>')
+	})
+}

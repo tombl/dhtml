@@ -92,16 +92,14 @@ async function bundle_code() {
 		},
 	}
 
-	function define_bundle(env): rolldown.BuildOptions {
-		const input = {
-			client: './src/client.ts',
-			server: './src/server.ts',
-			index: './src/index.ts',
-		}
-
+	function define_bundle(env: 'dev' | 'prod'): rolldown.BuildOptions {
 		const is_dev = env === 'dev'
 		return {
-			input,
+			input: {
+				client: './src/client.ts',
+				server: './src/server.ts',
+				index: './src/index.ts',
+			},
 			plugins: [!is_dev && strip_asserts_plugin, is_dev && dts({ sourcemap: true })],
 			output: {
 				dir: 'dist',

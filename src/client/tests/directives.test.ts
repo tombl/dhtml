@@ -1,7 +1,6 @@
-import { test } from 'bun:test'
 import { html } from 'dhtml'
 import { attr, type Directive } from 'dhtml/client'
-import assert from 'node:assert/strict'
+import { assert, assert_eq, test } from '../../../scripts/test/test.ts'
 import { setup } from './setup.ts'
 
 test('directive functions work correctly', () => {
@@ -27,13 +26,13 @@ test('directive functions work correctly', () => {
 	root.render(template(redifier))
 	const div = el.querySelector('div')
 	assert(div)
-	assert.equal(div.style.cssText, 'color: red;')
+	assert_eq(div.style.cssText, 'color: red;')
 
 	root.render(template(flipper))
-	assert.equal(div.style.cssText, 'transform: scaleX(-1);')
+	assert_eq(div.style.cssText, 'transform: scaleX(-1);')
 
 	root.render(template(null))
-	assert.equal(div.style.cssText, '')
+	assert_eq(div.style.cssText, '')
 
 	root.render(null)
 })
@@ -56,13 +55,13 @@ test('directive functions with values work correctly', () => {
 	root.render(template(['a', 'b']))
 	const div = el.querySelector('div')
 	assert(div)
-	assert.equal(div.className, 'foo a b')
+	assert_eq(div.className, 'foo a b')
 
 	root.render(template(['c', 'd']))
-	assert.equal(div.className, 'foo c d')
+	assert_eq(div.className, 'foo c d')
 
 	root.render(template([]))
-	assert.equal(div.className, 'foo')
+	assert_eq(div.className, 'foo')
 })
 
 test('attr directive works correctly', () => {
@@ -74,13 +73,13 @@ test('attr directive works correctly', () => {
 	`
 
 	root.render(template('attr-works-input'))
-	assert.equal(el.querySelector('label')!.htmlFor, 'attr-works-input')
+	assert_eq(el.querySelector('label')!.htmlFor, 'attr-works-input')
 
 	root.render(template('updated'))
-	assert.equal(el.querySelector('label')!.htmlFor, 'updated')
+	assert_eq(el.querySelector('label')!.htmlFor, 'updated')
 
 	root.render(template(null))
-	assert.equal(el.querySelector('label')!.htmlFor, '')
+	assert_eq(el.querySelector('label')!.htmlFor, '')
 })
 
 test('attr directive supports booleans', () => {
@@ -89,8 +88,8 @@ test('attr directive supports booleans', () => {
 	const template = (value: boolean) => html`<input ${attr('disabled', value)} />`
 
 	root.render(template(true))
-	assert.equal(el.querySelector('input')!.disabled, true)
+	assert_eq(el.querySelector('input')!.disabled, true)
 
 	root.render(template(false))
-	assert.equal(el.querySelector('input')!.disabled, false)
+	assert_eq(el.querySelector('input')!.disabled, false)
 })

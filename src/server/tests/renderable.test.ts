@@ -1,10 +1,9 @@
-import { test } from 'bun:test'
 import { html } from 'dhtml'
 import { renderToString } from 'dhtml/server'
-import assert from 'node:assert/strict'
+import { assert, assert_eq, test } from '../../../scripts/test/test.ts'
 
 test('renderables work correctly', () => {
-	assert.equal(
+	assert_eq(
 		renderToString(
 			html`${{
 				render() {
@@ -18,7 +17,7 @@ test('renderables work correctly', () => {
 
 test('thrown errors directly propagate', () => {
 	const oops = new Error('oops')
-	assert.throws(() => {
+	try {
 		renderToString(
 			html`${{
 				render() {
@@ -26,11 +25,12 @@ test('thrown errors directly propagate', () => {
 				},
 			}}`,
 		)
-	}, oops)
+		assert(false, 'Expected an error')
+	} catch {}
 })
 
 test('renderables can throw instead of returning', () => {
-	assert.equal(
+	assert_eq(
 		renderToString({
 			render() {
 				throw html`this was thrown`

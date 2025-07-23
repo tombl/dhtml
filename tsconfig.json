@@ -5,15 +5,14 @@
 		"skipLibCheck": true,
 		"noEmit": true,
 		"module": "nodenext",
-		"target": "es2020",
+		"target": "es2022",
 		"verbatimModuleSyntax": true,
 		"moduleResolution": "nodenext",
 		"allowImportingTsExtensions": true,
 		"stripInternal": true,
 		"isolatedDeclarations": true,
 		"declaration": true,
-		"noFallthroughCasesInSwitch": true,
-		"types": ["bun-types"]
+		"noFallthroughCasesInSwitch": true
 	},
-	"include": ["src"]
+	"include": ["src", "scripts"]
 }
