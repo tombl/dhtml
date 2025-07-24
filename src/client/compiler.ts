@@ -1,21 +1,24 @@
 import { assert, lexer } from '../shared.ts'
-import {
-	create_attribute_part,
-	create_child_part,
-	create_directive_part,
-	create_property_part,
-	type Part,
-} from './parts.ts'
-import type { Span } from './span.ts'
 import { is_comment, is_document_fragment, is_element } from './util.ts'
+
+export const PART_CHILD = 0
+export const PART_DIRECTIVE = 1
+export const PART_ATTRIBUTE = 2
+export const PART_PROPERTY = 3
+
+export type PartData =
+	| [type: typeof PART_CHILD, index: number]
+	| [type: typeof PART_DIRECTIVE]
+	| [type: typeof PART_ATTRIBUTE, name: string]
+	| [type: typeof PART_PROPERTY, name: string]
 
 export interface CompiledTemplate {
 	_content: DocumentFragment
-	_parts: [idx: number, create_part: (node: Node | Span) => Part][]
+	_parts: [idx: number, PartData][]
 	_root_parts: number[]
 }
 
-const DYNAMIC_WHOLE = /^dyn-\$(\d+)\$$/
+export const DYNAMIC_WHOLE: RegExp = /^dyn-\$(\d+)\$$/
 const DYNAMIC_GLOBAL = /dyn-\$(\d+)\$/g
 const FORCE_ATTRIBUTES = /-|^class$|^for$/i
 
@@ -44,17 +47,13 @@ export function compile_template(statics: TemplateStringsArray): CompiledTemplat
 		_root_parts: [],
 	}
 
-	function patch(
-		node: DocumentFragment | HTMLElement | SVGElement,
-		idx: number,
-		create_part: (node: Node | Span) => Part,
-	) {
+	function patch(node: DocumentFragment | HTMLElement | SVGElement, idx: number, data: PartData) {
 		assert(next_part < compiled._parts.length, 'got more parts than expected')
 		if (is_document_fragment(node)) compiled._root_parts.push(next_part)
 		else if ('dynparts' in node.dataset) node.dataset.dynparts += ' ' + next_part
 		// @ts-expect-error -- this assigment will cast nextPart to a string
 		else node.dataset.dynparts = next_part
-		compiled._parts[next_part++] = [idx, create_part]
+		compiled._parts[next_part++] = [idx, data]
 	}
 
 	const walker = document.createTreeWalker(template_element.content, 129)
@@ -73,8 +72,12 @@ export function compile_template(statics: TemplateStringsArray): CompiledTemplat
 						parent_node instanceof HTMLElement ||
 						parent_node instanceof SVGElement,
 				)
-				const child = [...parent_node.childNodes].indexOf(node)
-				patch(parent_node, parseInt(match[1]), node => create_child_part(node, child))
+
+				// these will become the start and end of the span:
+				parent_node.insertBefore(new Text(), node)
+				parent_node.insertBefore(new Text(), node.nextSibling)
+
+				patch(parent_node, parseInt(match[1]), [PART_CHILD, [...parent_node.childNodes].indexOf(node)])
 			}
 		} else {
 			assert(is_element(node))
@@ -90,28 +93,19 @@ export function compile_template(statics: TemplateStringsArray): CompiledTemplat
 					// directive:
 					to_remove.push(name)
 					assert(value === '', `directives must not have values`)
-					patch(node, parseInt(match[1]), node => {
-						assert(node instanceof Node)
-						return create_directive_part(node)
-					})
+					patch(node, parseInt(match[1]), [PART_DIRECTIVE])
 				} else {
 					// properties:
 					match = DYNAMIC_WHOLE.exec(value)
 					if (match !== null) {
 						to_remove.push(name)
 						if (FORCE_ATTRIBUTES.test(name)) {
-							patch(node, parseInt(match[1]), node => {
-								assert(node instanceof Element)
-								return create_attribute_part(node, name)
-							})
+							patch(node, parseInt(match[1]), [PART_ATTRIBUTE, name])
 						} else {
 							if (!(name in node)) {
 								name = (correct_case_cache[node.tagName] ??= generate_case_map(node))[name]
 							}
-							patch(node, parseInt(match[1]), node => {
-								assert(node instanceof Node)
-								return create_property_part(node, name)
-							})
+							patch(node, parseInt(match[1]), [PART_PROPERTY, name])
 						}
 					} else {
 						assert(!DYNAMIC_GLOBAL.test(value), `expected a whole dynamic value for ${name}, got a partial one`)

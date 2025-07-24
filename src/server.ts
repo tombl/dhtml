@@ -120,7 +120,7 @@ function render_directive(value: unknown) {
 	if (value === null) return ''
 
 	assert(typeof value === 'function')
-	console.log('directive returned:', value())
+	// console.log('directive returned:', value())
 
 	return ''
 }
@@ -133,8 +133,10 @@ function render_attribute(name: string, value: unknown) {
 	return `${name}="${escape(value)}"`
 }
 
-function* render_child(value: unknown) {
+function* render_child(value: unknown): Generator<string, void, void> {
 	const seen = new Map<object, number>()
+
+	yield '<?[>'
 
 	while (is_renderable(value))
 		try {
@@ -152,12 +154,29 @@ function* render_child(value: unknown) {
 		}
 
 	if (is_iterable(value)) {
-		for (const item of value) yield* render_to_iterable(item as Displayable)
+		for (const item of value) yield* render_child(item as Displayable)
 	} else if (is_html(value)) {
-		yield* render_to_iterable(value)
+		const { _statics: statics, _dynamics: dynamics } = is_html(value) ? value : single_part_template(value)
+		const template = compile_template(statics)
+
+		assert(
+			template.parts.length - template.extra_parts === dynamics.length,
+			'expected the same number of dynamics as parts. do you have a ${...} in an unsupported place?',
+		)
+
+		let str = template.source
+		let prev_end = 0
+		for (const { replace_start, replace_end, render } of template.parts) {
+			yield str.slice(prev_end, replace_start)
+			yield* render(dynamics)
+			prev_end = replace_end
+		}
+		yield str.slice(prev_end)
 	} else if (value !== null) {
 		yield escape(value)
 	}
+
+	yield '<?]>'
 }
 
 const ESCAPE_RE = /[&<>"']/g
@@ -172,33 +191,14 @@ function escape(str: unknown) {
 	return String(str).replace(ESCAPE_RE, c => ESCAPE_SUBSTITUTIONS[c as keyof typeof ESCAPE_SUBSTITUTIONS])
 }
 
-function* render_to_iterable(value: Displayable) {
-	const { _statics: statics, _dynamics: dynamics } = is_html(value) ? value : single_part_template(value)
-	const template = compile_template(statics)
-
-	assert(
-		template.parts.length - template.extra_parts === dynamics.length,
-		'expected the same number of dynamics as parts. do you have a ${...} in an unsupported place?',
-	)
-
-	let str = template.source
-	let prev_end = 0
-	for (const { replace_start, replace_end, render } of template.parts) {
-		yield str.slice(prev_end, replace_start)
-		yield* render(dynamics)
-		prev_end = replace_end
-	}
-	yield str.slice(prev_end)
-}
-
 export function renderToString(value: Displayable): string {
 	let str = ''
-	for (const part of render_to_iterable(value)) str += part
+	for (const part of render_child(value)) str += part
 	return str
 }
 
 export function renderToReadableStream(value: Displayable): ReadableStream<Uint8Array> {
-	const iter = render_to_iterable(value)
+	const iter = render_child(value)
 	return new ReadableStream<string>({
 		pull(controller) {
 			const { done, value } = iter.next()

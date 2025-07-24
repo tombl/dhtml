@@ -33,7 +33,7 @@ export function assert(value: unknown, message?: string): asserts value {
 }
 
 export const html_tag: unique symbol = Symbol()
-export function is_html(value: any): value is HTML {
+export function is_html(value: unknown): value is HTML {
 	return typeof value === 'object' && value !== null && html_tag in value
 }
 

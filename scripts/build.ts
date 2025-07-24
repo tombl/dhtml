@@ -32,7 +32,7 @@ async function bundle_code() {
 			walk<import('@oxc-project/types').Node, null>(ast, null, {
 				CallExpression(node, { next }) {
 					if (node.callee.type === 'Identifier' && node.callee.name === 'assert') {
-						source.update(node.start, node.end, ';')
+						source.update(node.start, node.end, 'undefined')
 						return
 					}
 
