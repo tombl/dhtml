@@ -8,64 +8,25 @@
 		<title>dhtml</title>
 		<script type="module">
 			import { html } from './dist/index.js'
-			import { createRoot, invalidate } from './dist/client.js'
+			import { hydrate, invalidate } from './dist/client.js'
 
-			const root = createRoot(document.body)
-			Object.assign(globalThis, { createRoot, html, root })
-
-			const url = ({ href }) => html`<a href=${href}>${href}</a>`
-
-			root.render({
-				i: 0,
+			let i = 0
+			await new Promise(resolve => setTimeout(resolve, 100))
+			hydrate(document.body, {
 				render() {
-					return html`
-						<main style="padding: 1rem; display: flex; flex-direction: column; gap: 1rem">
-							<header>
-								<h1><code>dhtml</code></h1>
-								<p>a post-component library for building user interfaces on the web.</p>
-								<p><a href="https://github.com/tombl/dhtml">github</a></p>
-							</header>
-							<pre style="tab-size: 2">
-${[
-									`import { html } from '`,
-									url(new URL('dist/index.js', location.href)),
-									`'
-import { createRoot, invalidate } from '`,
-									url(new URL('dist/client.js', location.href)),
-									`'
-
-const app = {
-	i: 0,
-	render() {
-		return html\`
-			<button
-				onclick=\${() => {
-					this.i++
-					invalidate(this)
-				}}
-			>
-				Count: \${this.i}
-			</button>
-		\`
-	},
-}
-
-createRoot(document.body).render(app)`,
-								]}</pre
-							>
-							<button
-								onclick=${() => {
-									this.i++
-									invalidate(this)
-								}}
-							>
-								Count: ${this.i}
-							</button>
-						</main>
-					`
+					return html`<button
+						onclick=${() => {
+							i++
+							invalidate(this)
+						}}
+					>
+						${i}
+					</button>`
 				},
 			})
 		</script>
 	</head>
-	<body></body>
+	<body>
+		<button>-1</button>
+	</body>
 </html>
