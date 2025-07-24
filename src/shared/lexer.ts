@@ -105,7 +105,7 @@ export function* lex(statics: TemplateStringsArray): Generator<[char: string, st
 				break
 
 			case AFTER_ATTR_NAME: // https://html.spec.whatwg.org/multipage/parsing.html#after-attribute-name-state
-				if (c === '\t' || c === '\n' || c === '\f' || c === ' ' || c === '/') {
+				if (c === '\t' || c === '\n' || c === '\f' || c === ' ') {
 				} else if (c === '/') state = SELF_CLOSING_START_TAG
 				else if (c === '=') state = BEFORE_ATTR_VALUE
 				else if (c === '>') state = DATA
