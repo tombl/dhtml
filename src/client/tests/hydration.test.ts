@@ -326,19 +326,17 @@ test('renderables with lifecycle hooks hydrate correctly', () => {
 	assert_deep_eq(sequence, ['cleanup'])
 })
 
-// TODO: this throws a html value which breaks the test harness
-if (false)
-	test('renderables that throw work correctly during hydration', () => {
-		const app = {
-			render() {
-				throw html`<div>Thrown content</div>`
-			},
-		}
+test('renderables that throw work correctly during hydration', () => {
+	const app = {
+		render() {
+			throw html`<div>Thrown content</div>`
+		},
+	}
 
-		const { el } = setup(app)
+	const { el } = setup(app)
 
-		assert_eq(el.innerHTML, '<div>Thrown content</div>')
-	})
+	assert_eq(el.innerHTML, '<!--?[--><div>Thrown content</div><!--?]-->')
+})
 
 // Advanced Hydration Scenarios
 test('deeply nested templates hydrate correctly', () => {

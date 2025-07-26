@@ -67,7 +67,15 @@ function hydrate_child_part(span: Span, value: unknown) {
 	let template_parts: [number, Part][] | undefined
 
 	if (is_renderable(value)) {
-		value = (current_renderable = value).render()
+		try {
+			value = (current_renderable = value).render()
+		} catch (thrown) {
+			if (is_html(thrown)) {
+				value = thrown
+			} else {
+				throw thrown
+			}
+		}
 	}
 
 	if (is_html(value)) {
