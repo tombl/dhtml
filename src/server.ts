@@ -120,7 +120,7 @@ function render_directive(value: unknown) {
 	if (value === null) return ''
 
 	assert(typeof value === 'function')
-	console.log('directive returned:', value())
+	// console.log('directive returned:', value())
 
 	return ''
 }

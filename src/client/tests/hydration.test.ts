@@ -203,53 +203,50 @@ test('mixed content arrays hydrate correctly', () => {
 })
 
 // Directive Hydration Tests
-// TODO: directives are broken?
-if (false) {
-	test('simple directives hydrate correctly', () => {
-		const redifier: Directive = node => {
-			if (!(node instanceof HTMLElement)) throw new Error('expected HTMLElement')
-			node.style.color = 'red'
+test('simple directives hydrate correctly', () => {
+	const redifier: Directive = node => {
+		if (!(node instanceof HTMLElement)) throw new Error('expected HTMLElement')
+		node.style.color = 'red'
+		return () => {
+			node.style.color = ''
+		}
+	}
+
+	const template = (directive: Directive | null) => html`<div ${directive}>Hello, world!</div>`
+	const { root, el } = setup(template(redifier))
+
+	const div = el.querySelector('div')!
+	assert_eq(div.style.cssText, 'color: red;')
+
+	root.render(template(null))
+	assert_eq(div.style.cssText, '')
+})
+
+test('attr directive hydrates correctly', () => {
+	const template = (value: string) => html`<label ${attr('for', value)}>Label</label>`
+	const { root, el } = setup(template('test-input'))
+
+	assert_eq(el.querySelector('label')!.htmlFor, 'test-input')
+
+	root.render(template('updated-input'))
+	assert_eq(el.querySelector('label')!.htmlFor, 'updated-input')
+})
+
+test('directives with parameters hydrate correctly', () => {
+	function classes(value: string[]): Directive {
+		const values = value.filter(Boolean)
+		return node => {
+			node.classList.add(...values)
 			return () => {
-				node.style.color = ''
+				node.classList.remove(...values)
 			}
 		}
+	}
 
-		const template = (directive: Directive | null) => html`<div ${directive}>Hello, world!</div>`
-		const { root, el } = setup(template(redifier))
+	const { el } = setup(html`<div class="base" ${classes(['a', 'b'])}>Hello</div>`)
 
-		const div = el.querySelector('div')!
-		assert_eq(div.style.cssText, 'color: red;')
-
-		root.render(template(null))
-		assert_eq(div.style.cssText, '')
-	})
-
-	test('attr directive hydrates correctly', () => {
-		const template = (value: string) => html`<label ${attr('for', value)}>Label</label>`
-		const { root, el } = setup(template('test-input'))
-
-		assert_eq(el.querySelector('label')!.htmlFor, 'test-input')
-
-		root.render(template('updated-input'))
-		assert_eq(el.querySelector('label')!.htmlFor, 'updated-input')
-	})
-
-	test('directives with parameters hydrate correctly', () => {
-		function classes(value: string[]): Directive {
-			const values = value.filter(Boolean)
-			return node => {
-				node.classList.add(...values)
-				return () => {
-					node.classList.remove(...values)
-				}
-			}
-		}
-
-		const { el } = setup(html`<div class="base" ${classes(['a', 'b'])}>Hello</div>`)
-
-		assert_eq(el.querySelector('div')!.className, 'base a b')
-	})
-}
+	assert_eq(el.querySelector('div')!.className, 'base a b')
+})
 
 // Renderable Component Tests
 test('basic renderables hydrate correctly', () => {

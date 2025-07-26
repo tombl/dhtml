@@ -11,7 +11,7 @@
 			import { hydrate, invalidate } from './dist/client.js'
 			import { renderToString } from './dist/server.js'
 
-			const app = html`<main>${html`(<p>${1}</p>)`}</main>`
+			const app = html`<p ${console.log}>a</p>`
 
 			document.body.innerHTML = renderToString(app)
 			console.log(renderToString(app))

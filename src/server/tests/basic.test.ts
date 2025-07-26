@@ -66,7 +66,7 @@ test('directives', () => {
 		calls++
 	}
 	assert_eq(renderToString(html`<p ${directive}></p>`), '<?[><p ></p><?]>')
-	assert_eq(calls, 1)
+	assert_eq(calls, 0) // TODO: what should these look like on the server?
 })
 
 test('unquoted attributes', () => {
