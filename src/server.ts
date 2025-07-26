@@ -136,6 +136,8 @@ function render_attribute(name: string, value: unknown) {
 function* render_child(value: unknown) {
 	const seen = new Map<object, number>()
 
+	yield '<?>'
+
 	while (is_renderable(value))
 		try {
 			const times = seen.get(value) ?? 0
@@ -158,6 +160,8 @@ function* render_child(value: unknown) {
 	} else if (value !== null) {
 		yield escape(value)
 	}
+
+	yield '<?>'
 }
 
 const ESCAPE_RE = /[&<>"']/g

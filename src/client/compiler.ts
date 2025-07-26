@@ -72,6 +72,11 @@ export function compile_template(statics: TemplateStringsArray): CompiledTemplat
 						parent_node instanceof HTMLElement ||
 						parent_node instanceof SVGElement,
 				)
+
+				// these will become the start and end of the span:
+				parent_node.insertBefore(new Text(), node)
+				parent_node.insertBefore(new Text(), node.nextSibling)
+
 				patch(parent_node, parseInt(match[1]), { _type: PART_CHILD, _index: [...parent_node.childNodes].indexOf(node) })
 			}
 		} else {

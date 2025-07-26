@@ -12,23 +12,23 @@ test('basic html renders correctly via stream', async () => {
 })
 
 test('inner content renders correctly', () => {
-	assert_eq(renderToString(html`<h1>${html`Inner content!`}</h1>`), '<h1>Inner content!</h1>')
+	assert_eq(renderToString(html`<h1>${html`Inner content!`}</h1>`), '<h1><?>Inner content!<?></h1>')
 })
 
 test('template with number renders correctly', () => {
 	const template = (n: number) => html`<h1>Hello, ${n}!</h1>`
-	assert_eq(renderToString(template(1)), '<h1>Hello, 1!</h1>')
-	assert_eq(renderToString(template(2)), '<h1>Hello, 2!</h1>')
+	assert_eq(renderToString(template(1)), '<h1>Hello, <?>1<?>!</h1>')
+	assert_eq(renderToString(template(2)), '<h1>Hello, <?>2<?>!</h1>')
 })
 
 test('lists of items', () => {
-	assert_eq(renderToString([1, 'a', html`<span>thing</span>`]), '1a<span>thing</span>')
+	assert_eq(renderToString([1, 'a', html`<span>thing</span>`]), '<?><?>1<?><?>a<?><span>thing</span><?>')
 })
 
 test('basic children render correctly', () => {
 	assert_eq(
 		renderToString(html`<span>${'This is a'}</span> ${html`test`} ${html`test`} ${html`test`}`),
-		'<span>This is a</span> test test test',
+		'<span><?>This is a<?></span> <?>test<?> <?>test<?> <?>test<?>',
 	)
 })
 

@@ -14,8 +14,8 @@ import {
 	create_property_part,
 	type Part,
 } from './parts.ts'
-import { create_span, create_span_into, type Span } from './span.ts'
-import { is_element } from './util.ts'
+import { create_span_into, type Span } from './span.ts'
+import { is_comment, is_element } from './util.ts'
 
 export interface Root {
 	render(value: Displayable): void
@@ -23,12 +23,30 @@ export interface Root {
 
 export function createRoot(parent: Node): Root {
 	const span = create_span_into(parent)
-	return { render: create_child_part(undefined, span) }
+	return { render: create_child_part(span) }
 }
 
 export function hydrate(parent: Node, value: Displayable): Root {
-	assert(parent.firstChild && parent.lastChild)
-	const render = hydrate_child_part({ _parent: parent, _start: parent.firstChild, _end: parent.lastChild }, value)
+	let children = [...parent.childNodes]
+	let start, end
+
+	for (let i = 0; i < children.length; i++) {
+		const node = children[i]
+		if (is_comment(node) && node.data === '?') {
+			start = node
+			break
+		}
+	}
+	for (let i = 0; i < children.length; i++) {
+		const node = children[children.length - i - 1]
+		if (is_comment(node) && node.data === '?') {
+			end = node
+			break
+		}
+	}
+
+	assert(start && end && start !== end)
+	const render = hydrate_child_part({ _parent: parent, _start: start, _end: end }, value)
 	render(value)
 	return { render }
 }
@@ -38,7 +56,6 @@ function hydrate_child_part(span: Span, value: unknown) {
 	let template: CompiledTemplate | undefined
 	let template_parts: [number, Part][] | undefined
 
-	const original_value = value
 	if (is_renderable(value)) {
 		value = (current_renderable = value).render()
 	}
@@ -89,7 +106,19 @@ function hydrate_child_part(span: Span, value: unknown) {
 						}
 					}
 
-					return [dynamic_index, hydrate_child_part(create_span(child), value._dynamics[dynamic_index])]
+					assert(child.parentNode && child.previousSibling && child.nextSibling)
+
+					return [
+						dynamic_index,
+						hydrate_child_part(
+							{
+								_parent: child.parentNode,
+								_start: child.previousSibling,
+								_end: child.nextSibling,
+							},
+							value._dynamics[dynamic_index],
+						),
+					]
 				case PART_DIRECTIVE:
 					assert(node instanceof Node)
 					return [dynamic_index, create_directive_part(node)]
@@ -105,5 +134,5 @@ function hydrate_child_part(span: Span, value: unknown) {
 		})
 	}
 
-	return create_child_part(undefined, span, true, current_renderable, template, template_parts)
+	return create_child_part(span, true, current_renderable, template, template_parts)
 }

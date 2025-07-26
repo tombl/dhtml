@@ -16,14 +16,13 @@ import {
 	type CompiledTemplate,
 } from './compiler.ts'
 import { controllers, get_controller, get_key, type Key } from './controller.ts'
-import { create_span, create_span_after, delete_contents, extract_contents, insert_node, type Span } from './span.ts'
+import { create_span_after, delete_contents, extract_contents, insert_node, type Span } from './span.ts'
 import type { Cleanup } from './util.ts'
 
 export type Part = (value: unknown) => void
 
 export function create_child_part(
-	get_span?: () => Span,
-	span?: Span,
+	span: Span,
 
 	// for when we're rendering a renderable:
 	needs_revalidate = true,
@@ -65,8 +64,6 @@ export function create_child_part(
 	}
 
 	return function update(value) {
-		span ??= (assert(get_span), get_span())
-
 		if (is_renderable(value)) {
 			if (!needs_revalidate && value === current_renderable) return
 			needs_revalidate = false
@@ -123,7 +120,7 @@ export function create_child_part(
 				const key = get_key(item) as Key
 				if (entries.length <= i) {
 					const span = create_span_after(end)
-					entries[i] = { _span: span, _part: create_child_part(() => span), _key: key }
+					entries[i] = { _span: span, _part: create_child_part(span), _key: key }
 				}
 
 				if (key !== undefined && entries[i]._key !== key) {
@@ -228,7 +225,16 @@ export function create_child_part(
 								}
 							}
 
-							return [dynamic_index, create_child_part(() => create_span(child))]
+							assert(child.parentNode && child.previousSibling && child.nextSibling)
+
+							return [
+								dynamic_index,
+								create_child_part({
+									_parent: child.parentNode,
+									_start: child.previousSibling,
+									_end: child.nextSibling,
+								}),
+							]
 						case PART_DIRECTIVE:
 							assert(node instanceof Node)
 							return [dynamic_index, create_directive_part(node)]

@@ -11,7 +11,7 @@ test('renderables work correctly', () => {
 				},
 			}}`,
 		),
-		'<h1>Hello, world!</h1>',
+		'<?><h1>Hello, world!</h1><?>',
 	)
 })
 
@@ -36,6 +36,6 @@ test('renderables can throw instead of returning', () => {
 				throw html`this was thrown`
 			},
 		}),
-		'this was thrown',
+		'<?>this was thrown<?>',
 	)
 })
