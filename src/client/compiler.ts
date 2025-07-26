@@ -7,10 +7,10 @@ export const PART_ATTRIBUTE = 2
 export const PART_PROPERTY = 3
 
 export type PartData =
-	| { _type: typeof PART_CHILD; _index: number }
-	| { _type: typeof PART_DIRECTIVE }
-	| { _type: typeof PART_ATTRIBUTE; _name: string }
-	| { _type: typeof PART_PROPERTY; _name: string }
+	| [type: typeof PART_CHILD, index: number]
+	| [type: typeof PART_DIRECTIVE]
+	| [type: typeof PART_ATTRIBUTE, name: string]
+	| [type: typeof PART_PROPERTY, name: string]
 
 export interface CompiledTemplate {
 	_content: DocumentFragment
@@ -77,7 +77,7 @@ export function compile_template(statics: TemplateStringsArray): CompiledTemplat
 				parent_node.insertBefore(new Text(), node)
 				parent_node.insertBefore(new Text(), node.nextSibling)
 
-				patch(parent_node, parseInt(match[1]), { _type: PART_CHILD, _index: [...parent_node.childNodes].indexOf(node) })
+				patch(parent_node, parseInt(match[1]), [PART_CHILD, [...parent_node.childNodes].indexOf(node)])
 			}
 		} else {
 			assert(is_element(node))
@@ -93,19 +93,19 @@ export function compile_template(statics: TemplateStringsArray): CompiledTemplat
 					// directive:
 					to_remove.push(name)
 					assert(value === '', `directives must not have values`)
-					patch(node, parseInt(match[1]), { _type: PART_DIRECTIVE })
+					patch(node, parseInt(match[1]), [PART_DIRECTIVE])
 				} else {
 					// properties:
 					match = DYNAMIC_WHOLE.exec(value)
 					if (match !== null) {
 						to_remove.push(name)
 						if (FORCE_ATTRIBUTES.test(name)) {
-							patch(node, parseInt(match[1]), { _type: PART_ATTRIBUTE, _name: name })
+							patch(node, parseInt(match[1]), [PART_ATTRIBUTE, name])
 						} else {
 							if (!(name in node)) {
 								name = (correct_case_cache[node.tagName] ??= generate_case_map(node))[name]
 							}
-							patch(node, parseInt(match[1]), { _type: PART_PROPERTY, _name: name })
+							patch(node, parseInt(match[1]), [PART_PROPERTY, name])
 						}
 					} else {
 						assert(!DYNAMIC_GLOBAL.test(value), `expected a whole dynamic value for ${name}, got a partial one`)

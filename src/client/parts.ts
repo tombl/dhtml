@@ -206,19 +206,19 @@ export function create_child_part(
 				delete_contents(span)
 				insert_node(span, doc)
 
-				template_parts = template._parts.map(([dynamic_index, data], element_index): [number, Part] => {
+				template_parts = template._parts.map(([dynamic_index, [type, data]], element_index): [number, Part] => {
 					const node = node_by_part[element_index]
-					switch (data._type) {
+					switch (type) {
 						case PART_CHILD:
 							let child: ChildNode | null
 
 							if (node instanceof Node) {
-								child = node.childNodes[data._index]
+								child = node.childNodes[data]
 								assert(child)
 							} else {
 								child = node._start.nextSibling
 								assert(child)
-								for (let i = 0; i < data._index; i++) {
+								for (let i = 0; i < data; i++) {
 									child = child.nextSibling
 									assert(child !== null, 'expected more siblings')
 									assert(child !== node._end, 'ran out of siblings before the end')
@@ -240,10 +240,10 @@ export function create_child_part(
 							return [dynamic_index, create_directive_part(node)]
 						case PART_ATTRIBUTE:
 							assert(node instanceof Element)
-							return [dynamic_index, create_attribute_part(node, data._name)]
+							return [dynamic_index, create_attribute_part(node, data)]
 						case PART_PROPERTY:
 							assert(node instanceof Node)
-							return [dynamic_index, create_property_part(node, data._name)]
+							return [dynamic_index, create_property_part(node, data)]
 					}
 				})
 			}
