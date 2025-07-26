@@ -1,8 +1,25 @@
 import { html } from 'dhtml'
-import { createRoot } from 'dhtml/client'
+import { hydrate, invalidate } from 'dhtml/client'
 
-export const app = html`<div>Hello, world!</div>`
+export const app = {
+	count: 0,
+	render() {
+		return html`
+			<main>
+				<div>Hello, world!</div>
+				<button
+					onclick=${() => {
+						this.count++
+						invalidate(this)
+					}}
+				>
+					${this.count}
+				</button>
+			</main>
+		`
+	},
+}
 
 if (typeof window !== 'undefined') {
-	createRoot(document.body).render(app)
+	hydrate(document.body, app)
 }

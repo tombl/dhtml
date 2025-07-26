@@ -16,7 +16,7 @@ app.get('/app/:script{.+.ts}', async (c, next) => {
 	c.res.headers.set('content-type', 'text/javascript')
 	c.res.headers.delete('content-length')
 })
-app.get('/app/*', serveStatic())
+app.get('/app/*', serveStatic({ root: './' }))
 
 app.get('/example', c =>
 	c.html(
@@ -37,8 +37,10 @@ app.get('/example', c =>
 		`),
 	),
 )
-app.get('/', async c =>
-	c.html(
+app.get('/', async c => {
+	const { app } = await import('./app/main.ts')
+
+	return c.html(
 		renderToString(html`
 			<!doctype html>
 			<html>
@@ -54,13 +56,13 @@ app.get('/', async c =>
 					</script>
 				</head>
 				<body>
-					${(await import('./app/main.ts')).app}
+					${app}
 					<script type="module" src="/app/main.ts"></script>
 				</body>
 			</html>
 		`),
-	),
-)
+	)
+})
 
 serve(app, addr => {
 	console.log(`Listening on http://localhost:${addr.port}`)
