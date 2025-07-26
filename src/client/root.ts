@@ -126,13 +126,12 @@ function hydrate_child_part(span: Span, value: unknown) {
 			}
 
 			assert(is_element(node))
-			if (node.nodeType !== template_node.nodeType) {
-				throw new Error(`Node type mismatch: ${node.nodeType} !== ${template_node.nodeType}`)
-			}
+			assert(
+				node.nodeType === template_node.nodeType,
+				`Node type mismatch: ${node.nodeType} != ${template_node.nodeType}`,
+			)
 			assert(template_node instanceof HTMLElement || template_node instanceof SVGElement)
-			if (node.tagName !== template_node.tagName) {
-				throw new Error(`Tag name mismatch: ${node.tagName} !== ${template_node.tagName}`)
-			}
+			assert(node.tagName === template_node.tagName, `Tag name mismatch: ${node.tagName} !== ${template_node.tagName}`)
 
 			if (template_node.dataset.dynparts)
 				for (const part of template_node.dataset.dynparts.split(' ')) node_by_part[+part] = node
@@ -184,8 +183,6 @@ function hydrate_child_part(span: Span, value: unknown) {
 				case PART_PROPERTY:
 					assert(node instanceof Node)
 					return [dynamic_index, create_property_part(node, data._name)]
-				default:
-					return data satisfies never
 			}
 		})
 	}

@@ -11,10 +11,16 @@
 			import { hydrate, invalidate } from './dist/client.js'
 			import { renderToString } from './dist/server.js'
 
-			const app = [html`a`, html`b`, html`c`]
+			let count = 0
+			const app = {
+				render() {
+					if (++count === 2) throw new Error('oops')
+					return 'hi'
+				},
+			}
 
 			document.body.innerHTML = renderToString(app)
-			console.log(renderToString(app))
+			// console.log(renderToString(app))
 			await new Promise(resolve => setTimeout(resolve, 100))
 			hydrate(document.body, app)
 		</script>

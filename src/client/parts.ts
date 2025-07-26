@@ -244,8 +244,6 @@ export function create_child_part(
 						case PART_PROPERTY:
 							assert(node instanceof Node)
 							return [dynamic_index, create_property_part(node, data._name)]
-						default:
-							return data satisfies never
 					}
 				})
 			}

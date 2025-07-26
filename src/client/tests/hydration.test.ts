@@ -3,12 +3,18 @@ import { attr, hydrate, invalidate, keyed, onMount, type Directive, type Root } 
 import { renderToString } from 'dhtml/server'
 import { assert, assert_deep_eq, assert_eq, test } from '../../../scripts/test/test.ts'
 
+let phase: 'server' | 'client' | null = null
+
 function setup(template: Displayable): { root: Root; el: HTMLDivElement } {
 	const el = document.createElement('div')
+	phase = 'server'
 	el.innerHTML = renderToString(template)
 	document.body.appendChild(el)
 
+	phase = 'client'
 	const root = hydrate(el, template)
+
+	phase = null
 	return { root, el }
 }
 
@@ -130,12 +136,18 @@ test('basic arrays hydrate correctly', () => {
 	`
 	const { root, el } = setup(template())
 
-	assert_eq(el.innerHTML, '<!--?[--> <ul> <!--?[--><!--?[--><li>Item 1</li><!--?]--><!--?[--><li>Item 2</li><!--?]--><!--?[--><li>Item 3</li><!--?]--><!--?]--> </ul> <!--?]-->')
+	assert_eq(
+		el.innerHTML,
+		'<!--?[--> <ul> <!--?[--><!--?[--><li>Item 1</li><!--?]--><!--?[--><li>Item 2</li><!--?]--><!--?[--><li>Item 3</li><!--?]--><!--?]--> </ul> <!--?]-->',
+	)
 
 	// Test adding items
 	items.push(html`<li>Item 4</li>`)
 	root.render(template())
-	assert_eq(el.innerHTML, '<!--?[--> <ul> <!--?[--><!--?[--><li>Item 1</li><!--?]--><!--?[--><li>Item 2</li><!--?]--><!--?[--><li>Item 3</li><!--?]--><li>Item 4</li><!--?]--> </ul> <!--?]-->')
+	assert_eq(
+		el.innerHTML,
+		'<!--?[--> <ul> <!--?[--><!--?[--><li>Item 1</li><!--?]--><!--?[--><li>Item 2</li><!--?]--><!--?[--><li>Item 3</li><!--?]--><li>Item 4</li><!--?]--> </ul> <!--?]-->',
+	)
 })
 
 test('empty to populated arrays hydrate correctly', () => {
@@ -169,7 +181,10 @@ test('keyed lists preserve identity during hydration', () => {
 	// Swap items
 	items.reverse()
 	root.render(template())
-	assert_eq(el.innerHTML, '<!--?[--> <ul> <!--?[--><!--?[--><li>Item 2</li><!--?]--><!--?[--><li>Item 1</li><!--?]--><!--?]--> </ul> <!--?]-->')
+	assert_eq(
+		el.innerHTML,
+		'<!--?[--> <ul> <!--?[--><!--?[--><li>Item 2</li><!--?]--><!--?[--><li>Item 1</li><!--?]--><!--?]--> </ul> <!--?]-->',
+	)
 
 	// Elements should maintain identity
 	assert_eq(el.querySelectorAll('li')[0], li2)
@@ -190,7 +205,10 @@ test('implicit keyed lists preserve identity during hydration', () => {
 	// Swap items
 	;[items[0], items[1]] = [items[1], items[0]]
 	root.render(template())
-	assert_eq(el.innerHTML, '<!--?[--> <ul> <!--?[--><!--?[--><li>Item 2</li><!--?]--><!--?[--><li>Item 1</li><!--?]--><!--?]--> </ul> <!--?]-->')
+	assert_eq(
+		el.innerHTML,
+		'<!--?[--> <ul> <!--?[--><!--?[--><li>Item 2</li><!--?]--><!--?[--><li>Item 1</li><!--?]--><!--?]--> </ul> <!--?]-->',
+	)
 
 	// Elements should maintain identity
 	assert_eq(el.querySelectorAll('li')[0], li2)
@@ -199,7 +217,10 @@ test('implicit keyed lists preserve identity during hydration', () => {
 
 test('mixed content arrays hydrate correctly', () => {
 	const { el } = setup([1, 'text', html`<span>element</span>`])
-	assert_eq(el.innerHTML, '<!--?[--><!--?[-->1<!--?]--><!--?[-->text<!--?]--><!--?[--><span>element</span><!--?]--><!--?]-->')
+	assert_eq(
+		el.innerHTML,
+		'<!--?[--><!--?[-->1<!--?]--><!--?[-->text<!--?]--><!--?[--><span>element</span><!--?]--><!--?]-->',
+	)
 })
 
 // Directive Hydration Tests
@@ -300,13 +321,13 @@ test('renderables with lifecycle hooks hydrate correctly', () => {
 
 	const app = {
 		render() {
-			sequence.push('render')
+			sequence.push(`render ${phase}`)
 			return html`<div>Component</div>`
 		},
 	}
 
 	onMount(app, () => {
-		sequence.push('mount')
+		sequence.push(`mount ${phase}`)
 		return () => sequence.push('cleanup')
 	})
 
@@ -314,10 +335,10 @@ test('renderables with lifecycle hooks hydrate correctly', () => {
 
 	assert_eq(el.innerHTML, '<!--?[--><div>Component</div><!--?]-->')
 	assert_deep_eq(sequence, [
-		'render', // render on the server
-		'render', // render on the client for hydration
-		'mount', // mount on the client
-		'render', // render on the client as an update
+		'render server', // render on the server
+		'render client', // render on the client for hydration
+		'mount client', // mount on the client
+		'render client', // rerender on the client
 	])
 
 	// Test cleanup
@@ -444,4 +465,56 @@ test('complex real-world template hydrates correctly', () => {
 	assert_eq(checkboxes.length, 2)
 	assert(!checkboxes[0].checked)
 	assert(checkboxes[1].checked)
+})
+
+test('no end', () => {
+	const el = document.createElement('div')
+	el.innerHTML = `<?[>hello`
+
+	let thrown = false
+
+	try {
+		hydrate(el, 'hello')
+	} catch (error) {
+		thrown = true
+		assert(error instanceof Error)
+		if (__DEV__) assert(error.message.includes('Could not find hydration end comment.'))
+	}
+
+	assert(thrown)
+})
+
+test('renderable passthrough errors', () => {
+	let thrown = false
+
+	const oops = new Error('oops')
+	let count = 0
+
+	try {
+		setup({
+			render() {
+				if (++count === 2) throw oops
+				return 'hello'
+			},
+		})
+	} catch (error) {
+		thrown = true
+		assert(error === oops)
+	}
+
+	assert(thrown)
+})
+
+test('hydration mismatch: tag name', () => {
+	const el = document.createElement('div')
+	el.innerHTML = renderToString(html`<h1>Hello!</h1>`)
+	let thrown = false
+
+	try {
+		hydrate(el, html`<h2>Hello!</h2>`)
+	} catch (error) {
+		thrown = true
+		assert(error instanceof Error)
+		assert(error.message.includes('Tag name mismatch'))
+	}
 })
