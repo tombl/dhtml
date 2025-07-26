@@ -18,7 +18,7 @@ export interface CompiledTemplate {
 	_root_parts: number[]
 }
 
-const DYNAMIC_WHOLE = /^dyn-\$(\d+)\$$/
+export const DYNAMIC_WHOLE: RegExp = /^dyn-\$(\d+)\$$/
 const DYNAMIC_GLOBAL = /dyn-\$(\d+)\$/g
 const FORCE_ATTRIBUTES = /-|^class$|^for$/i
 

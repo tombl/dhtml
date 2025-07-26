@@ -136,7 +136,7 @@ function render_attribute(name: string, value: unknown) {
 function* render_child(value: unknown): Generator<string, void, void> {
 	const seen = new Map<object, number>()
 
-	yield '<?>'
+	yield '<?[>'
 
 	while (is_renderable(value))
 		try {
@@ -176,7 +176,7 @@ function* render_child(value: unknown): Generator<string, void, void> {
 		yield escape(value)
 	}
 
-	yield '<?>'
+	yield '<?]>'
 }
 
 const ESCAPE_RE = /[&<>"']/g

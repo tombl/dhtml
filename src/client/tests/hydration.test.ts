@@ -16,32 +16,32 @@ function setup(template: Displayable): { root: Root; el: HTMLDivElement } {
 test('basic html hydrates correctly', () => {
 	const { root, el } = setup(html`<h1>Hello, world!</h1>`)
 
-	assert_eq(el.innerHTML, '<!--?--><h1>Hello, world!</h1><!--?-->')
+	assert_eq(el.innerHTML, '<!--?[--><h1>Hello, world!</h1><!--?]-->')
 
 	// Test that subsequent renders work
 	root.render(html`<h2>Updated!</h2>`)
-	assert_eq(el.innerHTML, '<!--?--><h2>Updated!</h2><!--?-->')
+	assert_eq(el.innerHTML, '<!--?[--><h2>Updated!</h2><!--?]-->')
 })
 
 test('dynamic content hydrates correctly', () => {
 	const template = (n: number) => html`<h1>Hello, ${n}!</h1>`
 	const { root, el } = setup(template(42))
 
-	assert_eq(el.innerHTML, '<!--?--><h1>Hello, <!--?-->42<!--?-->!</h1><!--?-->')
+	assert_eq(el.innerHTML, '<!--?[--><h1>Hello, <!--?[-->42<!--?]-->!</h1><!--?]-->')
 
 	// Test dynamic updates
 	root.render(template(84))
-	assert_eq(el.innerHTML, '<!--?--><h1>Hello, <!--?-->84<!--?-->!</h1><!--?-->')
+	assert_eq(el.innerHTML, '<!--?[--><h1>Hello, <!--?[-->84<!--?]-->!</h1><!--?]-->')
 })
 
 test('nested templates hydrate correctly', () => {
 	const { root, el } = setup(html`<h1>${html`Inner content!`}</h1>`)
 
-	assert_eq(el.innerHTML, '<!--?--><h1><!--?-->Inner content!<!--?--></h1><!--?-->')
+	assert_eq(el.innerHTML, '<!--?[--><h1><!--?[-->Inner content!<!--?]--></h1><!--?]-->')
 
 	// Test updates to nested content
 	root.render(html`<h1>${html`Updated inner!`}</h1>`)
-	assert_eq(el.innerHTML, '<!--?--><h1>Updated inner!</h1><!--?-->')
+	assert_eq(el.innerHTML, '<!--?[--><h1>Updated inner!</h1><!--?]-->')
 })
 
 test('multiple dynamic values hydrate correctly', () => {
@@ -49,7 +49,7 @@ test('multiple dynamic values hydrate correctly', () => {
 
 	assert_eq(
 		el.innerHTML,
-		'<!--?--><span><!--?-->This is a<!--?--></span> <!--?-->test<!--?--> <!--?-->with<!--?--> <!--?-->parts<!--?--><!--?-->',
+		'<!--?[--><span><!--?[-->This is a<!--?]--></span> <!--?[-->test<!--?]--> <!--?[-->with<!--?]--> <!--?[-->parts<!--?]--><!--?]-->',
 	)
 })
 
@@ -147,7 +147,7 @@ test('empty to populated arrays hydrate correctly', () => {
 	`
 	const { root, el } = setup(template())
 
-		assert_eq(el.innerHTML, '<!--?--><ul> <!--?--> </ul><!--?-->')
+	assert_eq(el.innerHTML, '<!--?[--> <ul> <!--?[--><!--?]--> </ul> <!--?]-->')
 
 	// Add items
 	items = [html`<li>Item 1</li>`, html`<li>Item 2</li>`]
@@ -166,10 +166,10 @@ test('keyed lists preserve identity during hydration', () => {
 
 	const [li1, li2] = el.querySelectorAll('li')
 
-		// Swap items
-		items.reverse()
-		root.render(template())
-		assert_eq(el.innerHTML, '<!--?--><ul>\n\t\t\t<li>Item 2</li><li>Item 1</li>\n\t\t</ul><!--?-->')
+	// Swap items
+	items.reverse()
+	root.render(template())
+	assert_eq(el.innerHTML, '<!--?[--> <ul> <!--?[--><li>Item 2</li><li>Item 1</li><!--?]--> </ul> <!--?]-->')
 
 	// Elements should maintain identity
 	assert_eq(el.querySelectorAll('li')[0], li2)
@@ -187,21 +187,20 @@ test('implicit keyed lists preserve identity during hydration', () => {
 
 	const [li1, li2] = el.querySelectorAll('li')
 
-		// Swap items
-		;[items[0], items[1]] = [items[1], items[0]]
-		root.render(template())
-		assert_eq(el.innerHTML, '<!--?--><ul>\n\t\t\t<li>Item 2</li><li>Item 1</li>\n\t\t</ul><!--?-->')
+	// Swap items
+	;[items[0], items[1]] = [items[1], items[0]]
+	root.render(template())
+	assert_eq(el.innerHTML, '<!--?[--> <ul> <!--?[--><li>Item 2</li><li>Item 1</li><!--?]--> </ul> <!--?]-->')
 
 	// Elements should maintain identity
 	assert_eq(el.querySelectorAll('li')[0], li2)
 	assert_eq(el.querySelectorAll('li')[1], li1)
 })
 
-	test('mixed content arrays hydrate correctly', () => {
-		const { el } = setup([1, 'text', html`<span>element</span>`])
-		assert_eq(el.innerHTML, '<!--?-->1text<span>element</span><!--?-->')
-	})
-}
+test('mixed content arrays hydrate correctly', () => {
+	const { el } = setup([1, 'text', html`<span>element</span>`])
+	assert_eq(el.innerHTML, '<!--?[-->1text<span>element</span><!--?]-->')
+})
 
 // Directive Hydration Tests
 // TODO: directives are broken?
@@ -260,7 +259,7 @@ test('basic renderables hydrate correctly', () => {
 		},
 	})
 
-	assert_eq(el.innerHTML, '<!--?--><h1>Component content</h1><!--?-->')
+	assert_eq(el.innerHTML, '<!--?[--><h1>Component content</h1><!--?]-->')
 })
 
 test('renderables with state hydrate correctly', () => {
@@ -273,12 +272,12 @@ test('renderables with state hydrate correctly', () => {
 
 	const { el } = setup(counter)
 
-	assert_eq(el.innerHTML, '<!--?--><div>Count: <!--?-->0<!--?--></div><!--?-->')
+	assert_eq(el.innerHTML, '<!--?[--><div>Count: <!--?[-->0<!--?]--></div><!--?]-->')
 
 	// Test state updates
 	counter.count = 5
 	invalidate(counter)
-	assert_eq(el.innerHTML, '<!--?--><div>Count: <!--?-->5<!--?--></div><!--?-->')
+	assert_eq(el.innerHTML, '<!--?[--><div>Count: <!--?[-->5<!--?]--></div><!--?]-->')
 })
 
 test('nested renderables hydrate correctly', () => {
@@ -296,7 +295,7 @@ test('nested renderables hydrate correctly', () => {
 
 	const { el } = setup(outer)
 
-	assert_eq(el.innerHTML, '<!--?--><div>Outer: <!--?--><span>Inner</span><!--?--></div><!--?-->')
+	assert_eq(el.innerHTML, '<!--?[--><div>Outer: <!--?[--><span>Inner</span><!--?]--></div><!--?]-->')
 })
 
 test('renderables with lifecycle hooks hydrate correctly', () => {
@@ -316,7 +315,7 @@ test('renderables with lifecycle hooks hydrate correctly', () => {
 
 	const { root, el } = setup(app)
 
-	assert_eq(el.innerHTML, '<!--?--><div>Component</div><!--?-->')
+	assert_eq(el.innerHTML, '<!--?[--><div>Component</div><!--?]-->')
 	assert_deep_eq(sequence, [
 		'render', // render on the server
 		'render', // render on the client for hydration
@@ -406,11 +405,11 @@ test('hydration preserves existing sibling nodes', () => {
 
 	const root = hydrate(el, html`<h1>Hydrated content</h1>`)
 
-	assert_eq(el.innerHTML, '<div>before</div><!--?--><h1>Hydrated content</h1><!--?--><div>after</div>')
+	assert_eq(el.innerHTML, '<div>before</div><!--?[--><h1>Hydrated content</h1><!--?]--><div>after</div>')
 
 	// Test that updates don't affect siblings
 	root.render(html`<h2>Updated content</h2>`)
-	assert_eq(el.innerHTML, '<div>before</div><!--?--><h2>Updated content</h2><!--?--><div>after</div>')
+	assert_eq(el.innerHTML, '<div>before</div><!--?[--><h2>Updated content</h2><!--?]--><div>after</div>')
 })
 
 test('complex real-world template hydrates correctly', () => {

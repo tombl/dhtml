@@ -11,24 +11,11 @@
 			import { hydrate, invalidate } from './dist/client.js'
 			import { renderToString } from './dist/server.js'
 
-			let i = -1
-			const app = {
-				render() {
-					return html`<button
-						onclick=${() => {
-							i++
-							invalidate(this)
-						}}
-					>
-						${i}
-					</button>`
-				},
-			}
+			const app = html`<main>${html`(<p>${1}</p>)`}</main>`
 
 			document.body.innerHTML = renderToString(app)
 			console.log(renderToString(app))
 			await new Promise(resolve => setTimeout(resolve, 100))
-			i++
 			hydrate(document.body, app)
 		</script>
 	</head>

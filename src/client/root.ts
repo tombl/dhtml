@@ -1,6 +1,7 @@
 import { assert, is_html, is_renderable, type Displayable, type Renderable } from '../shared.ts'
 import {
 	compile_template,
+	DYNAMIC_WHOLE,
 	PART_ATTRIBUTE,
 	PART_CHILD,
 	PART_DIRECTIVE,
@@ -26,26 +27,35 @@ export function createRoot(parent: Node): Root {
 	return { render: create_child_part(span) }
 }
 
+function find_end(start: Comment): Comment | null {
+	assert(start.data === '?[')
+	let depth = 1
+	let node: ChildNode | null = start
+	while ((node = node.nextSibling)) {
+		if (is_comment(node)) {
+			if (node.data === '?[') depth++
+			else if (node.data === '?]') {
+				depth--
+				if (depth === 0) return node
+			}
+		}
+	}
+	return null
+}
+
 export function hydrate(parent: Node, value: Displayable): Root {
-	let children = [...parent.childNodes]
-	let start, end
-
-	for (let i = 0; i < children.length; i++) {
-		const node = children[i]
-		if (is_comment(node) && node.data === '?') {
-			start = node
-			break
-		}
+	let start
+	for (start of parent.childNodes) {
+		if (is_comment(start) && start.data === '?[') break
 	}
-	for (let i = 0; i < children.length; i++) {
-		const node = children[children.length - i - 1]
-		if (is_comment(node) && node.data === '?') {
-			end = node
-			break
-		}
-	}
+	assert(
+		start && is_comment(start),
+		`Could not find hydration start comment. Please ensure the element contains server-side rendered output.`,
+	)
 
-	assert(start && end && start !== end)
+	const end = find_end(start)
+	assert(end, `Could not find hydration end comment. Please ensure the element contains server-side rendered output.`)
+
 	const render = hydrate_child_part({ _parent: parent, _start: start, _end: end }, value)
 	render(value)
 	return { render }
@@ -65,9 +75,9 @@ function hydrate_child_part(span: Span, value: unknown) {
 
 		const node_by_part: Array<Node | Span> = []
 
-		const walker = document.createTreeWalker(span._parent, 1)
-		const template_walker = document.createTreeWalker(template._content, 1)
-		assert(NodeFilter.SHOW_ELEMENT === 1)
+		const walker = document.createTreeWalker(span._parent, 129)
+		const template_walker = document.createTreeWalker(template._content, 129)
+		assert((NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_COMMENT) === 129)
 		walker.currentNode = span._start
 
 		while (walker.nextNode() && template_walker.nextNode()) {
@@ -75,11 +85,24 @@ function hydrate_child_part(span: Span, value: unknown) {
 			const template_node = template_walker.currentNode
 			if (node === span._end) break
 
+			if (is_comment(node) && is_comment(template_node)) {
+				if (node.data === '?[') {
+					assert(DYNAMIC_WHOLE.test(template_node.data))
+					const end = find_end(node)
+					assert(end)
+					walker.currentNode = end
+				}
+				continue
+			}
+
 			assert(is_element(node))
 			if (node.nodeType !== template_node.nodeType) {
 				throw new Error(`Node type mismatch: ${node.nodeType} !== ${template_node.nodeType}`)
 			}
 			assert(template_node instanceof HTMLElement || template_node instanceof SVGElement)
+			if (node.tagName !== template_node.tagName) {
+				throw new Error(`Tag name mismatch: ${node.tagName} !== ${template_node.tagName}`)
+			}
 
 			if (template_node.dataset.dynparts)
 				for (const part of template_node.dataset.dynparts.split(' ')) node_by_part[+part] = node
@@ -106,7 +129,10 @@ function hydrate_child_part(span: Span, value: unknown) {
 						}
 					}
 
-					assert(child.parentNode && child.previousSibling && child.nextSibling)
+					assert(child.parentNode)
+					assert(child.previousSibling && is_comment(child.previousSibling) && child.previousSibling.data === '?[')
+					const end = find_end(child.previousSibling)
+					assert(end)
 
 					return [
 						dynamic_index,
@@ -114,7 +140,7 @@ function hydrate_child_part(span: Span, value: unknown) {
 							{
 								_parent: child.parentNode,
 								_start: child.previousSibling,
-								_end: child.nextSibling,
+								_end: end,
 							},
 							value._dynamics[dynamic_index],
 						),
