@@ -7,51 +7,40 @@ import {
 	type Displayable,
 	type Renderable,
 } from '../shared.ts'
-import { compile_template, type CompiledTemplate } from './compiler.ts'
+import {
+	compile_template,
+	PART_ATTRIBUTE,
+	PART_CHILD,
+	PART_DIRECTIVE,
+	PART_PROPERTY,
+	type CompiledTemplate,
+} from './compiler.ts'
 import { controllers, get_controller, get_key, type Key } from './controller.ts'
 import { create_span, create_span_after, delete_contents, extract_contents, insert_node, type Span } from './span.ts'
 import type { Cleanup } from './util.ts'
 
 export type Part = (value: unknown) => void
 
-export function create_child_part(parent_node: Node | Span, child_index: number): Part {
-	let child: ChildNode | null
-
-	if (parent_node instanceof Node) {
-		child = parent_node.childNodes[child_index]
-		assert(child)
-	} else {
-		child = parent_node._start.nextSibling
-		assert(child)
-		for (let i = 0; i < child_index; i++) {
-			child = child.nextSibling
-			assert(child !== null, 'expected more siblings')
-			assert(child !== parent_node._end, 'ran out of siblings before the end')
-		}
-	}
-
-	return create_child_part_inner(() => create_span(child))
-}
-
-export function create_child_part_inner(get_span: () => Span): Part {
-	let span: Span | undefined
+export function create_child_part(
+	get_span?: () => Span,
+	span?: Span,
 
 	// for when we're rendering a renderable:
-	let current_renderable: Renderable | null = null
-	let needs_revalidate = true
+	needs_revalidate = true,
+	current_renderable?: Renderable,
 
 	// for when we're rendering a template:
-	let old_template: CompiledTemplate | undefined
-	let template_parts: [number, Part][] | undefined
+	old_template?: CompiledTemplate,
+	template_parts?: [number, Part][],
 
 	// for when we're rendering multiple values:
-	let entries: Array<{ _span: Span; _part: Part; _key: Key }> | undefined
+	entries?: Array<{ _span: Span; _part: Part; _key: Key }>,
 
 	// for when we're rendering a string/single dom node:
 	// undefined means no previous value, because a user-specified undefined is remapped to null
-	let old_value: unknown
-
-	function switch_renderable(next: Renderable | null) {
+	old_value?: unknown,
+): Part {
+	function switch_renderable(next: Renderable | undefined) {
 		if (current_renderable && current_renderable !== next) {
 			const controller = controllers.get(current_renderable)
 			if (controller) {
@@ -76,7 +65,7 @@ export function create_child_part_inner(get_span: () => Span): Part {
 	}
 
 	return function update(value) {
-		span ??= get_span()
+		span ??= (assert(get_span), get_span())
 
 		if (is_renderable(value)) {
 			if (!needs_revalidate && value === current_renderable) return
@@ -109,7 +98,7 @@ export function create_child_part_inner(get_span: () => Span): Part {
 			// if render returned another renderable, we want to track/cache both renderables individually.
 			// wrap it in a nested ChildPart so that each can be tracked without ChildPart having to handle multiple renderables.
 			if (is_renderable(value)) value = single_part_template(value)
-		} else switch_renderable(null)
+		} else switch_renderable(undefined)
 
 		// if it's undefined, swap the value for null.
 		// this means if the initial value is undefined,
@@ -134,7 +123,7 @@ export function create_child_part_inner(get_span: () => Span): Part {
 				const key = get_key(item) as Key
 				if (entries.length <= i) {
 					const span = create_span_after(end)
-					entries[i] = { _span: span, _part: create_child_part_inner(() => span), _key: key }
+					entries[i] = { _span: span, _part: create_child_part(() => span), _key: key }
 				}
 
 				if (key !== undefined && entries[i]._key !== key) {
@@ -208,8 +197,7 @@ export function create_child_part_inner(get_span: () => Span): Part {
 					const parts = node.getAttribute('data-dynparts')
 					assert(parts)
 					node.removeAttribute('data-dynparts')
-					// @ts-expect-error -- is part a number, is part a string, who cares?
-					for (const part of parts.split(' ')) node_by_part[part] = node
+					for (const part of parts.split(' ')) node_by_part[+part] = node
 				}
 
 				for (const part of old_template._root_parts) node_by_part[part] = span
@@ -221,10 +209,39 @@ export function create_child_part_inner(get_span: () => Span): Part {
 				delete_contents(span)
 				insert_node(span, doc)
 
-				template_parts = template._parts.map(([dynamic_index, create_part], element_index) => [
-					dynamic_index,
-					create_part(node_by_part[element_index]),
-				])
+				template_parts = template._parts.map(([dynamic_index, data], element_index): [number, Part] => {
+					const node = node_by_part[element_index]
+					switch (data._type) {
+						case PART_CHILD:
+							let child: ChildNode | null
+
+							if (node instanceof Node) {
+								child = node.childNodes[data._index]
+								assert(child)
+							} else {
+								child = node._start.nextSibling
+								assert(child)
+								for (let i = 0; i < data._index; i++) {
+									child = child.nextSibling
+									assert(child !== null, 'expected more siblings')
+									assert(child !== node._end, 'ran out of siblings before the end')
+								}
+							}
+
+							return [dynamic_index, create_child_part(() => create_span(child))]
+						case PART_DIRECTIVE:
+							assert(node instanceof Node)
+							return [dynamic_index, create_directive_part(node)]
+						case PART_ATTRIBUTE:
+							assert(node instanceof Element)
+							return [dynamic_index, create_attribute_part(node, data._name)]
+						case PART_PROPERTY:
+							assert(node instanceof Node)
+							return [dynamic_index, create_property_part(node, data._name)]
+						default:
+							return data satisfies never
+					}
+				})
 			}
 
 			assert(template_parts)
