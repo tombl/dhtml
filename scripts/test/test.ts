@@ -6,18 +6,25 @@ export function test(name: string, fn: () => void | Promise<void>): void {
 
 export { bench } from 'mitata'
 
+function raise(message: string, fn: Function) {
+	const error = new Error(message)
+	Error.captureStackTrace?.(error, fn)
+	throw error
+}
+
 export function assert(value: unknown, message?: string): asserts value {
-	if (!value) throw new Error(message ?? 'assertion failed')
+	if (!value) raise(message ?? 'assertion failed', assert)
 }
 
 export function assert_eq<T>(actual: T, expected: T, message?: string): asserts actual {
-	if (actual !== expected) throw new Error(message ?? `Expected ${expected} but got ${actual}`)
+	if (actual !== expected) raise(message ?? `Expected ${expected} but got ${actual}`, assert_eq)
 }
 
 export function assert_deep_eq<T>(actual: T, expected: T, message?: string): asserts actual {
 	if (!deep_eq(actual, expected)) {
-		throw new Error(
+		raise(
 			message ?? `Expected ${JSON.stringify(expected, null, 2)} but got ${JSON.stringify(actual, null, 2)}`,
+			assert_deep_eq,
 		)
 	}
 }

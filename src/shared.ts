@@ -25,7 +25,11 @@ export function is_iterable(value: unknown): value is Iterable<unknown> {
 
 export function assert(value: unknown, message?: string): asserts value {
 	if (!__DEV__) return
-	if (!value) throw new Error(message ?? 'assertion failed')
+	if (!value) {
+		const error = new Error(message ?? 'assertion failed')
+		Error.captureStackTrace?.(error, assert) // remove assert from the stack trace
+		throw error
+	}
 }
 
 export const html_tag: unique symbol = Symbol()
