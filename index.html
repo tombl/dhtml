@@ -11,11 +11,7 @@
 			import { hydrate, invalidate } from './dist/client.js'
 			import { renderToString } from './dist/server.js'
 
-			const app = {
-				render() {
-					throw html`<div>Thrown content</div>`
-				},
-			}
+			const app = [html`a`, html`b`, html`c`]
 
 			document.body.innerHTML = renderToString(app)
 			console.log(renderToString(app))

@@ -1,4 +1,4 @@
-import { assert, is_html, is_renderable, type Displayable, type Renderable } from '../shared.ts'
+import { assert, is_html, is_iterable, is_renderable, type Displayable, type Renderable } from '../shared.ts'
 import {
 	compile_template,
 	DYNAMIC_WHOLE,
@@ -8,6 +8,7 @@ import {
 	PART_PROPERTY,
 	type CompiledTemplate,
 } from './compiler.ts'
+import { get_key, type Key } from './controller.ts'
 import {
 	create_attribute_part,
 	create_child_part,
@@ -65,6 +66,7 @@ function hydrate_child_part(span: Span, value: unknown) {
 	let current_renderable: Renderable | undefined
 	let template: CompiledTemplate | undefined
 	let template_parts: [number, Part][] | undefined
+	let entries: Array<{ _span: Span; _part: Part; _key: Key }> | undefined
 
 	if (is_renderable(value)) {
 		try {
@@ -76,6 +78,26 @@ function hydrate_child_part(span: Span, value: unknown) {
 				throw thrown
 			}
 		}
+	}
+
+	if (is_iterable(value)) {
+		entries = []
+		const { _parent } = span
+		let end = span._start
+
+		for (const item of value) {
+			const key = get_key(item) as Key
+
+			const start = end.nextSibling
+			assert(start && is_comment(start) && start.data === '?[')
+
+			end = find_end(start)!
+			assert(end)
+
+			const span: Span = { _parent, _start: start, _end: end }
+			entries.push({ _span: span, _part: hydrate_child_part(span, item), _key: key })
+		}
+		assert(end.nextSibling === span._end)
 	}
 
 	if (is_html(value)) {
@@ -168,5 +190,5 @@ function hydrate_child_part(span: Span, value: unknown) {
 		})
 	}
 
-	return create_child_part(span, true, current_renderable, template, template_parts)
+	return create_child_part(span, true, current_renderable, template, template_parts, entries, value)
 }

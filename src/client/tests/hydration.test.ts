@@ -130,12 +130,12 @@ test('basic arrays hydrate correctly', () => {
 	`
 	const { root, el } = setup(template())
 
-	assert_eq(el.innerHTML, '<!--?[--> <ul> <!--?[--><li>Item 1</li><li>Item 2</li><li>Item 3</li><!--?]--> </ul> <!--?]-->')
+	assert_eq(el.innerHTML, '<!--?[--> <ul> <!--?[--><!--?[--><li>Item 1</li><!--?]--><!--?[--><li>Item 2</li><!--?]--><!--?[--><li>Item 3</li><!--?]--><!--?]--> </ul> <!--?]-->')
 
 	// Test adding items
 	items.push(html`<li>Item 4</li>`)
 	root.render(template())
-	assert_eq(el.innerHTML, '<!--?[--> <ul> <!--?[--><li>Item 1</li><li>Item 2</li><li>Item 3</li><li>Item 4</li><!--?]--> </ul> <!--?]-->')
+	assert_eq(el.innerHTML, '<!--?[--> <ul> <!--?[--><!--?[--><li>Item 1</li><!--?]--><!--?[--><li>Item 2</li><!--?]--><!--?[--><li>Item 3</li><!--?]--><li>Item 4</li><!--?]--> </ul> <!--?]-->')
 })
 
 test('empty to populated arrays hydrate correctly', () => {
@@ -169,7 +169,7 @@ test('keyed lists preserve identity during hydration', () => {
 	// Swap items
 	items.reverse()
 	root.render(template())
-	assert_eq(el.innerHTML, '<!--?[--> <ul> <!--?[--><li>Item 2</li><li>Item 1</li><!--?]--> </ul> <!--?]-->')
+	assert_eq(el.innerHTML, '<!--?[--> <ul> <!--?[--><!--?[--><li>Item 2</li><!--?]--><!--?[--><li>Item 1</li><!--?]--><!--?]--> </ul> <!--?]-->')
 
 	// Elements should maintain identity
 	assert_eq(el.querySelectorAll('li')[0], li2)
@@ -190,7 +190,7 @@ test('implicit keyed lists preserve identity during hydration', () => {
 	// Swap items
 	;[items[0], items[1]] = [items[1], items[0]]
 	root.render(template())
-	assert_eq(el.innerHTML, '<!--?[--> <ul> <!--?[--><li>Item 2</li><li>Item 1</li><!--?]--> </ul> <!--?]-->')
+	assert_eq(el.innerHTML, '<!--?[--> <ul> <!--?[--><!--?[--><li>Item 2</li><!--?]--><!--?[--><li>Item 1</li><!--?]--><!--?]--> </ul> <!--?]-->')
 
 	// Elements should maintain identity
 	assert_eq(el.querySelectorAll('li')[0], li2)
@@ -199,7 +199,7 @@ test('implicit keyed lists preserve identity during hydration', () => {
 
 test('mixed content arrays hydrate correctly', () => {
 	const { el } = setup([1, 'text', html`<span>element</span>`])
-	assert_eq(el.innerHTML, '<!--?[-->1text<span>element</span><!--?]-->')
+	assert_eq(el.innerHTML, '<!--?[--><!--?[-->1<!--?]--><!--?[-->text<!--?]--><!--?[--><span>element</span><!--?]--><!--?]-->')
 })
 
 // Directive Hydration Tests
