@@ -37,13 +37,14 @@ test('supports property attributes', () => {
 	assert(!el.querySelector('details')!.open)
 })
 
-test('infers the case of properties', () => {
+test('maintains the case of properties', () => {
 	const { root, el } = setup()
 
 	const innerHTML = '<h1>Hello, world!</h1>'
 
 	root.render(html`<div innerhtml=${innerHTML}></div>`)
-	assert_eq(el.querySelector('div')!.innerHTML, innerHTML)
+	// @ts-expect-error -- no such property
+	assert_eq(el.querySelector('div')!.innerhtml, innerHTML)
 
 	root.render(html`<span innerHTML=${innerHTML}></span>`)
 	assert_eq(el.querySelector('span')!.innerHTML, innerHTML)

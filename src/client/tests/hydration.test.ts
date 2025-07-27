@@ -88,8 +88,9 @@ test('boolean attributes hydrate correctly', () => {
 
 test('property attributes hydrate correctly', () => {
 	const innerHTML = '<span>Hello!</span>'
-	const { el } = setup(html`<div innerhtml=${innerHTML}></div>`)
+	const { el } = setup(html`<div innerHTML=${innerHTML}></div>`)
 
+	// assert(!el.querySelector('div')!.hasAttribute('innerHTML'))
 	assert_eq(el.querySelector('div')!.innerHTML, innerHTML)
 })
 
