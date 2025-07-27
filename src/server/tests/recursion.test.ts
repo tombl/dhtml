@@ -12,7 +12,7 @@ test('basic recursion is handled correctly', () => {
 			return this
 		},
 	}
-	assert_eq(renderToString(app), '<?[>hello!<?]>')
+	assert_eq(renderToString(app), '<?[>'.repeat(DEPTH) + '<?[>hello!<?]>' + '<?]>'.repeat(DEPTH))
 })
 
 test('nested recursion is handled correctly', () => {

@@ -134,16 +134,10 @@ function render_attribute(name: string, value: unknown) {
 }
 
 function* render_child(value: unknown): Generator<string, void, void> {
-	const seen = new Map<object, number>()
-
 	yield '<?[>'
 
-	while (is_renderable(value))
+	if (is_renderable(value)) {
 		try {
-			const times = seen.get(value) ?? 0
-			if (times > 100) throw new Error('circular render')
-			seen.set(value, times + 1)
-
 			value = value.render()
 		} catch (thrown) {
 			if (is_html(thrown)) {
@@ -152,6 +146,9 @@ function* render_child(value: unknown): Generator<string, void, void> {
 				throw thrown
 			}
 		}
+
+		if (is_renderable(value)) value = single_part_template(value)
+	}
 
 	if (is_iterable(value)) {
 		for (const item of value) yield* render_child(item)
