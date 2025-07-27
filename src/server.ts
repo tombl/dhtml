@@ -134,16 +134,10 @@ function render_attribute(name: string, value: unknown) {
 }
 
 function* render_child(value: unknown): Generator<string, void, void> {
-	const seen = new Map<object, number>()
-
 	yield '<?[>'
 
-	while (is_renderable(value))
+	if (is_renderable(value)) {
 		try {
-			const times = seen.get(value) ?? 0
-			if (times > 100) throw new Error('circular render')
-			seen.set(value, times + 1)
-
 			value = value.render()
 		} catch (thrown) {
 			if (is_html(thrown)) {
@@ -153,10 +147,13 @@ function* render_child(value: unknown): Generator<string, void, void> {
 			}
 		}
 
+		if (is_renderable(value)) value = single_part_template(value)
+	}
+
 	if (is_iterable(value)) {
-		for (const item of value) yield* render_child(item as Displayable)
+		for (const item of value) yield* render_child(item)
 	} else if (is_html(value)) {
-		const { _statics: statics, _dynamics: dynamics } = is_html(value) ? value : single_part_template(value)
+		const { _statics: statics, _dynamics: dynamics } = value
 		const template = compile_template(statics)
 
 		assert(
@@ -164,14 +161,13 @@ function* render_child(value: unknown): Generator<string, void, void> {
 			'expected the same number of dynamics as parts. do you have a ${...} in an unsupported place?',
 		)
 
-		let str = template.source
 		let prev_end = 0
 		for (const { replace_start, replace_end, render } of template.parts) {
-			yield str.slice(prev_end, replace_start)
+			yield template.source.slice(prev_end, replace_start)
 			yield* render(dynamics)
 			prev_end = replace_end
 		}
-		yield str.slice(prev_end)
+		yield template.source.slice(prev_end)
 	} else if (value !== null) {
 		yield escape(value)
 	}

@@ -1,4 +1,4 @@
-import { assert, is_html, is_iterable, is_renderable, type Displayable, type Renderable } from '../shared.ts'
+import { assert, is_html, is_iterable, is_renderable, single_part_template, type Displayable, type Renderable } from '../shared.ts'
 import {
 	compile_template,
 	DYNAMIC_WHOLE,
@@ -78,6 +78,8 @@ function hydrate_child_part(span: Span, value: unknown) {
 				throw thrown
 			}
 		}
+
+		if (is_renderable(value)) value = single_part_template(value)
 	}
 
 	if (is_iterable(value)) {
