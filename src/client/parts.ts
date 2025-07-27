@@ -162,6 +162,7 @@ export function create_child_part(
 				entry._part(null)
 			}
 
+			old_value = undefined
 			return
 		} else if (entries) {
 			for (const entry of entries) entry._part(null)
@@ -250,7 +251,12 @@ export function create_child_part(
 
 			assert(template_parts)
 			for (const [idx, part] of template_parts) part(dynamics[idx])
-		} else if (!Object.is(old_value, value)) {
+
+			old_value = undefined
+			return
+		}
+
+		if (!Object.is(old_value, value)) {
 			// if we previously rendered a tree that might contain renderables,
 			// and the template has changed (or we're not even rendering a template anymore),
 			// we need to clear the old renderables.
@@ -264,9 +270,9 @@ export function create_child_part(
 				delete_contents(span)
 				if (value !== null) insert_node(span, value instanceof Node ? value : new Text('' + value))
 			}
-		}
 
-		old_value = value
+			old_value = value
+		}
 	}
 }
 
