@@ -183,3 +183,35 @@ test('syntax close but not exact does not throw', () => {
 
 	assert_eq(el.innerHTML, 'dyn-$01$')
 })
+
+{
+	const values = {
+		text: 'text',
+		number: 1234,
+		null: null,
+		iterable: ['iterable', 'of', 'things'],
+		html: html`html`,
+		html_element: html`<a href="#">element</a>`,
+		renderable: {
+			render() {
+				return 'hello'
+			},
+		},
+	}
+
+	for (const [a_name, a_value] of Object.entries(values)) {
+		for (const [b_name, b_value] of Object.entries(values)) {
+			test(`updating across value kinds: ${a_name} -> ${b_name}`, () => {
+				const { root, el } = setup()
+
+				root.render(a_value)
+				root.render(b_value)
+
+				const { root: root2, el: el2 } = setup()
+				root2.render(b_value)
+
+				assert_eq(el.innerHTML, el2.innerHTML)
+			})
+		}
+	}
+}
