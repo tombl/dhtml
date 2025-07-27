@@ -21,6 +21,7 @@ export interface CompiledTemplate {
 export const DYNAMIC_WHOLE: RegExp = /^dyn-\$(\d+)\$$/
 const DYNAMIC_GLOBAL = /dyn-\$(\d+)\$/g
 const FORCE_ATTRIBUTES = /-|^class$|^for$/i
+const NEEDS_UPPERCASING = /\$./g
 
 const templates: WeakMap<TemplateStringsArray, CompiledTemplate> = new WeakMap()
 export function compile_template(statics: TemplateStringsArray): CompiledTemplate {
@@ -34,6 +35,9 @@ export function compile_template(statics: TemplateStringsArray): CompiledTemplat
 			if (char === '\0') {
 				if (state === lexer.DATA) return `<!--dyn-$${next_part++}$-->`
 				else return `dyn-$${next_part++}$`
+			}
+			if (state === lexer.ATTR_NAME && char.toLowerCase() !== char) {
+				return `$${char}`
 			}
 			return char
 		})
@@ -102,10 +106,10 @@ export function compile_template(statics: TemplateStringsArray): CompiledTemplat
 						if (FORCE_ATTRIBUTES.test(name)) {
 							patch(node, parseInt(match[1]), [PART_ATTRIBUTE, name])
 						} else {
-							if (!(name in node)) {
-								name = (correct_case_cache[node.tagName] ??= generate_case_map(node))[name] ?? name
-							}
-							patch(node, parseInt(match[1]), [PART_PROPERTY, name])
+							patch(node, parseInt(match[1]), [
+								PART_PROPERTY,
+								name.replace(NEEDS_UPPERCASING, match => match[1].toUpperCase()),
+							])
 						}
 					} else {
 						assert(!DYNAMIC_GLOBAL.test(value), `expected a whole dynamic value for ${name}, got a partial one`)
@@ -120,18 +124,4 @@ export function compile_template(statics: TemplateStringsArray): CompiledTemplat
 
 	templates.set(statics, compiled)
 	return compiled
-}
-
-const correct_case_cache: Record<string, Record<string, string>> = {}
-function generate_case_map(node: Node) {
-	const cache: Record<string, string> = {}
-
-	while (node !== null) {
-		for (const prop of Object.getOwnPropertyNames(node)) {
-			cache[prop.toLowerCase()] ??= prop
-		}
-		node = Object.getPrototypeOf(node)
-	}
-
-	return cache
 }
