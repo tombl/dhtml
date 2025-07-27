@@ -1,4 +1,4 @@
-import { html, type Displayable } from 'dhtml'
+import { html, type Displayable, type Renderable } from 'dhtml'
 import { attr, hydrate, invalidate, keyed, onMount, type Directive, type Root } from 'dhtml/client'
 import { renderToString } from 'dhtml/server'
 import { assert, assert_deep_eq, assert_eq, test } from '../../../scripts/test/test.ts'
@@ -503,6 +503,31 @@ test('renderable passthrough errors', () => {
 	}
 
 	assert(thrown)
+})
+
+test('hydration of deep nesting', () => {
+	const DEPTH = 10
+
+	const leaf = {
+		text: 'hello!',
+		render() {
+			return this.text
+		},
+	}
+	let app: Renderable = leaf
+	for (let i = 0; i < DEPTH; i++) {
+		const inner = app
+		app = { render: () => inner }
+	}
+
+	const { el } = setup(app)
+
+	assert_eq(el.innerHTML, '<!--?[-->'.repeat(DEPTH + 1) + 'hello!' + '<!--?]-->'.repeat(DEPTH + 1))
+
+	leaf.text = 'goodbye'
+	invalidate(leaf)
+
+	assert_eq(el.innerHTML, '<!--?[-->'.repeat(DEPTH + 1) + 'goodbye' + '<!--?]-->'.repeat(DEPTH + 1))
 })
 
 test('hydration mismatch: tag name', () => {
