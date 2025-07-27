@@ -103,7 +103,7 @@ export function compile_template(statics: TemplateStringsArray): CompiledTemplat
 							patch(node, parseInt(match[1]), [PART_ATTRIBUTE, name])
 						} else {
 							if (!(name in node)) {
-								name = (correct_case_cache[node.tagName] ??= generate_case_map(node))[name]
+								name = (correct_case_cache[node.tagName] ??= generate_case_map(node))[name] ?? name
 							}
 							patch(node, parseInt(match[1]), [PART_PROPERTY, name])
 						}
