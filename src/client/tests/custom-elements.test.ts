@@ -7,12 +7,12 @@ test('custom elements instantiate correctly', () => {
 	const { root, el } = setup()
 
 	class CustomElement extends HTMLElement {
-		#thing?: string
-		get thing() {
-			return this.#thing
+		#thingName?: string
+		get thingName() {
+			return this.#thingName
 		}
-		set thing(value) {
-			this.#thing = value?.toUpperCase()
+		set thingName(value) {
+			this.#thingName = value?.toUpperCase()
 		}
 
 		constructor() {
@@ -23,12 +23,12 @@ test('custom elements instantiate correctly', () => {
 
 	customElements.define('custom-element', CustomElement)
 
-	root.render(html`<custom-element thing=${'hello'}></custom-element>`)
+	root.render(html`<custom-element thingName=${'hello'}></custom-element>`)
 	assert_eq(el.innerHTML, `<custom-element>inside custom element</custom-element>`)
 
 	const customElement = el.querySelector('custom-element') as CustomElement
 	assert(customElement instanceof CustomElement)
-	assert_eq(customElement.thing, 'HELLO')
+	assert_eq(customElement.thingName, 'HELLO')
 })
 
 test('content renders into shadow dom', () => {
