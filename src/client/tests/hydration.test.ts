@@ -517,4 +517,6 @@ test('hydration mismatch: tag name', () => {
 		assert(error instanceof Error)
 		assert(error.message.includes('Tag name mismatch'))
 	}
+
+	assert(thrown)
 })
