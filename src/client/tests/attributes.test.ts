@@ -1,5 +1,5 @@
 import { html } from 'dhtml'
-import { assert, assert_eq, test } from '../../../scripts/test/test.ts'
+import { assert, assert_deep_eq, assert_eq, test } from '../../../scripts/test/test.ts'
 import { setup } from './setup.ts'
 
 test('regular attributes', () => {
@@ -48,6 +48,13 @@ test('maintains the case of properties', () => {
 
 	root.render(html`<span innerHTML=${innerHTML}></span>`)
 	assert_eq(el.querySelector('span')!.innerHTML, innerHTML)
+})
+
+test('does not maintain the case of attributes', () => {
+	const { root, el } = setup()
+
+	root.render(html`<div theThing="hello"></div>`)
+	assert_deep_eq(el.querySelector('div')!.getAttributeNames(), ['thething'])
 })
 
 test('treats class/for specially', () => {
