@@ -63,8 +63,7 @@ export function compile_template(statics: TemplateStringsArray): CompiledTemplat
 	const walker = document.createTreeWalker(template_element.content, 129)
 	assert((NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_COMMENT) === 129)
 
-	// stop iterating once we've hit the last part, but if we're in dev mode, keep going to check for mistakes.
-	while ((next_part < compiled._parts.length || __DEV__) && walker.nextNode()) {
+	while (walker.nextNode()) {
 		const node = walker.currentNode
 		if (is_comment(node)) {
 			const match = DYNAMIC_WHOLE.exec(node.data)
@@ -87,36 +86,39 @@ export function compile_template(statics: TemplateStringsArray): CompiledTemplat
 			assert(is_element(node))
 			assert(node instanceof HTMLElement || node instanceof SVGElement)
 
-			const to_remove = []
-			for (let name of node.getAttributeNames()) {
+			for (const name of node.getAttributeNames()) {
 				const value = node.getAttribute(name)
 				assert(value !== null)
 
 				let match = DYNAMIC_WHOLE.exec(name)
 				if (match !== null) {
 					// directive:
-					to_remove.push(name)
+					node.removeAttribute(name)
 					assert(value === '', `directives must not have values`)
 					patch(node, parseInt(match[1]), [PART_DIRECTIVE])
 				} else {
 					// properties:
 					match = DYNAMIC_WHOLE.exec(value)
+					const remapped_name = name.replace(NEEDS_UPPERCASING, match => match[1].toUpperCase())
 					if (match !== null) {
-						to_remove.push(name)
-						if (FORCE_ATTRIBUTES.test(name)) {
-							patch(node, parseInt(match[1]), [PART_ATTRIBUTE, name])
+						node.removeAttribute(name)
+						if (FORCE_ATTRIBUTES.test(remapped_name)) {
+							patch(node, parseInt(match[1]), [PART_ATTRIBUTE, remapped_name])
 						} else {
-							patch(node, parseInt(match[1]), [
-								PART_PROPERTY,
-								name.replace(NEEDS_UPPERCASING, match => match[1].toUpperCase()),
-							])
+							patch(node, parseInt(match[1]), [PART_PROPERTY, remapped_name])
 						}
+					} else if (remapped_name !== name) {
+						assert(!node.hasAttribute(remapped_name), `duplicate attribute ${remapped_name}`)
+						node.setAttribute(remapped_name, value)
+						node.removeAttribute(name)
 					} else {
-						assert(!DYNAMIC_GLOBAL.test(value), `expected a whole dynamic value for ${name}, got a partial one`)
+						assert(
+							!DYNAMIC_GLOBAL.test(value),
+							`expected a whole dynamic value for ${remapped_name}, got a partial one`,
+						)
 					}
 				}
 			}
-			for (const name of to_remove) node.removeAttribute(name)
 		}
 	}
 
