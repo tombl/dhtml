@@ -1,5 +1,4 @@
 import { assert } from '../shared.ts'
-import { is_document_fragment } from './util.ts'
 
 export interface Span {
 	readonly _parent: Node
@@ -52,8 +51,6 @@ export function create_span_after(node: Node): Span {
 }
 
 export function insert_node(span: Span, node: Node): void {
-	const end = is_document_fragment(node) ? node.lastChild : node
-	if (end === null) return // empty fragment
 	span._parent.insertBefore(node, span._end)
 }
 
