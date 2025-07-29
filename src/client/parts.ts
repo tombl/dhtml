@@ -284,12 +284,10 @@ export function create_property_part(node: Node, name: string): Part {
 }
 
 export function create_attribute_part(node: Element, name: string): Part {
-	return value => {
-		set_attr(node, name, value)
-	}
+	return value => set_attr(node, name, value)
 }
 
-export type Directive = (node: Element) => Cleanup
+export type Directive = (el: Element) => Cleanup
 
 export function create_directive_part(node: Node): Part {
 	let cleanup: Cleanup
@@ -310,8 +308,17 @@ function set_attr(el: Element, name: string, value: unknown) {
 export function attr_directive(name: string, value: string | boolean | null | undefined): Directive {
 	return el => {
 		set_attr(el, name, value)
-		return () => {
-			set_attr(el, name, null)
-		}
+		return () => set_attr(el, name, null)
+	}
+}
+
+export function on_directive(
+	type: string,
+	listener: EventListenerOrEventListenerObject,
+	options?: boolean | AddEventListenerOptions,
+): Directive {
+	return el => {
+		el.addEventListener(type, listener, options)
+		return () => el.removeEventListener(type, listener, options)
 	}
 }

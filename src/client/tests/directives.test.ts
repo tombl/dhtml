@@ -1,5 +1,5 @@
 import { html } from 'dhtml'
-import { attr, type Directive } from 'dhtml/client'
+import { attr, on, type Directive } from 'dhtml/client'
 import { assert, assert_eq, test } from '../../../scripts/test/test.ts'
 import { setup } from './setup.ts'
 
@@ -92,4 +92,127 @@ test('attr directive supports booleans', () => {
 
 	root.render(template(false))
 	assert_eq(el.querySelector('input')!.disabled, false)
+})
+
+test('on directive works correctly', () => {
+	const { root, el } = setup()
+	let count = 0
+	let event: Event
+
+	const template = (handler: EventListener | null) => html`
+		<button ${handler ? on('click', handler) : null}>Click me</button>
+	`
+
+	root.render(
+		template(e => {
+			count++
+			event = e
+		}),
+	)
+	const button = el.querySelector('button')!
+
+	button.click()
+	assert_eq(count, 1)
+	assert(event! instanceof Event)
+	assert_eq(event.type, 'click')
+
+	button.click()
+	assert_eq(count, 2)
+
+	root.render(template(null))
+	button.click()
+	assert_eq(count, 2)
+})
+
+test('on directive handles event listener updates', () => {
+	const { root, el } = setup()
+	let count1 = 0
+	let count2 = 0
+
+	const template = (handler: EventListener) => html`<button ${on('click', handler)}>Click me</button>`
+
+	root.render(
+		template(() => {
+			count1++
+		}),
+	)
+	const button = el.querySelector('button')!
+
+	button.click()
+	assert_eq(count1, 1)
+	assert_eq(count2, 0)
+
+	root.render(
+		template(() => {
+			count2++
+		}),
+	)
+	button.click()
+	assert_eq(count1, 1)
+	assert_eq(count2, 1)
+})
+
+test('on directive supports different event types', () => {
+	const { root, el } = setup()
+	let enter_count = 0
+	let leave_count = 0
+
+	const template = () => html`
+		<div
+			${on('mouseenter', () => {
+				enter_count++
+			})}
+			${on('mouseleave', () => {
+				leave_count++
+			})}
+		>
+			Hover me
+		</div>
+	`
+
+	root.render(template())
+	const div = el.querySelector('div')!
+
+	div.dispatchEvent(new MouseEvent('mouseenter'))
+	assert_eq(enter_count, 1)
+	assert_eq(leave_count, 0)
+
+	div.dispatchEvent(new MouseEvent('mouseleave'))
+	assert_eq(enter_count, 1)
+	assert_eq(leave_count, 1)
+})
+
+test('on directive supports event listener options', () => {
+	const { root, el } = setup()
+	let count = 0
+
+	const template = (options?: AddEventListenerOptions) => html`
+		<button
+			${on(
+				'click',
+				() => {
+					count++
+				},
+				options,
+			)}
+		>
+			Click me
+		</button>
+	`
+
+	root.render(template({ once: true }))
+	const button = el.querySelector('button')!
+
+	button.click()
+	assert_eq(count, 1)
+
+	button.click()
+	assert_eq(count, 1)
+
+	root.render(template())
+	button.click()
+	assert_eq(count, 2)
+
+	button.click()
+	assert_eq(count, 3)
 })
