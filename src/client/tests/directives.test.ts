@@ -243,3 +243,31 @@ test('same directive function is not re-invoked or cleaned up', () => {
 	root.render(template(null, null))
 	assert_deep_eq(sequence, ['stable cleanup', 'unstable cleanup'])
 })
+
+test('cleanup can throw and next directive will still run', () => {
+	const { root, el } = setup()
+
+	const template = (d: Directive | null) => html`<div ${d}>Hello, world!</div>`
+
+	const oops = new Error('oops')
+
+	root.render(
+		template(() => () => {
+			throw oops
+		}),
+	)
+
+	let caught
+	try {
+		root.render(
+			template(node => {
+				;(node as HTMLElement).style.color = 'red'
+			}),
+		)
+	} catch (error) {
+		caught = error
+	}
+
+	assert_eq(caught, oops)
+	assert_eq(el.querySelector('div')!.style.cssText, 'color: red;')
+})
