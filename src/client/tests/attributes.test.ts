@@ -12,19 +12,16 @@ test('regular attributes', () => {
 test('can toggle attributes', () => {
 	const { root, el } = setup()
 
-	let hidden: unknown = false
-	const template = () => html`<h1 hidden=${hidden}>Hello, world!</h1>`
+	const template = (hidden: unknown) => html`<h1 data-hidden=${hidden}>Hello, world!</h1>`
 
-	root.render(template())
-	assert(!el.querySelector('h1')!.hasAttribute('hidden'))
+	root.render(template(false))
+	assert(!el.querySelector('h1')!.hasAttribute('data-hidden'))
 
-	hidden = true
-	root.render(template())
-	assert(el.querySelector('h1')!.hasAttribute('hidden'))
+	root.render(template(true))
+	assert(el.querySelector('h1')!.hasAttribute('data-hidden'))
 
-	hidden = null
-	root.render(template())
-	assert(!el.querySelector('h1')!.hasAttribute('hidden'))
+	root.render(template(null))
+	assert(!el.querySelector('h1')!.hasAttribute('data-hidden'))
 })
 
 test('supports property attributes', () => {

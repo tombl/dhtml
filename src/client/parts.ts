@@ -285,12 +285,7 @@ export function create_property_part(node: Node, name: string): Part {
 
 export function create_attribute_part(node: Element, name: string): Part {
 	return value => {
-		if (value === null) {
-			node.removeAttribute(name)
-		} else {
-			// setAttribute implicitly casts the value to a string
-			node.setAttribute(name, value as string)
-		}
+		set_attr(node, name, value)
 	}
 }
 
@@ -305,13 +300,18 @@ export function create_directive_part(node: Node): Part {
 	}
 }
 
+function set_attr(el: Element, name: string, value: unknown) {
+	if (typeof value === 'boolean') el.toggleAttribute(name, value)
+	else if (value == null) el.removeAttribute(name)
+	// the cast is fine because setAttribute implicitly casts the value to a string
+	else el.setAttribute(name, value as string)
+}
+
 export function attr_directive(name: string, value: string | boolean | null | undefined): Directive {
-	return node => {
-		if (typeof value === 'boolean') node.toggleAttribute(name, value)
-		else if (value == null) node.removeAttribute(name)
-		else node.setAttribute(name, value)
+	return el => {
+		set_attr(el, name, value)
 		return () => {
-			node.removeAttribute(name)
+			set_attr(el, name, null)
 		}
 	}
 }
