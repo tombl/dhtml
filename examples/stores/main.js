@@ -1,51 +1,42 @@
 import { html } from 'dhtml'
 import { createRoot, invalidate } from 'dhtml/client'
-import { createSubscriber, Store } from './store.js'
+import { computed, signal } from './signals.js'
 
-class ThemeToggle {
-	#theme
-	#preference
-	constructor(theme) {
-		this.theme = theme
-		this.#theme = createSubscriber(
-			this,
-			cb => this.theme.subscribe(cb),
-			() => this.theme.get(),
-		)
+function getSystemTheme() {
+	const media = window.matchMedia('(prefers-color-scheme: dark)')
+	const matches = signal(media.matches)
+	media.addEventListener('change', e => {
+		matches.value = e.matches
+	})
+	return computed(() => (matches.value ? 'dark' : 'light'))
+}
 
-		const prefersDark = window.matchMedia('(prefers-color-scheme: dark)')
-		this.#preference = createSubscriber(
-			this,
-			cb => {
-				prefersDark.addEventListener('change', cb)
-				return () => prefersDark.removeEventListener('change', cb)
-			},
-			() => (prefersDark.matches ? 'dark' : 'light'),
-		)
-	}
-	render() {
-		return html`
+function createThemeToggle(preference, systemTheme) {
+	return computed(
+		() => html`
 			<select
-				value=${this.#theme()}
+				value=${preference.value}
 				onchange=${e => {
-					this.theme.set(e.target.value)
+					preference.value = e.target.value
 				}}
 			>
 				${['System', 'Light', 'Dark'].map(
 					t => html`
-						<option value=${t.toLowerCase()}>${t === 'System' ? `System (${this.#preference()})` : t}</option>
+						<option value=${t.toLowerCase()}>${t === 'System' ? `System (${systemTheme.value})` : t}</option>
 					`,
 				)}
 			</select>
-		`
-	}
+		`,
+	)
 }
 
 class App {
-	theme = new Store('system')
+	preference = signal('system')
+	systemTheme = getSystemTheme()
+	theme = computed(() => (this.preference.value === 'system' ? this.systemTheme.value : this.preference))
 
-	#themeToggle1 = new ThemeToggle(this.theme)
-	#themeToggle2 = new ThemeToggle(this.theme)
+	#themeToggle1 = createThemeToggle(this.preference, this.systemTheme)
+	#themeToggle2 = createThemeToggle(this.preference, this.systemTheme)
 
 	render() {
 		return html`
@@ -63,7 +54,7 @@ document.body.addEventListener('keypress', e => {
 	if (e.ctrlKey && e.key === 'i') invalidate(app)
 })
 
-app.theme.subscribe(theme => {
+app.preference.subscribe(theme => {
 	if (theme === 'system') {
 		delete document.documentElement.dataset.theme
 	} else {
