@@ -1,29 +1,27 @@
 import { html } from 'dhtml'
 import { createRoot, invalidate } from 'dhtml/client'
-import { computed, signal } from './signals.js'
+import { computed, effect, signal } from './signals.js'
 
 function getSystemTheme() {
 	const media = window.matchMedia('(prefers-color-scheme: dark)')
 	const matches = signal(media.matches)
 	media.addEventListener('change', e => {
-		matches.value = e.matches
+		matches(e.matches)
 	})
-	return computed(() => (matches.value ? 'dark' : 'light'))
+	return computed(() => (matches() ? 'dark' : 'light'))
 }
 
 function createThemeToggle(preference, systemTheme) {
 	return computed(
 		() => html`
 			<select
-				value=${preference.value}
+				value=${preference()}
 				onchange=${e => {
-					preference.value = e.target.value
+					preference(e.target.value)
 				}}
 			>
 				${['System', 'Light', 'Dark'].map(
-					t => html`
-						<option value=${t.toLowerCase()}>${t === 'System' ? `System (${systemTheme.value})` : t}</option>
-					`,
+					t => html` <option value=${t.toLowerCase()}>${t === 'System' ? `System (${systemTheme()})` : t}</option> `,
 				)}
 			</select>
 		`,
@@ -33,7 +31,7 @@ function createThemeToggle(preference, systemTheme) {
 class App {
 	preference = signal('system')
 	systemTheme = getSystemTheme()
-	theme = computed(() => (this.preference.value === 'system' ? this.systemTheme.value : this.preference))
+	theme = computed(() => (this.preference() === 'system' ? this.systemTheme() : this.preference))
 
 	#themeToggle1 = createThemeToggle(this.preference, this.systemTheme)
 	#themeToggle2 = createThemeToggle(this.preference, this.systemTheme)
@@ -54,11 +52,11 @@ document.body.addEventListener('keypress', e => {
 	if (e.ctrlKey && e.key === 'i') invalidate(app)
 })
 
-app.preference.subscribe(theme => {
-	if (theme === 'system') {
+effect(() => {
+	if (app.preference() === 'system') {
 		delete document.documentElement.dataset.theme
 	} else {
-		document.documentElement.dataset.theme = theme
+		document.documentElement.dataset.theme = app.preference()
 	}
 })
 

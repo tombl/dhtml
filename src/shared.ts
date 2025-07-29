@@ -15,11 +15,11 @@ export interface Renderable {
 }
 
 export function is_renderable(value: unknown): value is Renderable {
-	return typeof value === 'object' && value !== null && 'render' in value
+	return (typeof value === 'object' || typeof value === 'function') && value !== null && 'render' in value
 }
 
 export function is_iterable(value: unknown): value is Iterable<unknown> {
-	return typeof value === 'object' && value !== null && Symbol.iterator in value
+	return (typeof value === 'object' || typeof value === 'function') && value !== null && Symbol.iterator in value
 }
 
 export function assert(value: unknown, message?: string): asserts value {
