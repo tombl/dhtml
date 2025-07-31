@@ -231,7 +231,6 @@ export function create_child_part(
 							return [
 								dynamic_index,
 								create_child_part({
-									_parent: child.parentNode,
 									_start: child.previousSibling,
 									_end: child.nextSibling,
 								}),

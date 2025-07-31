@@ -1,4 +1,12 @@
-import { assert, is_html, is_iterable, is_renderable, single_part_template, type Displayable, type Renderable } from '../shared.ts'
+import {
+	assert,
+	is_html,
+	is_iterable,
+	is_renderable,
+	single_part_template,
+	type Displayable,
+	type Renderable,
+} from '../shared.ts'
 import {
 	compile_template,
 	DYNAMIC_WHOLE,
@@ -57,7 +65,7 @@ export function hydrate(parent: Node, value: Displayable): Root {
 	const end = find_end(start)
 	assert(end, `Could not find hydration end comment. Please ensure the element contains server-side rendered output.`)
 
-	const render = hydrate_child_part({ _parent: parent, _start: start, _end: end }, value)
+	const render = hydrate_child_part({ _start: start, _end: end }, value)
 	render(value)
 	return { render }
 }
@@ -84,7 +92,6 @@ function hydrate_child_part(span: Span, value: unknown) {
 
 	if (is_iterable(value)) {
 		entries = []
-		const { _parent } = span
 		let end = span._start
 
 		for (const item of value) {
@@ -96,7 +103,7 @@ function hydrate_child_part(span: Span, value: unknown) {
 			end = find_end(start)!
 			assert(end)
 
-			const span: Span = { _parent, _start: start, _end: end }
+			const span = { _start: start, _end: end }
 			entries.push({ _span: span, _part: hydrate_child_part(span, item), _key: key })
 		}
 		assert(end.nextSibling === span._end)
@@ -107,7 +114,7 @@ function hydrate_child_part(span: Span, value: unknown) {
 
 		const node_by_part: Array<Node | Span> = []
 
-		const walker = document.createTreeWalker(span._parent, 129)
+		const walker = document.createTreeWalker(span._start.parentNode!, 129)
 		const template_walker = document.createTreeWalker(template._content, 129)
 		assert((NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_COMMENT) === 129)
 		walker.currentNode = span._start
@@ -169,7 +176,6 @@ function hydrate_child_part(span: Span, value: unknown) {
 						dynamic_index,
 						hydrate_child_part(
 							{
-								_parent: child.parentNode,
 								_start: child.previousSibling,
 								_end: end,
 							},
