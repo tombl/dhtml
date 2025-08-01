@@ -1,57 +1,34 @@
 import { assert } from '../shared.ts'
 
 export interface Span {
-	readonly _parent: Node
 	readonly _start: Node
 	readonly _end: Node
 }
 
 export function create_span(node: Node): Span {
 	assert(node.parentNode !== null)
-	const start = new Text()
-	const end = new Text()
-
-	node.parentNode.insertBefore(start, node)
-	node.parentNode.insertBefore(end, node.nextSibling)
 
 	return {
-		_parent: node.parentNode,
-		_start: start,
-		_end: end,
+		_start: node.parentNode.insertBefore(new Text(), node),
+		_end: node.parentNode.insertBefore(new Text(), node.nextSibling),
 	}
 }
 
 export function create_span_into(parent: Node): Span {
-	const start = new Text()
-	const end = new Text()
-
-	parent.appendChild(start)
-	parent.appendChild(end)
-
-	return {
-		_parent: parent,
-		_start: start,
-		_end: end,
-	}
+	return { _start: parent.appendChild(new Text()), _end: parent.appendChild(new Text()) }
 }
 
 export function create_span_after(node: Node): Span {
 	assert(node.parentNode !== null)
-	const start = new Text()
-	const end = new Text()
-
-	node.parentNode.insertBefore(end, node.nextSibling)
-	node.parentNode.insertBefore(start, end)
 
 	return {
-		_parent: node.parentNode,
-		_start: start,
-		_end: end,
+		_start: node.parentNode.insertBefore(new Text(), node.nextSibling),
+		_end: node.parentNode.insertBefore(new Text(), node.nextSibling!.nextSibling),
 	}
 }
 
 export function insert_node(span: Span, node: Node): void {
-	span._parent.insertBefore(node, span._end)
+	span._end.parentNode!.insertBefore(node, span._end)
 }
 
 export function extract_contents(span: Span): DocumentFragment {
@@ -75,7 +52,7 @@ export function delete_contents(span: Span): void {
 		assert(node)
 		if (node === span._end) break
 		const next = node.nextSibling
-		span._parent.removeChild(node)
+		node.remove()
 		node = next
 	}
 }
