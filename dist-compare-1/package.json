@@ -1,0 +1,21 @@
+{
+	"name": "dhtml",
+	"type": "module",
+	"exports": {
+		".": {
+			"types": "./index.d.ts",
+			"production": "./index.min.js",
+			"default": "./index.js"
+		},
+		"./client": {
+			"types": "./client.d.ts",
+			"production": "./client.min.js",
+			"default": "./client.js"
+		},
+		"./server": {
+			"types": "./server.d.ts",
+			"production": "./server.min.js",
+			"default": "./server.js"
+		}
+	}
+}
