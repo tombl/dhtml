@@ -48,9 +48,9 @@ const client: ClientFunctions = {
 			// Dynamically import all library versions
 			for (const libPath of library_paths) {
 				try {
-					const index = await import(`../${libPath}/index.min.js`)
-					const client = await import(`../${libPath}/client.min.js`)
-					const server = await import(`../${libPath}/server.min.js`)
+					const index = await import(`../../${libPath}/index.min.js`)
+					const client = await import(`../../${libPath}/client.min.js`)
+					const server = await import(`../../${libPath}/server.min.js`)
 					libraries.push({
 						index: { html: index.html },
 						client: { invalidate: client.invalidate, createRoot: client.createRoot },
