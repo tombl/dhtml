@@ -32,33 +32,29 @@ const args = parseArgs({
 
 const filter = args.values.filter !== undefined ? new RegExp(args.values.filter) : undefined
 
-async function setup_comparison_builds(commits: string[]): Promise<string[]> {
+async function setup_comparison_builds(commits: string[]): Promise<{ paths: string[]; cleanup: () => void }> {
 	const build_paths: string[] = []
 	const temp_dirs: string[] = []
 
-	try {
-		for (let i = 0; i < commits.length; i++) {
-			const commit = commits[i]
-			const build_dir = `dist-compare-${i}`
-			const temp_dir = `temp-worktree-${i}`
+	for (let i = 0; i < commits.length; i++) {
+		const commit = commits[i]
+		const temp_dir = `temp-worktree-${i}`
 
-			console.log(`Building version ${i + 1}: ${commit}`)
+		console.log(`Building version ${i + 1}: ${commit}`)
 
-			// Create worktree for this commit
-			execSync(`git worktree add ${temp_dir} ${commit}`, { stdio: 'inherit' })
-			temp_dirs.push(temp_dir)
+		// Create worktree for this commit
+		execSync(`git worktree add ${temp_dir} ${commit}`, { stdio: 'inherit' })
+		temp_dirs.push(temp_dir)
 
-			// Build in the worktree
-			execSync('npm install', { stdio: 'inherit', cwd: temp_dir })
-			execSync('npm run build', { stdio: 'inherit', cwd: temp_dir })
+		// Build in the worktree
+		execSync('npm install', { stdio: 'inherit', cwd: temp_dir })
+		execSync('npm run build', { stdio: 'inherit', cwd: temp_dir })
 
-			// Copy build back to main checkout
-			await fs.rm(build_dir, { recursive: true, force: true })
-			await fs.cp(path.join(temp_dir, 'dist'), build_dir, { recursive: true })
+		// Use the dist directory directly from the worktree
+		build_paths.push(`${temp_dir}/dist`)
+	}
 
-			build_paths.push(build_dir)
-		}
-	} finally {
+	const cleanup = () => {
 		// Clean up worktrees
 		for (const temp_dir of temp_dirs) {
 			try {
@@ -69,7 +65,7 @@ async function setup_comparison_builds(commits: string[]): Promise<string[]> {
 		}
 	}
 
-	return build_paths
+	return { paths: build_paths, cleanup }
 }
 
 const all_files: { [runtime: string]: string[] } = {}
@@ -121,9 +117,13 @@ for (const [runtime, files] of Object.entries(all_files)) {
 			if (commits.length !== 2) {
 				throw new Error('--compare requires exactly two comma-separated commit references')
 			}
-			const library_paths = await setup_comparison_builds(commits)
-			// Don't import bench.ts for comparison mode - handled internally
-			await client.run_benchmarks({ filter, library_paths })
+			const { paths: library_paths, cleanup } = await setup_comparison_builds(commits)
+			try {
+				// Don't import bench.ts for comparison mode - handled internally
+				await client.run_benchmarks({ filter, library_paths })
+			} finally {
+				cleanup()
+			}
 		} else {
 			// Import bench files for standard mode
 			await Promise.all(files.map(file => client.import('./' + path.relative(here, file))))
