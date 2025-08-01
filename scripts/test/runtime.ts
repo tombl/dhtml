@@ -2,6 +2,7 @@ import { createBirpc } from 'birpc'
 import * as mitata from 'mitata'
 import * as devalue from './devalue.ts'
 import type { ServerFunctions } from './main.ts'
+import { assert } from './test.ts'
 
 export type TestResult = { name: string } & ({ result: 'pass'; duration: number } | { result: 'fail'; reason: unknown })
 
@@ -9,7 +10,7 @@ export interface ClientFunctions {
 	define<K extends keyof typeof globalThis>(name: K, value: (typeof globalThis)[K]): void
 	import(path: string): Promise<unknown>
 	run_tests(options: { filter?: RegExp }): Promise<void>
-	run_benchmarks(options: { filter?: RegExp; builds?: Array<{ path: string; ref: string }> }): Promise<mitata.trial[]>
+	run_benchmarks(options: { filter?: RegExp; builds?: Array<{ dir: string; ref: string }> }): Promise<mitata.trial[]>
 	stop_coverage(): Promise<void>
 }
 
@@ -37,58 +38,52 @@ const client: ClientFunctions = {
 	async run_benchmarks(options) {
 		const { builds } = options
 
-		if (!builds || builds.length === 1) {
-			// Single build or standard benchmarking mode
+		if (!builds) {
 			const { benchmarks } = await mitata.run({ filter: options.filter })
 			return benchmarks
 		} else {
-			// Multiple builds - comparison mode
-			const libraries: Array<{
-				index: typeof import('dhtml')
-				client: typeof import('dhtml/client')
-				server: typeof import('dhtml/server')
-				ref: string
-			}> = []
+			const versions = await Promise.all(
+				builds.map(async ({ dir, ref }) => {
+					return {
+						index: (await import(`../../${dir}/dist/index.min.js`)) as typeof import('dhtml'),
+						client: (await import(`../../${dir}/dist/client.min.js`)) as typeof import('dhtml/client'),
+						server: (await import(`../../${dir}/dist/server.min.js`)) as typeof import('dhtml/server'),
+						ref,
+					}
+				}),
+			)
 
-			// Dynamically import all library versions
-			for (const build of builds) {
-				try {
-					const index = (await import(`../../${build.path}/index.min.js`)) as typeof import('dhtml')
-					const client = (await import(`../../${build.path}/client.min.js`)) as typeof import('dhtml/client')
-					const server = (await import(`../../${build.path}/server.min.js`)) as typeof import('dhtml/server')
-					libraries.push({
-						index,
-						client,
-						server,
-						ref: build.ref,
-					})
-				} catch (error) {
-					console.error(`Failed to import from ${build.path}:`, error)
-					throw error
-				}
+			// TODO: much like tests, export a custom bench() function from test.ts,
+			// which collects in an array defined in this file, so that we don't need
+			// to hardcode the bench-comparison path.
+			// unlike test(), bench() will provide the lib argument to the function.
+			const { get_benchmarks } = await import('../../../src/client/tests/bench-comparison.ts' as string)
+
+			const called_versions = versions.map(lib => ({
+				ref: lib.ref,
+				fns: Object.entries(get_benchmarks(lib))
+					.filter(([name]) => (options.filter === undefined ? true : options.filter.test(name)))
+					.map(([, value]) => {
+						assert(typeof value === 'function')
+						return value
+					}),
+			}))
+
+			const n_fns = called_versions[0].fns.length
+			assert(n_fns > 0, 'filtered to 0 functions')
+			for (const { fns } of called_versions.slice(1)) {
+				assert(fns.length === n_fns, 'expected the same number of functions from all modules')
 			}
 
-			// Import get_benchmarks function dynamically
-			const benchPath = '../../../src/client/tests/bench-comparison.ts'
-			const benchModule = (await import(benchPath)) as any
-			const get_benchmarks = benchModule.get_benchmarks as Function
-
-			// Setup mitata comparison
 			mitata.summary(() => {
-				for (const lib of libraries) {
-					mitata.bench(lib.ref, () => {
-						const benchmarks = get_benchmarks(lib)
-						// Run all benchmark functions
-						for (const [name, fn] of Object.entries(benchmarks)) {
-							if (name.startsWith('bench_') && typeof fn === 'function') {
-								fn()
-							}
-						}
+				for (const { ref, fns } of called_versions) {
+					mitata.bench(ref, () => {
+						for (const fn of fns) fn()
 					})
 				}
 			})
 
-			const { benchmarks } = await mitata.run({ filter: options.filter })
+			const { benchmarks } = await mitata.run()
 			return benchmarks
 		}
 	},
