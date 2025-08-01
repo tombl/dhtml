@@ -34,47 +34,6 @@ const args = parseArgs({
 const filter = args.values.filter !== undefined ? new RegExp(args.values.filter) : undefined
 const exec_file = promisify(execFile)
 
-async function setup_comparison_builds(commits: string[]) {
-	const temp_dirs: string[] = []
-
-	// Build all versions in parallel
-	const buildPromises = commits.map(async commit => {
-		const temp_dir = `temp-worktree-${commit.replace(/[^a-zA-Z0-9]/g, '-')}`
-		temp_dirs.push(temp_dir)
-
-		console.log(`Building ${commit}`)
-
-		// Create worktree for this commit
-		await exec_file('git', ['worktree', 'add', temp_dir, commit], { stdio: 'inherit' } as ExecFileOptions)
-
-		// Install dependencies and build
-		await exec_file('npm', ['install'], { stdio: 'inherit', cwd: temp_dir } as ExecFileOptions)
-		await exec_file('npm', ['run', 'build'], { stdio: 'inherit', cwd: temp_dir } as ExecFileOptions)
-
-		console.log(`Completed building ${commit}`)
-
-		// Return the build info
-		return { path: `${temp_dir}/dist`, ref: commit }
-	})
-
-	const builds = await Promise.all(buildPromises)
-
-	const cleanup = async () => {
-		// Clean up worktrees in parallel
-		await Promise.all(
-			temp_dirs.map(async temp_dir => {
-				try {
-					await exec_file('git', ['worktree', 'remove', temp_dir], { stdio: 'inherit' } as ExecFileOptions)
-				} catch (error) {
-					console.warn(`Failed to remove worktree ${temp_dir}:`, error)
-				}
-			}),
-		)
-	}
-
-	return { builds, cleanup }
-}
-
 const all_files: { [runtime: string]: string[] } = {}
 for (const arg of args.positionals) {
 	for await (const file of fs.glob(arg)) {
@@ -118,27 +77,39 @@ for (const [runtime, files] of Object.entries(all_files)) {
 
 	const here = path.join(fileURLToPath(import.meta.url), '..')
 
-	if (args.values.bench) {
-		if (args.values.compare) {
-			const commits = args.values.compare.split(',').map(c => c.trim())
-			if (commits.length !== 2) {
-				throw new Error('--compare requires exactly two comma-separated commit references')
-			}
-			const { builds, cleanup } = await setup_comparison_builds(commits)
-			try {
-				// Don't import bench.ts for comparison mode - handled internally
-				await client.run_benchmarks({ filter, builds })
-			} finally {
-				await cleanup()
-			}
-		} else {
-			// Import bench files for standard mode
-			await Promise.all(files.map(file => client.import('./' + path.relative(here, file))))
-			await client.run_benchmarks({ filter })
+	if (args.values.bench && args.values.compare) {
+		const commits = args.values.compare.split(',').map(c => c.trim())
+
+		const builds = await Promise.all(
+			commits.map(async ref => {
+				const dir = `temp-worktree-${ref}`
+
+				console.log(`Building ${ref}`)
+
+				await exec_file('git', ['worktree', 'add', dir, ref], { stdio: 'inherit' } as ExecFileOptions)
+				await exec_file('npm', ['install'], { stdio: 'inherit', cwd: dir } as ExecFileOptions)
+				await exec_file('npm', ['run', 'build'], { stdio: 'inherit', cwd: dir } as ExecFileOptions)
+
+				console.log(`Completed building ${ref}`)
+
+				return { dir, ref }
+			}),
+		)
+
+		try {
+			await client.run_benchmarks({ filter, builds })
+		} finally {
+			await Promise.all(
+				builds.map(({ dir }) => exec_file('git', ['worktree', 'remove', dir], { stdio: 'inherit' } as ExecFileOptions)),
+			)
 		}
 	} else {
-		// Import test files for test mode
 		await Promise.all(files.map(file => client.import('./' + path.relative(here, file))))
+	}
+
+	if (args.values.bench && !args.values.compare) {
+		await client.run_benchmarks({ filter })
+	} else {
 		await client.run_tests({ filter })
 	}
 
@@ -146,8 +117,7 @@ for (const [runtime, files] of Object.entries(all_files)) {
 	coverage.push(...(await rt.coverage()))
 }
 
-if (args.values.bench) {
-} else {
+if (!args.values.bench) {
 	await handle_coverage(coverage)
 
 	if (results.length === 0) {
