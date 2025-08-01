@@ -1,4 +1,5 @@
 import { createBirpc } from 'birpc'
+import { execSync } from 'node:child_process'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -24,11 +25,45 @@ const args = parseArgs({
 		bench: { type: 'boolean', short: 'b', default: false },
 		prod: { type: 'boolean', short: 'p', default: false },
 		filter: { type: 'string', short: 'f' },
+		compare: { type: 'string', short: 'c' },
 	},
 	allowPositionals: true,
 })
 
 const filter = args.values.filter !== undefined ? new RegExp(args.values.filter) : undefined
+
+async function setup_comparison_builds(commits: string[]): Promise<string[]> {
+	const original_head = execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim()
+	const build_paths: string[] = []
+
+	try {
+		for (let i = 0; i < commits.length; i++) {
+			const commit = commits[i]
+			const build_dir = `dist-compare-${i}`
+
+			console.log(`Building version ${i + 1}: ${commit}`)
+
+			// Checkout the commit
+			execSync(`git checkout ${commit}`, { stdio: 'inherit' })
+
+			// Install dependencies and build
+			execSync('npm install', { stdio: 'inherit' })
+			execSync('npm run build', { stdio: 'inherit' })
+
+			// Copy build to versioned directory
+			await fs.rm(build_dir, { recursive: true, force: true })
+			await fs.cp('dist', build_dir, { recursive: true })
+
+			build_paths.push(build_dir)
+		}
+	} finally {
+		// Always return to original HEAD
+		execSync(`git checkout ${original_head}`, { stdio: 'inherit' })
+		execSync('npm install', { stdio: 'inherit' })
+	}
+
+	return build_paths
+}
 
 const all_files: { [runtime: string]: string[] } = {}
 for (const arg of args.positionals) {
@@ -75,7 +110,16 @@ for (const [runtime, files] of Object.entries(all_files)) {
 	await Promise.all(files.map(file => client.import('./' + path.relative(here, file))))
 
 	if (args.values.bench) {
-		await client.run_benchmarks({ filter })
+		if (args.values.compare) {
+			const commits = args.values.compare.split(',').map(c => c.trim())
+			if (commits.length !== 2) {
+				throw new Error('--compare requires exactly two comma-separated commit references')
+			}
+			const library_paths = await setup_comparison_builds(commits)
+			await client.run_benchmarks({ filter, library_paths })
+		} else {
+			await client.run_benchmarks({ filter })
+		}
 	} else {
 		await client.run_tests({ filter })
 	}
