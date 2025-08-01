@@ -1,4 +1,5 @@
 import { createBirpc } from 'birpc'
+import type { ExecFileOptions } from 'node:child_process'
 import { execFile } from 'node:child_process'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
@@ -44,11 +45,11 @@ async function setup_comparison_builds(commits: string[]) {
 		console.log(`Building ${commit}`)
 
 		// Create worktree for this commit
-		await exec_file('git', ['worktree', 'add', temp_dir, commit], { stdio: 'inherit' })
+		await exec_file('git', ['worktree', 'add', temp_dir, commit], { stdio: 'inherit' } as ExecFileOptions)
 
 		// Install dependencies and build
-		await exec_file('npm', ['install'], { stdio: 'inherit', cwd: temp_dir })
-		await exec_file('npm', ['run', 'build'], { stdio: 'inherit', cwd: temp_dir })
+		await exec_file('npm', ['install'], { stdio: 'inherit', cwd: temp_dir } as ExecFileOptions)
+		await exec_file('npm', ['run', 'build'], { stdio: 'inherit', cwd: temp_dir } as ExecFileOptions)
 
 		console.log(`Completed building ${commit}`)
 
@@ -63,7 +64,7 @@ async function setup_comparison_builds(commits: string[]) {
 		await Promise.all(
 			temp_dirs.map(async temp_dir => {
 				try {
-					await exec_file('git', ['worktree', 'remove', temp_dir], { stdio: 'inherit' })
+					await exec_file('git', ['worktree', 'remove', temp_dir], { stdio: 'inherit' } as ExecFileOptions)
 				} catch (error) {
 					console.warn(`Failed to remove worktree ${temp_dir}:`, error)
 				}
