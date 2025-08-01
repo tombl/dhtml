@@ -86,9 +86,11 @@ const client: ClientFunctions = {
 
 			mitata.summary(() => {
 				for (const { ref, fns } of called_versions) {
-					mitata.bench(ref, () => {
-						for (const fn of fns) fn()
-					})
+					mitata
+						.bench(ref, () => {
+							for (const fn of fns) fn()
+						})
+						.gc('inner')
 				}
 			})
 

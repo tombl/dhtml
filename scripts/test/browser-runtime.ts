@@ -9,6 +9,7 @@ export async function create_browser_runtime(): Promise<Runtime> {
 	const browser = await puppeteer.launch({
 		// headless: false,
 		// devtools: true,
+		args: ['--js-flags="--expose-gc"'],
 	})
 
 	const app = new Hono()
