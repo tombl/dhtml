@@ -43,7 +43,12 @@ const client: ClientFunctions = {
 			return benchmarks
 		} else {
 			// Multiple builds - comparison mode
-			const libraries = []
+			const libraries: Array<{
+				index: { html: any }
+				client: { invalidate: any; createRoot: any }
+				server: any
+				ref: string
+			}> = []
 
 			// Dynamically import all library versions
 			for (const build of builds) {
@@ -63,9 +68,10 @@ const client: ClientFunctions = {
 				}
 			}
 
-			// Import get_benchmarks function
-			const benchModule = await import('../../../src/client/tests/bench-comparison.ts')
-			const get_benchmarks = benchModule.get_benchmarks
+			// Import get_benchmarks function dynamically
+			const benchPath = '../../../src/client/tests/bench-comparison.ts'
+			const benchModule = (await import(benchPath)) as any
+			const get_benchmarks = benchModule.get_benchmarks as Function
 
 			// Setup mitata comparison
 			mitata.summary(() => {
@@ -74,7 +80,7 @@ const client: ClientFunctions = {
 						const benchmarks = get_benchmarks(lib)
 						// Run all benchmark functions
 						for (const [name, fn] of Object.entries(benchmarks)) {
-							if (name.startsWith('bench_')) {
+							if (name.startsWith('bench_') && typeof fn === 'function') {
 								fn()
 							}
 						}
