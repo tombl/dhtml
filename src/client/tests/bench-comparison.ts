@@ -1,10 +1,12 @@
 export function get_benchmarks({
-	index: { html },
-	client: { invalidate, createRoot },
+	index,
+	client,
 }: {
-	index: { html: any }
-	client: { invalidate: any; createRoot: any }
+	index: typeof import('dhtml')
+	client: typeof import('dhtml/client')
 }): Record<string, () => void> {
+	const { html } = index
+	const { invalidate, createRoot } = client
 	// Setup function using the passed library version
 	function setup(initial_html = '') {
 		const el = document.createElement('div')
