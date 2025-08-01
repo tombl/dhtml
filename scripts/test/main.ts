@@ -114,7 +114,6 @@ for (const [runtime, files] of Object.entries(all_files)) {
 	await client.define('__DEV__', !args.values.prod)
 
 	const here = path.join(fileURLToPath(import.meta.url), '..')
-	await Promise.all(files.map(file => client.import('./' + path.relative(here, file))))
 
 	if (args.values.bench) {
 		if (args.values.compare) {
@@ -123,11 +122,16 @@ for (const [runtime, files] of Object.entries(all_files)) {
 				throw new Error('--compare requires exactly two comma-separated commit references')
 			}
 			const library_paths = await setup_comparison_builds(commits)
+			// Don't import bench.ts for comparison mode - handled internally
 			await client.run_benchmarks({ filter, library_paths })
 		} else {
+			// Import bench files for standard mode
+			await Promise.all(files.map(file => client.import('./' + path.relative(here, file))))
 			await client.run_benchmarks({ filter })
 		}
 	} else {
+		// Import test files for test mode
+		await Promise.all(files.map(file => client.import('./' + path.relative(here, file))))
 		await client.run_tests({ filter })
 	}
 
