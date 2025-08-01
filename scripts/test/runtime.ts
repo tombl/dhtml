@@ -44,21 +44,21 @@ const client: ClientFunctions = {
 		} else {
 			// Multiple builds - comparison mode
 			const libraries: Array<{
-				index: { html: any }
-				client: { invalidate: any; createRoot: any }
-				server: any
+				index: typeof import('dhtml')
+				client: typeof import('dhtml/client')
+				server: typeof import('dhtml/server')
 				ref: string
 			}> = []
 
 			// Dynamically import all library versions
 			for (const build of builds) {
 				try {
-					const index = await import(`../../${build.path}/index.min.js`)
-					const client = await import(`../../${build.path}/client.min.js`)
-					const server = await import(`../../${build.path}/server.min.js`)
+					const index = (await import(`../../${build.path}/index.min.js`)) as typeof import('dhtml')
+					const client = (await import(`../../${build.path}/client.min.js`)) as typeof import('dhtml/client')
+					const server = (await import(`../../${build.path}/server.min.js`)) as typeof import('dhtml/server')
 					libraries.push({
-						index: { html: index.html },
-						client: { invalidate: client.invalidate, createRoot: client.createRoot },
+						index,
+						client,
 						server,
 						ref: build.ref,
 					})
