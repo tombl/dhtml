@@ -75,6 +75,15 @@ const client: ClientFunctions = {
 				assert(fns.length === n_fns, 'expected the same number of functions from all modules')
 			}
 
+			// Warmup runs for each version to reduce cache effects
+			console.log('Running warmup iterations...')
+			for (let warmup = 0; warmup < 3; warmup++) {
+				for (const { ref, fns } of called_versions) {
+					for (const fn of fns) fn()
+				}
+			}
+			console.log('Warmup complete, starting benchmarks...')
+
 			mitata.summary(() => {
 				for (const { ref, fns } of called_versions) {
 					mitata.bench(ref, () => {
