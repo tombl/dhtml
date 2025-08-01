@@ -1,9 +1,9 @@
 import { createBirpc } from 'birpc'
-import { execSync } from 'node:child_process'
+import { execFile } from 'node:child_process'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { parseArgs, styleText } from 'node:util'
+import { parseArgs, promisify, styleText } from 'node:util'
 import { create_browser_runtime } from './browser-runtime.ts'
 import { handle_coverage, type Coverage } from './coverage.ts'
 import * as devalue from './devalue.ts'
@@ -31,6 +31,7 @@ const args = parseArgs({
 })
 
 const filter = args.values.filter !== undefined ? new RegExp(args.values.filter) : undefined
+const exec_file = promisify(execFile)
 
 async function setup_comparison_builds(commits: string[]): Promise<{ paths: string[]; cleanup: () => void }> {
 	const build_paths: string[] = []
@@ -43,22 +44,22 @@ async function setup_comparison_builds(commits: string[]): Promise<{ paths: stri
 		console.log(`Building version ${i + 1}: ${commit}`)
 
 		// Create worktree for this commit
-		execSync(`git worktree add ${temp_dir} ${commit}`, { stdio: 'inherit' })
+		await exec_file('git', ['worktree', 'add', temp_dir, commit], { stdio: 'inherit' })
 		temp_dirs.push(temp_dir)
 
 		// Build in the worktree
-		execSync('npm install', { stdio: 'inherit', cwd: temp_dir })
-		execSync('npm run build', { stdio: 'inherit', cwd: temp_dir })
+		await exec_file('npm', ['install'], { stdio: 'inherit', cwd: temp_dir })
+		await exec_file('npm', ['run', 'build'], { stdio: 'inherit', cwd: temp_dir })
 
 		// Use the dist directory directly from the worktree
 		build_paths.push(`${temp_dir}/dist`)
 	}
 
-	const cleanup = () => {
+	const cleanup = async () => {
 		// Clean up worktrees
 		for (const temp_dir of temp_dirs) {
 			try {
-				execSync(`git worktree remove ${temp_dir}`, { stdio: 'inherit' })
+				await exec_file('git', ['worktree', 'remove', temp_dir], { stdio: 'inherit' })
 			} catch (error) {
 				console.warn(`Failed to remove worktree ${temp_dir}:`, error)
 			}
@@ -122,7 +123,7 @@ for (const [runtime, files] of Object.entries(all_files)) {
 				// Don't import bench.ts for comparison mode - handled internally
 				await client.run_benchmarks({ filter, library_paths })
 			} finally {
-				cleanup()
+				await cleanup()
 			}
 		} else {
 			// Import bench files for standard mode
