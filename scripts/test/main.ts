@@ -34,36 +34,41 @@ const filter = args.values.filter !== undefined ? new RegExp(args.values.filter)
 const exec_file = promisify(execFile)
 
 async function setup_comparison_builds(commits: string[]) {
-	const builds: Array<{ path: string; ref: string }> = []
 	const temp_dirs: string[] = []
 
-	for (let i = 0; i < commits.length; i++) {
-		const commit = commits[i]
+	// Build all versions in parallel
+	const buildPromises = commits.map(async commit => {
 		const temp_dir = `temp-worktree-${commit.replace(/[^a-zA-Z0-9]/g, '-')}`
+		temp_dirs.push(temp_dir)
 
 		console.log(`Building ${commit}`)
 
 		// Create worktree for this commit
 		await exec_file('git', ['worktree', 'add', temp_dir, commit], { stdio: 'inherit' })
-		temp_dirs.push(temp_dir)
 
-		// Build in the worktree
+		// Install dependencies and build
 		await exec_file('npm', ['install'], { stdio: 'inherit', cwd: temp_dir })
 		await exec_file('npm', ['run', 'build'], { stdio: 'inherit', cwd: temp_dir })
 
-		// Use the dist directory directly from the worktree
-		builds.push({ path: `${temp_dir}/dist`, ref: commit })
-	}
+		console.log(`Completed building ${commit}`)
+
+		// Return the build info
+		return { path: `${temp_dir}/dist`, ref: commit }
+	})
+
+	const builds = await Promise.all(buildPromises)
 
 	const cleanup = async () => {
-		// Clean up worktrees
-		for (const temp_dir of temp_dirs) {
-			try {
-				await exec_file('git', ['worktree', 'remove', temp_dir], { stdio: 'inherit' })
-			} catch (error) {
-				console.warn(`Failed to remove worktree ${temp_dir}:`, error)
-			}
-		}
+		// Clean up worktrees in parallel
+		await Promise.all(
+			temp_dirs.map(async temp_dir => {
+				try {
+					await exec_file('git', ['worktree', 'remove', temp_dir], { stdio: 'inherit' })
+				} catch (error) {
+					console.warn(`Failed to remove worktree ${temp_dir}:`, error)
+				}
+			}),
+		)
 	}
 
 	return { builds, cleanup }
