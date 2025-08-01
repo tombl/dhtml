@@ -1,12 +1,20 @@
-import { setup } from './setup.ts'
-
 export function get_benchmarks({
 	index: { html },
-	client: { invalidate },
+	client: { invalidate, createRoot },
 }: {
 	index: { html: any }
-	client: { invalidate: any }
+	client: { invalidate: any; createRoot: any }
 }) {
+	// Setup function using the passed library version
+	function setup(initial_html = '') {
+		const el = document.createElement('div')
+		el.innerHTML = initial_html
+		document.body.appendChild(el)
+
+		const root = createRoot(el)
+
+		return { root, el }
+	}
 	// ==============================
 	// Data Structures
 	// ==============================

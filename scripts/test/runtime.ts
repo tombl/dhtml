@@ -51,7 +51,11 @@ const client: ClientFunctions = {
 					const index = await import(`${libPath}/index.min.js`)
 					const client = await import(`${libPath}/client.min.js`)
 					const server = await import(`${libPath}/server.min.js`)
-					libraries.push({ index, client, server })
+					libraries.push({
+						index: { html: index.html },
+						client: { invalidate: client.invalidate, createRoot: client.createRoot },
+						server,
+					})
 				} catch (error) {
 					console.error(`Failed to import from ${libPath}:`, error)
 					throw error
@@ -59,7 +63,7 @@ const client: ClientFunctions = {
 			}
 
 			// Import get_benchmarks function
-			const benchModule = await import('../../../src/client/tests/bench.ts')
+			const benchModule = await import('../../../src/client/tests/bench-comparison.ts')
 			const get_benchmarks = benchModule.get_benchmarks
 
 			// Setup mitata comparison
