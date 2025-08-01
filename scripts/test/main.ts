@@ -33,33 +33,40 @@ const args = parseArgs({
 const filter = args.values.filter !== undefined ? new RegExp(args.values.filter) : undefined
 
 async function setup_comparison_builds(commits: string[]): Promise<string[]> {
-	const original_head = execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim()
 	const build_paths: string[] = []
+	const temp_dirs: string[] = []
 
 	try {
 		for (let i = 0; i < commits.length; i++) {
 			const commit = commits[i]
 			const build_dir = `dist-compare-${i}`
+			const temp_dir = `temp-worktree-${i}`
 
 			console.log(`Building version ${i + 1}: ${commit}`)
 
-			// Checkout the commit
-			execSync(`git checkout ${commit}`, { stdio: 'inherit' })
+			// Create worktree for this commit
+			execSync(`git worktree add ${temp_dir} ${commit}`, { stdio: 'inherit' })
+			temp_dirs.push(temp_dir)
 
-			// Install dependencies and build
-			execSync('npm install', { stdio: 'inherit' })
-			execSync('npm run build', { stdio: 'inherit' })
+			// Build in the worktree
+			execSync('npm install', { stdio: 'inherit', cwd: temp_dir })
+			execSync('npm run build', { stdio: 'inherit', cwd: temp_dir })
 
-			// Copy build to versioned directory
+			// Copy build back to main checkout
 			await fs.rm(build_dir, { recursive: true, force: true })
-			await fs.cp('dist', build_dir, { recursive: true })
+			await fs.cp(path.join(temp_dir, 'dist'), build_dir, { recursive: true })
 
 			build_paths.push(build_dir)
 		}
 	} finally {
-		// Always return to original HEAD
-		execSync(`git checkout ${original_head}`, { stdio: 'inherit' })
-		execSync('npm install', { stdio: 'inherit' })
+		// Clean up worktrees
+		for (const temp_dir of temp_dirs) {
+			try {
+				execSync(`git worktree remove ${temp_dir}`, { stdio: 'inherit' })
+			} catch (error) {
+				console.warn(`Failed to remove worktree ${temp_dir}:`, error)
+			}
+		}
 	}
 
 	return build_paths
