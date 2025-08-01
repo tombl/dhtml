@@ -9,7 +9,7 @@ export interface ClientFunctions {
 	define<K extends keyof typeof globalThis>(name: K, value: (typeof globalThis)[K]): void
 	import(path: string): Promise<unknown>
 	run_tests(options: { filter?: RegExp }): Promise<void>
-	run_benchmarks(options: { filter?: RegExp; library_paths?: string[] }): Promise<mitata.trial[]>
+	run_benchmarks(options: { filter?: RegExp; builds?: Array<{ path: string; ref: string }> }): Promise<mitata.trial[]>
 	stop_coverage(): Promise<void>
 }
 
@@ -35,29 +35,30 @@ const client: ClientFunctions = {
 		}
 	},
 	async run_benchmarks(options) {
-		const { library_paths } = options
+		const { builds } = options
 
-		if (!library_paths || library_paths.length === 1) {
-			// Single library path - standard benchmarking mode
+		if (!builds || builds.length === 1) {
+			// Single build or standard benchmarking mode
 			const { benchmarks } = await mitata.run({ filter: options.filter })
 			return benchmarks
 		} else {
-			// Multiple library paths - comparison mode
+			// Multiple builds - comparison mode
 			const libraries = []
 
 			// Dynamically import all library versions
-			for (const libPath of library_paths) {
+			for (const build of builds) {
 				try {
-					const index = await import(`../../${libPath}/index.min.js`)
-					const client = await import(`../../${libPath}/client.min.js`)
-					const server = await import(`../../${libPath}/server.min.js`)
+					const index = await import(`../../${build.path}/index.min.js`)
+					const client = await import(`../../${build.path}/client.min.js`)
+					const server = await import(`../../${build.path}/server.min.js`)
 					libraries.push({
 						index: { html: index.html },
 						client: { invalidate: client.invalidate, createRoot: client.createRoot },
 						server,
+						ref: build.ref,
 					})
 				} catch (error) {
-					console.error(`Failed to import from ${libPath}:`, error)
+					console.error(`Failed to import from ${build.path}:`, error)
 					throw error
 				}
 			}
@@ -68,11 +69,8 @@ const client: ClientFunctions = {
 
 			// Setup mitata comparison
 			mitata.summary(() => {
-				for (let i = 0; i < libraries.length; i++) {
-					const lib = libraries[i]
-					const libName = `version ${i + 1}`
-
-					mitata.bench(libName, () => {
+				for (const lib of libraries) {
+					mitata.bench(lib.ref, () => {
 						const benchmarks = get_benchmarks(lib)
 						// Run all benchmark functions
 						for (const [name, fn] of Object.entries(benchmarks)) {

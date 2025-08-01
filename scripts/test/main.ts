@@ -33,15 +33,15 @@ const args = parseArgs({
 const filter = args.values.filter !== undefined ? new RegExp(args.values.filter) : undefined
 const exec_file = promisify(execFile)
 
-async function setup_comparison_builds(commits: string[]): Promise<{ paths: string[]; cleanup: () => void }> {
-	const build_paths: string[] = []
+async function setup_comparison_builds(commits: string[]) {
+	const builds: Array<{ path: string; ref: string }> = []
 	const temp_dirs: string[] = []
 
 	for (let i = 0; i < commits.length; i++) {
 		const commit = commits[i]
-		const temp_dir = `temp-worktree-${i}`
+		const temp_dir = `temp-worktree-${commit.replace(/[^a-zA-Z0-9]/g, '-')}`
 
-		console.log(`Building version ${i + 1}: ${commit}`)
+		console.log(`Building ${commit}`)
 
 		// Create worktree for this commit
 		await exec_file('git', ['worktree', 'add', temp_dir, commit], { stdio: 'inherit' })
@@ -52,7 +52,7 @@ async function setup_comparison_builds(commits: string[]): Promise<{ paths: stri
 		await exec_file('npm', ['run', 'build'], { stdio: 'inherit', cwd: temp_dir })
 
 		// Use the dist directory directly from the worktree
-		build_paths.push(`${temp_dir}/dist`)
+		builds.push({ path: `${temp_dir}/dist`, ref: commit })
 	}
 
 	const cleanup = async () => {
@@ -66,7 +66,7 @@ async function setup_comparison_builds(commits: string[]): Promise<{ paths: stri
 		}
 	}
 
-	return { paths: build_paths, cleanup }
+	return { builds, cleanup }
 }
 
 const all_files: { [runtime: string]: string[] } = {}
@@ -118,10 +118,10 @@ for (const [runtime, files] of Object.entries(all_files)) {
 			if (commits.length !== 2) {
 				throw new Error('--compare requires exactly two comma-separated commit references')
 			}
-			const { paths: library_paths, cleanup } = await setup_comparison_builds(commits)
+			const { builds, cleanup } = await setup_comparison_builds(commits)
 			try {
 				// Don't import bench.ts for comparison mode - handled internally
-				await client.run_benchmarks({ filter, library_paths })
+				await client.run_benchmarks({ filter, builds })
 			} finally {
 				await cleanup()
 			}
