@@ -4,7 +4,7 @@ export function get_benchmarks({
 }: {
 	index: { html: any }
 	client: { invalidate: any; createRoot: any }
-}) {
+}): Record<string, () => void> {
 	// Setup function using the passed library version
 	function setup(initial_html = '') {
 		const el = document.createElement('div')
@@ -413,13 +413,13 @@ export function get_benchmarks({
 	// Benchmark Functions
 	// ==============================
 
-	function bench_table_small_render() {
+	function bench_table_small_render(): void {
 		const { root } = setup()
 		const state = new TableState(15, 4)
 		root.render(state)
 	}
 
-	function bench_table_small_removeAll() {
+	function bench_table_small_removeAll(): void {
 		const { root } = setup()
 		const state = new TableState(15, 4)
 		root.render(state)
@@ -427,7 +427,7 @@ export function get_benchmarks({
 		invalidate(state)
 	}
 
-	function bench_table_small_sort() {
+	function bench_table_small_sort(): void {
 		const { root } = setup()
 		const state = new TableState(15, 4)
 		root.render(state)
@@ -435,7 +435,7 @@ export function get_benchmarks({
 		invalidate(state)
 	}
 
-	function bench_table_small_filter() {
+	function bench_table_small_filter(): void {
 		const { root } = setup()
 		const state = new TableState(15, 4)
 		root.render(state)
@@ -443,7 +443,7 @@ export function get_benchmarks({
 		invalidate(state)
 	}
 
-	function bench_table_small_activate() {
+	function bench_table_small_activate(): void {
 		const { root } = setup()
 		const state = new TableState(15, 4)
 		root.render(state)
@@ -451,13 +451,13 @@ export function get_benchmarks({
 		invalidate(state)
 	}
 
-	function bench_table_large_render() {
+	function bench_table_large_render(): void {
 		const { root } = setup()
 		const state = new TableState(100, 4)
 		root.render(state)
 	}
 
-	function bench_table_large_removeAll() {
+	function bench_table_large_removeAll(): void {
 		const { root } = setup()
 		const state = new TableState(100, 4)
 		root.render(state)
@@ -465,7 +465,7 @@ export function get_benchmarks({
 		invalidate(state)
 	}
 
-	function bench_table_large_sort() {
+	function bench_table_large_sort(): void {
 		const { root } = setup()
 		const state = new TableState(100, 4)
 		root.render(state)
@@ -473,7 +473,7 @@ export function get_benchmarks({
 		invalidate(state)
 	}
 
-	function bench_table_large_filter() {
+	function bench_table_large_filter(): void {
 		const { root } = setup()
 		const state = new TableState(100, 4)
 		root.render(state)
@@ -481,7 +481,7 @@ export function get_benchmarks({
 		invalidate(state)
 	}
 
-	function bench_table_large_activate() {
+	function bench_table_large_activate(): void {
 		const { root } = setup()
 		const state = new TableState(100, 4)
 		root.render(state)
@@ -489,7 +489,7 @@ export function get_benchmarks({
 		invalidate(state)
 	}
 
-	function bench_anim_small_advance() {
+	function bench_anim_small_advance(): void {
 		const { root } = setup()
 		const state = new AnimState(30)
 		root.render(state)
@@ -497,7 +497,7 @@ export function get_benchmarks({
 		invalidate(state)
 	}
 
-	function bench_anim_large_advance() {
+	function bench_anim_large_advance(): void {
 		const { root } = setup()
 		const state = new AnimState(100)
 		root.render(state)
@@ -505,13 +505,13 @@ export function get_benchmarks({
 		invalidate(state)
 	}
 
-	function bench_tree_small_render() {
+	function bench_tree_small_render(): void {
 		const { root } = setup()
 		const state = new TreeState([5, 10])
 		root.render(state)
 	}
 
-	function bench_tree_small_removeAll() {
+	function bench_tree_small_removeAll(): void {
 		const { root } = setup()
 		const state = new TreeState([5, 10])
 		root.render(state)
@@ -519,7 +519,7 @@ export function get_benchmarks({
 		invalidate(state)
 	}
 
-	function bench_tree_small_reverse() {
+	function bench_tree_small_reverse(): void {
 		const { root } = setup()
 		const state = new TreeState([5, 10])
 		root.render(state)
@@ -527,7 +527,7 @@ export function get_benchmarks({
 		invalidate(state)
 	}
 
-	function bench_tree_small_insertFirst() {
+	function bench_tree_small_insertFirst(): void {
 		const { root } = setup()
 		const state = new TreeState([5, 10])
 		root.render(state)
@@ -535,7 +535,7 @@ export function get_benchmarks({
 		invalidate(state)
 	}
 
-	function bench_tree_small_insertLast() {
+	function bench_tree_small_insertLast(): void {
 		const { root } = setup()
 		const state = new TreeState([5, 10])
 		root.render(state)
@@ -543,7 +543,7 @@ export function get_benchmarks({
 		invalidate(state)
 	}
 
-	function bench_tree_small_removeFirst() {
+	function bench_tree_small_removeFirst(): void {
 		const { root } = setup()
 		const state = new TreeState([5, 10])
 		root.render(state)
@@ -551,7 +551,7 @@ export function get_benchmarks({
 		invalidate(state)
 	}
 
-	function bench_tree_small_removeLast() {
+	function bench_tree_small_removeLast(): void {
 		const { root } = setup()
 		const state = new TreeState([5, 10])
 		root.render(state)
@@ -559,7 +559,7 @@ export function get_benchmarks({
 		invalidate(state)
 	}
 
-	function bench_tree_small_moveFromEndToStart() {
+	function bench_tree_small_moveFromEndToStart(): void {
 		const { root } = setup()
 		const state = new TreeState([5, 10])
 		root.render(state)
@@ -567,7 +567,7 @@ export function get_benchmarks({
 		invalidate(state)
 	}
 
-	function bench_tree_small_moveFromStartToEnd() {
+	function bench_tree_small_moveFromStartToEnd(): void {
 		const { root } = setup()
 		const state = new TreeState([5, 10])
 		root.render(state)
@@ -575,20 +575,20 @@ export function get_benchmarks({
 		invalidate(state)
 	}
 
-	function bench_tree_small_no_change() {
+	function bench_tree_small_no_change(): void {
 		const { root } = setup()
 		const state = new TreeState([5, 10])
 		root.render(state)
 		invalidate(state)
 	}
 
-	function bench_tree_large_render() {
+	function bench_tree_large_render(): void {
 		const { root } = setup()
 		const state = new TreeState([50, 10])
 		root.render(state)
 	}
 
-	function bench_tree_large_removeAll() {
+	function bench_tree_large_removeAll(): void {
 		const { root } = setup()
 		const state = new TreeState([50, 10])
 		root.render(state)
@@ -596,7 +596,7 @@ export function get_benchmarks({
 		invalidate(state)
 	}
 
-	function bench_tree_large_reverse() {
+	function bench_tree_large_reverse(): void {
 		const { root } = setup()
 		const state = new TreeState([50, 10])
 		root.render(state)
@@ -604,7 +604,7 @@ export function get_benchmarks({
 		invalidate(state)
 	}
 
-	function bench_tree_worst_case_kivi() {
+	function bench_tree_worst_case_kivi(): void {
 		const { root } = setup()
 		const state = new TreeState([10, 10])
 		root.render(state)
@@ -612,7 +612,7 @@ export function get_benchmarks({
 		invalidate(state)
 	}
 
-	function bench_tree_worst_case_snabbdom() {
+	function bench_tree_worst_case_snabbdom(): void {
 		const { root } = setup()
 		const state = new TreeState([10, 10])
 		root.render(state)
@@ -620,7 +620,7 @@ export function get_benchmarks({
 		invalidate(state)
 	}
 
-	function bench_tree_worst_case_react() {
+	function bench_tree_worst_case_react(): void {
 		const { root } = setup()
 		const state = new TreeState([10, 10])
 		root.render(state)
@@ -628,7 +628,7 @@ export function get_benchmarks({
 		invalidate(state)
 	}
 
-	function bench_tree_worst_case_virtual_dom() {
+	function bench_tree_worst_case_virtual_dom(): void {
 		const { root } = setup()
 		const state = new TreeState([10, 10])
 		root.render(state)
@@ -637,34 +637,34 @@ export function get_benchmarks({
 	}
 
 	return {
-		bench_table_small_render,
-		bench_table_small_removeAll,
-		bench_table_small_sort,
-		bench_table_small_filter,
-		bench_table_small_activate,
-		bench_table_large_render,
-		bench_table_large_removeAll,
-		bench_table_large_sort,
-		bench_table_large_filter,
-		bench_table_large_activate,
-		bench_anim_small_advance,
-		bench_anim_large_advance,
-		bench_tree_small_render,
-		bench_tree_small_removeAll,
-		bench_tree_small_reverse,
-		bench_tree_small_insertFirst,
-		bench_tree_small_insertLast,
-		bench_tree_small_removeFirst,
-		bench_tree_small_removeLast,
-		bench_tree_small_moveFromEndToStart,
-		bench_tree_small_moveFromStartToEnd,
-		bench_tree_small_no_change,
-		bench_tree_large_render,
-		bench_tree_large_removeAll,
-		bench_tree_large_reverse,
-		bench_tree_worst_case_kivi,
-		bench_tree_worst_case_snabbdom,
-		bench_tree_worst_case_react,
-		bench_tree_worst_case_virtual_dom,
+		bench_table_small_render: bench_table_small_render,
+		bench_table_small_removeAll: bench_table_small_removeAll,
+		bench_table_small_sort: bench_table_small_sort,
+		bench_table_small_filter: bench_table_small_filter,
+		bench_table_small_activate: bench_table_small_activate,
+		bench_table_large_render: bench_table_large_render,
+		bench_table_large_removeAll: bench_table_large_removeAll,
+		bench_table_large_sort: bench_table_large_sort,
+		bench_table_large_filter: bench_table_large_filter,
+		bench_table_large_activate: bench_table_large_activate,
+		bench_anim_small_advance: bench_anim_small_advance,
+		bench_anim_large_advance: bench_anim_large_advance,
+		bench_tree_small_render: bench_tree_small_render,
+		bench_tree_small_removeAll: bench_tree_small_removeAll,
+		bench_tree_small_reverse: bench_tree_small_reverse,
+		bench_tree_small_insertFirst: bench_tree_small_insertFirst,
+		bench_tree_small_insertLast: bench_tree_small_insertLast,
+		bench_tree_small_removeFirst: bench_tree_small_removeFirst,
+		bench_tree_small_removeLast: bench_tree_small_removeLast,
+		bench_tree_small_moveFromEndToStart: bench_tree_small_moveFromEndToStart,
+		bench_tree_small_moveFromStartToEnd: bench_tree_small_moveFromStartToEnd,
+		bench_tree_small_no_change: bench_tree_small_no_change,
+		bench_tree_large_render: bench_tree_large_render,
+		bench_tree_large_removeAll: bench_tree_large_removeAll,
+		bench_tree_large_reverse: bench_tree_large_reverse,
+		bench_tree_worst_case_kivi: bench_tree_worst_case_kivi,
+		bench_tree_worst_case_snabbdom: bench_tree_worst_case_snabbdom,
+		bench_tree_worst_case_react: bench_tree_worst_case_react,
+		bench_tree_worst_case_virtual_dom: bench_tree_worst_case_virtual_dom,
 	}
 }
