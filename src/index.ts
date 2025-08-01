@@ -1,4 +1,4 @@
-import { html_tag, is_html } from './shared.ts'
+import { html_tag, is_html, keyed_tag, type Displayable, type Key, type Keyed } from './shared.ts'
 
 export interface HTML {
 	[html_tag]: true
@@ -11,6 +11,14 @@ export function html(statics: TemplateStringsArray, ...dynamics: unknown[]): HTM
 		[html_tag]: true,
 		_dynamics: dynamics,
 		_statics: statics,
+	}
+}
+
+export function keyed<T extends Displayable & object>(displayable: T, key: Key): Keyed {
+	return {
+		[keyed_tag]: true,
+		_key: key,
+		render: () => displayable,
 	}
 }
 

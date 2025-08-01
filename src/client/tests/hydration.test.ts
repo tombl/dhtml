@@ -1,5 +1,5 @@
-import { html, type Displayable, type Renderable } from 'dhtml'
-import { attr, hydrate, invalidate, keyed, onMount, type Directive, type Root } from 'dhtml/client'
+import { html, keyed, type Displayable, type Renderable } from 'dhtml'
+import { attr, hydrate, invalidate, onMount, type Directive, type Root } from 'dhtml/client'
 import { renderToString } from 'dhtml/server'
 import { assert, assert_deep_eq, assert_eq, test } from '../../../scripts/test/test.ts'
 
