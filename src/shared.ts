@@ -18,6 +18,29 @@ export function is_renderable(value: unknown): value is Renderable {
 	return typeof value === 'object' && value !== null && 'render' in value
 }
 
+let current_renderable: Renderable | undefined
+
+export function unwrap_renderable(renderable: Renderable): Displayable {
+	const prev = current_renderable
+	current_renderable = renderable
+
+	try {
+		return renderable.render()
+	} catch (thrown) {
+		if (is_html(thrown)) {
+			return thrown
+		} else {
+			throw thrown
+		}
+	} finally {
+		current_renderable = prev
+	}
+}
+
+export function getCurrentRenderable(): Renderable | undefined {
+	return current_renderable
+}
+
 export function is_iterable(value: unknown): value is Iterable<unknown> {
 	return typeof value === 'object' && value !== null && Symbol.iterator in value
 }
