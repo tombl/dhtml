@@ -1,4 +1,13 @@
-import { assert, is_html, is_iterable, is_renderable, lexer, single_part_template, type Displayable } from './shared.ts'
+import {
+	assert,
+	is_html,
+	is_iterable,
+	is_renderable,
+	lexer,
+	single_part_template,
+	unwrap_renderable,
+	type Displayable,
+} from './shared.ts'
 
 interface PartRenderer {
 	replace_start: number
@@ -137,16 +146,7 @@ function* render_child(value: unknown): Generator<string, void, void> {
 	yield '<?[>'
 
 	if (is_renderable(value)) {
-		try {
-			value = value.render()
-		} catch (thrown) {
-			if (is_html(thrown)) {
-				value = thrown
-			} else {
-				throw thrown
-			}
-		}
-
+		value = unwrap_renderable(value)
 		if (is_renderable(value)) value = single_part_template(value)
 	}
 

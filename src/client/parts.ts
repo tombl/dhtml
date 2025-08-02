@@ -5,6 +5,7 @@ import {
 	is_keyed,
 	is_renderable,
 	single_part_template,
+	unwrap_renderable,
 	type Displayable,
 	type Key,
 	type Renderable,
@@ -84,15 +85,7 @@ export function create_child_part(
 				update(renderable)
 			})
 
-			try {
-				value = renderable.render()
-			} catch (thrown) {
-				if (is_html(thrown)) {
-					value = thrown
-				} else {
-					throw thrown
-				}
-			}
+			value = unwrap_renderable(renderable)
 
 			// if render returned another renderable, we want to track/cache both renderables individually.
 			// wrap it in a nested ChildPart so that each can be tracked without ChildPart having to handle multiple renderables.

@@ -18,6 +18,18 @@ export function is_renderable(value: unknown): value is Renderable {
 	return typeof value === 'object' && value !== null && 'render' in value
 }
 
+export function unwrap_renderable(renderable: Renderable): Displayable {
+	try {
+		return renderable.render()
+	} catch (thrown) {
+		if (is_html(thrown)) {
+			return thrown
+		} else {
+			throw thrown
+		}
+	}
+}
+
 export function is_iterable(value: unknown): value is Iterable<unknown> {
 	return typeof value === 'object' && value !== null && Symbol.iterator in value
 }
