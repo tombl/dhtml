@@ -5,6 +5,7 @@ import {
 	is_keyed,
 	is_renderable,
 	single_part_template,
+	unwrap_renderable,
 	type Displayable,
 	type Key,
 	type Renderable,
@@ -78,16 +79,8 @@ function hydrate_child_part(span: Span, value: unknown) {
 	let entries: Array<{ _span: Span; _part: Part; _key: Key }> | undefined
 
 	if (is_renderable(value)) {
-		try {
-			value = (current_renderable = value).render()
-		} catch (thrown) {
-			if (is_html(thrown)) {
-				value = thrown
-			} else {
-				throw thrown
-			}
-		}
-
+		current_renderable = value
+		value = unwrap_renderable(value)
 		if (is_renderable(value)) value = single_part_template(value)
 	}
 
