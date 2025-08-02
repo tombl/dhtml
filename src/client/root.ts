@@ -2,9 +2,11 @@ import {
 	assert,
 	is_html,
 	is_iterable,
+	is_keyed,
 	is_renderable,
 	single_part_template,
 	type Displayable,
+	type Key,
 	type Renderable,
 } from '../shared.ts'
 import {
@@ -16,7 +18,6 @@ import {
 	PART_PROPERTY,
 	type CompiledTemplate,
 } from './compiler.ts'
-import { get_key, type Key } from './controller.ts'
 import {
 	create_attribute_part,
 	create_child_part,
@@ -95,7 +96,7 @@ function hydrate_child_part(span: Span, value: unknown) {
 		let end = span._start
 
 		for (const item of value) {
-			const key = get_key(item) as Key
+			const key = is_keyed(item) ? item._key : (item as Key)
 
 			const start = end.nextSibling
 			assert(start && is_comment(start) && start.data === '?[')

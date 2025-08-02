@@ -1,5 +1,5 @@
-import { html, type Displayable } from 'dhtml'
-import { invalidate, keyed } from 'dhtml/client'
+import { html, keyed, type Displayable } from 'dhtml'
+import { invalidate } from 'dhtml/client'
 import { assert, assert_eq, test } from '../../../scripts/test/test.ts'
 import { setup } from './setup.ts'
 

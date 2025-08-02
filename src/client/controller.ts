@@ -1,8 +1,6 @@
-import type { Displayable, Renderable } from '../index.ts'
+import type { Renderable } from '../index.ts'
 import { assert, is_renderable } from '../shared.ts'
 import { type Cleanup } from './util.ts'
-
-export type Key = string | number | bigint | boolean | symbol | object | null
 
 export interface Controller {
 	_mount_callbacks: (() => Cleanup)[]
@@ -26,8 +24,6 @@ export function get_controller(renderable: Renderable): Controller {
 	return controller
 }
 
-const keys: WeakMap<Displayable & object, Key> = new WeakMap()
-
 export function invalidate(renderable: Renderable): void {
 	const controller = controllers.get(renderable)
 	assert(controller, 'the renderable has not been rendered')
@@ -46,15 +42,4 @@ export function onMount(renderable: Renderable, callback: () => Cleanup): void {
 
 export function onUnmount(renderable: Renderable, callback: () => void): void {
 	onMount(renderable, () => callback)
-}
-
-export function keyed<T extends Displayable & object>(displayable: T, key: Key): T {
-	assert(!keys.has(displayable), 'renderable already has a key')
-	keys.set(displayable, key)
-	return displayable
-}
-
-export function get_key(displayable: unknown): unknown {
-	// the cast is fine because getting any non-object will return null
-	return keys.get(displayable as object) ?? displayable
 }

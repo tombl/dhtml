@@ -2,9 +2,11 @@ import {
 	assert,
 	is_html,
 	is_iterable,
+	is_keyed,
 	is_renderable,
 	single_part_template,
 	type Displayable,
+	type Key,
 	type Renderable,
 } from '../shared.ts'
 import {
@@ -15,7 +17,7 @@ import {
 	PART_PROPERTY,
 	type CompiledTemplate,
 } from './compiler.ts'
-import { controllers, get_controller, get_key, type Key } from './controller.ts'
+import { controllers, get_controller } from './controller.ts'
 import { create_span_after, delete_contents, extract_contents, insert_node, type Span } from './span.ts'
 import type { Cleanup } from './util.ts'
 
@@ -117,7 +119,7 @@ export function create_child_part(
 			let i = 0
 			let end = span._start
 			for (const item of value) {
-				const key = get_key(item) as Key
+				const key = is_keyed(item) ? item._key : (item as Key)
 				if (entries.length <= i) {
 					const span = create_span_after(end)
 					entries[i] = { _span: span, _part: create_child_part(span), _key: key }

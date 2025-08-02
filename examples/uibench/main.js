@@ -1,8 +1,8 @@
 // @ts-check
 /// <reference types='./uibench.d.ts' />
 
-import { html } from 'dhtml'
-import { createRoot, keyed } from 'dhtml/client'
+import { html, keyed } from 'dhtml'
+import { createRoot } from 'dhtml/client'
 
 /** @param {string} text */
 function tableCell(text) {
