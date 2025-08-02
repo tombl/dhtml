@@ -1,4 +1,4 @@
-export { html, keyed, type Displayable, type HTML, type Renderable } from './shared.ts'
+export { getCurrentRenderable, html, keyed, type Displayable, type HTML, type Renderable } from './shared.ts'
 
 import { is_html } from './shared.ts'
 
