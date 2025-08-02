@@ -1,8 +1,10 @@
 import { createBirpc } from 'birpc'
+import type { ExecFileOptions } from 'node:child_process'
+import { execFile } from 'node:child_process'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { parseArgs, styleText } from 'node:util'
+import { parseArgs, promisify, styleText } from 'node:util'
 import { create_browser_runtime } from './browser-runtime.ts'
 import { handle_coverage, type Coverage } from './coverage.ts'
 import * as devalue from './devalue.ts'
@@ -24,11 +26,13 @@ const args = parseArgs({
 		bench: { type: 'boolean', short: 'b', default: false },
 		prod: { type: 'boolean', short: 'p', default: false },
 		filter: { type: 'string', short: 'f' },
+		compare: { type: 'string', short: 'c' },
 	},
 	allowPositionals: true,
 })
 
 const filter = args.values.filter !== undefined ? new RegExp(args.values.filter) : undefined
+const execFileAsync = promisify(execFile)
 
 const all_files: { [runtime: string]: string[] } = {}
 for (const arg of args.positionals) {
@@ -72,9 +76,40 @@ for (const [runtime, files] of Object.entries(all_files)) {
 	await client.define('__DEV__', !args.values.prod)
 
 	const here = path.join(fileURLToPath(import.meta.url), '..')
-	await Promise.all(files.map(file => client.import('./' + path.relative(here, file))))
 
-	if (args.values.bench) {
+	if (args.values.bench && args.values.compare) {
+		const commits = args.values.compare.split(',').map(c => c.trim())
+
+		const builds = await Promise.all(
+			commits.map(async ref => {
+				const dir = `temp-worktree-${ref}`
+
+				console.log(`Building ${ref}`)
+
+				await execFileAsync('git', ['worktree', 'add', dir, ref], { stdio: 'inherit' } as ExecFileOptions)
+				await execFileAsync('npm', ['install'], { stdio: 'inherit', cwd: dir } as ExecFileOptions)
+				await execFileAsync('npm', ['run', 'build'], { stdio: 'inherit', cwd: dir } as ExecFileOptions)
+
+				console.log(`Completed building ${ref}`)
+
+				return { dir, ref }
+			}),
+		)
+
+		try {
+			await client.run_benchmarks({ filter, builds })
+		} finally {
+			await Promise.all(
+				builds.map(({ dir }) =>
+					execFileAsync('git', ['worktree', 'remove', dir], { stdio: 'inherit' } as ExecFileOptions),
+				),
+			)
+		}
+	} else {
+		await Promise.all(files.map(file => client.import('./' + path.relative(here, file))))
+	}
+
+	if (args.values.bench && !args.values.compare) {
 		await client.run_benchmarks({ filter })
 	} else {
 		await client.run_tests({ filter })
@@ -84,8 +119,7 @@ for (const [runtime, files] of Object.entries(all_files)) {
 	coverage.push(...(await rt.coverage()))
 }
 
-if (args.values.bench) {
-} else {
+if (!args.values.bench) {
 	await handle_coverage(coverage)
 
 	if (results.length === 0) {
