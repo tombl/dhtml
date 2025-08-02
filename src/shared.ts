@@ -1,4 +1,3 @@
-import { html, type HTML } from './index.ts'
 export * as lexer from './shared/lexer.ts'
 
 /** @internal */
@@ -32,7 +31,21 @@ export function assert(value: unknown, message?: string): asserts value {
 	}
 }
 
-export const html_tag: unique symbol = Symbol()
+export interface HTML {
+	[html_tag]: true
+	/* @internal */ _statics: TemplateStringsArray
+	/* @internal */ _dynamics: unknown[]
+}
+
+const html_tag: unique symbol = Symbol()
+export function html(statics: TemplateStringsArray, ...dynamics: unknown[]): HTML {
+	return {
+		[html_tag]: true,
+		_dynamics: dynamics,
+		_statics: statics,
+	}
+}
+
 export function is_html(value: unknown): value is HTML {
 	return typeof value === 'object' && value !== null && html_tag in value
 }
@@ -47,7 +60,15 @@ export interface Keyed extends Renderable {
 	/** @internal */ _key: Key
 }
 
-export const keyed_tag: unique symbol = Symbol()
+const keyed_tag: unique symbol = Symbol()
+export function keyed<T extends Displayable & object>(displayable: T, key: Key): Keyed {
+	return {
+		[keyed_tag]: true,
+		_key: key,
+		render: () => displayable,
+	}
+}
+
 export function is_keyed(value: any): value is Keyed {
 	return typeof value === 'object' && value !== null && keyed_tag in value
 }

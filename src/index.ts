@@ -1,26 +1,6 @@
-import { html_tag, is_html, keyed_tag, type Displayable, type Key, type Keyed } from './shared.ts'
+export { html, keyed, type Displayable, type HTML, type Renderable } from './shared.ts'
 
-export interface HTML {
-	[html_tag]: true
-	/* @internal */ _statics: TemplateStringsArray
-	/* @internal */ _dynamics: unknown[]
-}
-
-export function html(statics: TemplateStringsArray, ...dynamics: unknown[]): HTML {
-	return {
-		[html_tag]: true,
-		_dynamics: dynamics,
-		_statics: statics,
-	}
-}
-
-export function keyed<T extends Displayable & object>(displayable: T, key: Key): Keyed {
-	return {
-		[keyed_tag]: true,
-		_key: key,
-		render: () => displayable,
-	}
-}
+import { is_html } from './shared.ts'
 
 if (__DEV__) {
 	type JsonML = string | readonly [tag: string, attrs?: Record<string, any>, ...children: JsonML[]]
@@ -46,5 +26,3 @@ if (__DEV__) {
 		},
 	})
 }
-
-export type { Displayable, Renderable } from './shared.ts'
