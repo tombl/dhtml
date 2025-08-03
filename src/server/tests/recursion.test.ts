@@ -1,6 +1,6 @@
 import { html } from 'dhtml'
+import { renderToString } from 'dhtml/server'
 import { assert_eq, test } from '../../../scripts/test/test.ts'
-import { renderToString } from '../../server.ts'
 
 const DEPTH = 10
 

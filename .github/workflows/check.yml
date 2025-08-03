@@ -1,4 +1,7 @@
-on: [push]
+on:
+  push:
+    branches: [main]
+  pull_request:
 
 jobs:
   check:
@@ -9,6 +12,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - run: npm install
-      - run: npm run build
-      - run: npm run check --workspaces
+      - uses: google/wireit@setup-github-actions-caching/v2
+      - run: npm ci
+      - name: Disable AppArmor for chromium
+        run: echo 0 | sudo tee /proc/sys/kernel/apparmor_restrict_unprivileged_userns || true
+      - run: npm run check
+      - if: always()
+        uses: coverallsapp/github-action@v2
+        with:
+          file: coverage/lcov.info
+          format: lcov

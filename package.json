@@ -7,13 +7,170 @@
 		"./server": "./src/server.ts"
 	},
 	"scripts": {
-		"build": "node scripts/build.ts",
-		"build:watch": "node --watch scripts/build.ts --watch",
-		"format": "prettier --write . --cache",
-		"check": "tsc",
-		"test": "node scripts/test/main.ts 'src/{client,server}/tests/*.test.ts'",
-		"test:prod": "npm run test -- --prod",
-		"bench": "node scripts/test/main.ts --prod --bench 'src/{client,server}/tests/bench.ts'"
+		"build": "wireit",
+		"build:watch": "wireit",
+		"format": "wireit",
+		"check": "wireit",
+		"check:types": "wireit",
+		"check:format": "wireit",
+		"check:examples": "wireit",
+		"test": "wireit",
+		"bench": "wireit"
+	},
+	"wireit": {
+		"build": {
+			"command": "node scripts/build.ts",
+			"files": [
+				"src/**/*.ts",
+				"scripts/build.ts",
+				"tsconfig.json"
+			],
+			"output": [
+				"dist/**"
+			]
+		},
+		"build:watch": {
+			"command": "node --watch scripts/build.ts --watch",
+			"files": [
+				"src/**/*.ts",
+				"scripts/build.ts",
+				"tsconfig.json"
+			],
+			"service": true
+		},
+		"format": {
+			"command": "prettier --write . --cache",
+			"files": [
+				"src/**/*.ts",
+				"scripts/**/*.ts",
+				"examples/**/*.{ts,js,json}",
+				"*.{json,md}",
+				".prettierrc*"
+			],
+			"output": []
+		},
+		"check:types": {
+			"command": "tsc --build --pretty",
+			"files": [
+				"src/**/*.ts",
+				"scripts/**/*.ts",
+				"tsconfig.json"
+			],
+			"clean": "if-file-deleted",
+			"output": [
+				".tsbuildinfo"
+			]
+		},
+		"check:format": {
+			"command": "prettier --check . --cache",
+			"files": [
+				"src/**/*.ts",
+				"scripts/**/*.ts",
+				"examples/**/*.{ts,js,json}",
+				"*.{json,md}",
+				"package.json"
+			],
+			"output": []
+		},
+		"test": {
+			"dependencies": [
+				"test:client",
+				"test:server",
+				"test:client:prod",
+				"test:server:prod"
+			]
+		},
+		"check:examples": {
+			"dependencies": [
+				"./examples/todomvc:check",
+				"./examples/uibench:check",
+				"./examples/ssr:check",
+				"./examples/kanban:check"
+			]
+		},
+		"check": {
+			"dependencies": [
+				"check:types",
+				"check:format",
+				"check:examples",
+				"test"
+			]
+		},
+		"test:client": {
+			"command": "node scripts/test/main.ts 'src/client/tests/*.test.ts'",
+			"dependencies": [
+				{
+					"script": "build",
+					"cascade": false
+				}
+			],
+			"files": [
+				"src/client/tests/*.test.ts",
+				"scripts/test/**/*.ts",
+				"dist/*.js",
+				"!dist/server*"
+			],
+			"output": []
+		},
+		"test:server": {
+			"command": "node scripts/test/main.ts 'src/server/tests/*.test.ts'",
+			"dependencies": [
+				{
+					"script": "build",
+					"cascade": false
+				}
+			],
+			"files": [
+				"src/server/tests/*.test.ts",
+				"scripts/test/**/*.ts",
+				"dist/*.js",
+				"!dist/client*"
+			],
+			"output": []
+		},
+		"test:client:prod": {
+			"command": "node scripts/test/main.ts --prod 'src/client/tests/*.test.ts'",
+			"dependencies": [
+				{
+					"script": "build",
+					"cascade": false
+				}
+			],
+			"files": [
+				"src/client/tests/*.test.ts",
+				"scripts/test/**/*.ts",
+				"dist/*.min.js",
+				"!dist/server*"
+			],
+			"output": []
+		},
+		"test:server:prod": {
+			"command": "node scripts/test/main.ts --prod 'src/server/tests/*.test.ts'",
+			"dependencies": [
+				{
+					"script": "build",
+					"cascade": false
+				}
+			],
+			"files": [
+				"src/server/tests/*.test.ts",
+				"scripts/test/**/*.ts",
+				"dist/*.min.js",
+				"!dist/client*"
+			],
+			"output": []
+		},
+		"bench": {
+			"command": "node scripts/test/main.ts --prod --bench 'src/{client,server}/tests/bench.ts'",
+			"dependencies": [
+				"build"
+			],
+			"files": [
+				"src/**/*.ts",
+				"scripts/test/**/*.ts"
+			],
+			"output": []
+		}
 	},
 	"workspaces": [
 		".",
@@ -43,6 +200,7 @@
 		"rolldown-plugin-dts": "^0.15.0",
 		"terser": "^5.41.0",
 		"typescript": "^5.8.3",
+		"wireit": "^0.14.12",
 		"zimmerframe": "^1.1.2"
 	},
 	"prettier": {

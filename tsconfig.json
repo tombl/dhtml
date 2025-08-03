@@ -12,7 +12,8 @@
 		"stripInternal": true,
 		"isolatedDeclarations": true,
 		"declaration": true,
-		"noFallthroughCasesInSwitch": true
+		"noFallthroughCasesInSwitch": true,
+		"incremental": true
 	},
 	"include": ["src", "scripts"]
 }
