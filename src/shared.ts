@@ -61,7 +61,7 @@ export interface Keyed extends Renderable {
 }
 
 const keyed_tag: unique symbol = Symbol()
-export function keyed<T extends Displayable & object>(displayable: T, key: Key): Keyed {
+export function keyed(displayable: Displayable, key: Key): Keyed {
 	return {
 		[keyed_tag]: true,
 		_key: key,
