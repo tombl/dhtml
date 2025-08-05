@@ -20,7 +20,7 @@ export interface CompiledTemplate {
 
 export const DYNAMIC_WHOLE: RegExp = /^dyn-\$(\d+)\$$/
 const DYNAMIC_GLOBAL = /dyn-\$(\d+)\$/g
-const FORCE_ATTRIBUTES = /-|^class$|^for$/i
+const FORCE_ATTRIBUTES = /-|^for$|^class$|^style$/i
 const NEEDS_UPPERCASING = /\$./g
 
 const templates: WeakMap<TemplateStringsArray, CompiledTemplate> = new WeakMap()
