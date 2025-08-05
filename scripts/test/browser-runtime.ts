@@ -1,6 +1,6 @@
 import { serve } from '@hono/node-server'
 import { serveStatic } from '@hono/node-server/serve-static'
-import { transformSync } from 'amaro'
+import { stripTypeScriptTypes } from 'node:module'
 import { Hono } from 'hono'
 import * as puppeteer from 'puppeteer'
 import type { Runtime } from './main.ts'
@@ -34,7 +34,7 @@ export async function create_browser_runtime(): Promise<Runtime> {
 	app.use(async (c, next) => {
 		await next()
 		if (c.res.ok && c.req.path.endsWith('.ts')) {
-			const { code } = transformSync(await c.res.text(), { mode: 'strip-only' })
+			const code = stripTypeScriptTypes(await c.res.text())
 			c.res = c.body(code)
 			c.res.headers.set('content-type', 'text/javascript')
 			c.res.headers.delete('content-length')
