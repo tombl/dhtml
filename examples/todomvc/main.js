@@ -3,6 +3,14 @@
 import { html } from 'dhtml'
 import { createRoot, invalidate } from 'dhtml/client'
 
+function transition(cb) {
+	if ('startViewTransition' in document) {
+		document.startViewTransition(cb)
+	} else {
+		cb()
+	}
+}
+
 function classes(...args) {
 	const classes = args.flatMap(a => (a ? a.split(' ') : []))
 	return node => {
@@ -27,7 +35,10 @@ class TodoItem {
 
 	render() {
 		return html`
-			<li ${classes(this.completed && 'completed', this.editing && 'editing')}>
+			<li
+				${classes(this.completed && 'completed', this.editing && 'editing')}
+				style=${`view-transition-name: _${this.id}`}
+			>
 				<div class="view">
 					<input
 						class="toggle"
@@ -36,22 +47,28 @@ class TodoItem {
 						onchange=${e => {
 							e.preventDefault()
 							this.completed = e.target.checked
-							invalidate(this)
-							invalidate(this.app)
+							transition(() => {
+								invalidate(this)
+								invalidate(this.app)
+							})
 						}}
 					/>
 					<label
 						ondblclick=${() => {
-							this.editing = true
-							invalidate(this)
+							transition(() => {
+								this.editing = true
+								invalidate(this)
+							})
 						}}
 						>${this.title}</label
 					>
 					<button
 						class="destroy"
 						onclick=${() => {
-							this.app.remove(this.id)
-							invalidate(this.app)
+							transition(() => {
+								this.app.remove(this.id)
+								invalidate(this.app)
+							})
 						}}
 					></button>
 				</div>
@@ -66,18 +83,22 @@ class TodoItem {
 									onblur=${e => {
 										const value = e.target.value.trim()
 										if (value) {
-											this.title = value
-											this.editing = false
-											invalidate(this)
+											transition(() => {
+												this.title = value
+												this.editing = false
+												invalidate(this)
+											})
 										}
 									}}
 									onkeydown=${e => {
 										if (e.key === 'Enter') {
 											const value = e.target.value.trim()
 											if (value) {
-												this.title = value
-												this.editing = false
-												invalidate(this)
+												transition(() => {
+													this.title = value
+													this.editing = false
+													invalidate(this)
+												})
 											}
 										}
 									}}
@@ -115,9 +136,11 @@ class App {
 						if (event.key === 'Enter') {
 							const value = event.target.value.trim()
 							if (value) {
-								this.todos.push(new TodoItem(this, value))
-								event.target.value = ''
-								invalidate(this)
+								transition(() => {
+									this.todos.push(new TodoItem(this, value))
+									event.target.value = ''
+									invalidate(this)
+								})
 							}
 						}
 					}}
@@ -133,8 +156,10 @@ class App {
 									type="checkbox"
 									checked=${activeCount === 0}
 									onchange=${e => {
-										for (const todo of this.todos) todo.completed = e.target.checked
-										invalidate(this)
+										transition(() => {
+											for (const todo of this.todos) todo.completed = e.target.checked
+											invalidate(this)
+										})
 									}}
 								/>
 								<label class="toggle-all-label" for="toggle-all">Toggle All Input</label>
@@ -162,8 +187,10 @@ class App {
 												href="#"
 												${classes(this.filter === filter && 'selected')}
 												onclick=${() => {
-													this.filter = filter
-													invalidate(this)
+													transition(() => {
+														this.filter = filter
+														invalidate(this)
+													})
 												}}
 												>${filter}</a
 											>
@@ -174,8 +201,10 @@ class App {
 								? html`<button
 										class="clear-completed"
 										onclick=${() => {
-											this.todos = this.todos.filter(todo => !todo.completed)
-											invalidate(this)
+											transition(() => {
+												this.todos = this.todos.filter(todo => !todo.completed)
+												invalidate(this)
+											})
 										}}
 									>
 										Clear completed
