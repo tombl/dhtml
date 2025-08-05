@@ -16,6 +16,11 @@
 		<script type="module" src="main.js"></script>
 		<link rel="stylesheet" href="https://unpkg.com/todomvc-app-css/index.css" />
 		<link rel="stylesheet" href="https://unpkg.com/todomvc-common/base.css" />
+		<style>
+			::view-transition-group(root) {
+				animation: none;
+			}
+		</style>
 	</head>
 	<body>
 		<section class="todoapp" id="root"></section>
