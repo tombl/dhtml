@@ -5,6 +5,7 @@ import {
 	is_keyed,
 	is_renderable,
 	single_part_template,
+	unwrap_html,
 	type Displayable,
 	type Key,
 	type Renderable,
@@ -172,7 +173,7 @@ export function create_child_part(
 		}
 
 		if (is_html(value)) {
-			const { _dynamics: dynamics, _statics: statics } = value
+			const { _statics: statics, _dynamics: dynamics } = unwrap_html(value)
 			const template = compile_template(statics)
 
 			assert(

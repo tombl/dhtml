@@ -5,6 +5,7 @@ import {
 	is_keyed,
 	is_renderable,
 	single_part_template,
+	unwrap_html,
 	type Displayable,
 	type Key,
 	type Renderable,
@@ -111,7 +112,8 @@ function hydrate_child_part(span: Span, value: unknown) {
 	}
 
 	if (is_html(value)) {
-		template = compile_template(value._statics)
+		const { _statics: statics, _dynamics: dynamics } = unwrap_html(value)
+		template = compile_template(statics)
 
 		const node_by_part: Array<Node | Span> = []
 
@@ -180,7 +182,7 @@ function hydrate_child_part(span: Span, value: unknown) {
 								_start: child.previousSibling,
 								_end: end,
 							},
-							value._dynamics[dynamic_index],
+							dynamics[dynamic_index],
 						),
 					]
 				case PART_DIRECTIVE:
