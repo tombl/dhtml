@@ -6,6 +6,7 @@ import {
 	is_renderable,
 	single_part_template,
 	unwrap_html,
+	unwrap_keyed,
 	type Displayable,
 	type Key,
 	type Renderable,
@@ -120,7 +121,7 @@ export function create_child_part(
 			let i = 0
 			let end = span._start
 			for (const item of value) {
-				const key = is_keyed(item) ? item._key : (item as Key)
+				const key = is_keyed(item) ? unwrap_keyed(item) : (item as Key)
 				if (entries.length <= i) {
 					const span = create_span_after(end)
 					entries[i] = { _span: span, _part: create_child_part(span), _key: key }

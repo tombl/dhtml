@@ -6,6 +6,7 @@ import {
 	is_renderable,
 	single_part_template,
 	unwrap_html,
+	unwrap_keyed,
 	type Displayable,
 	type Key,
 	type Renderable,
@@ -97,7 +98,7 @@ function hydrate_child_part(span: Span, value: unknown) {
 		let end = span._start
 
 		for (const item of value) {
-			const key = is_keyed(item) ? item._key : (item as Key)
+			const key = is_keyed(item) ? unwrap_keyed(item) : (item as Key)
 
 			const start = end.nextSibling
 			assert(start && is_comment(start) && start.data === '?[')
