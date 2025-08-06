@@ -7,8 +7,8 @@
 		"./server": "./src/server.ts"
 	},
 	"scripts": {
-		"build": "node scripts/build.ts",
-		"build:watch": "node --watch scripts/build.ts --watch",
+		"build": "node scripts/build/main.ts",
+		"build:watch": "node --watch scripts/build/main.ts --watch",
 		"format": "prettier --write . --cache",
 		"check": "tsc",
 		"test": "node scripts/test/main.ts 'src/{client,server}/tests/*.test.ts'",
@@ -22,15 +22,9 @@
 	],
 	"devDependencies": {
 		"@types/node": "^22.15.30",
-		"magic-string": "^0.30.17",
-		"oxc-parser": "^0.80.0",
 		"prettier": "^3.5.3",
 		"prettier-plugin-organize-imports": "^4.1.0",
-		"rolldown": "^1.0.0-beta.12",
-		"rolldown-plugin-dts": "^0.15.0",
-		"terser": "^5.41.0",
-		"typescript": "^5.8.3",
-		"zimmerframe": "^1.1.2"
+		"typescript": "^5.8.3"
 	},
 	"prettier": {
 		"plugins": [
