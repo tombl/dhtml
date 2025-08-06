@@ -1,4 +1,13 @@
-import { assert, is_html, is_iterable, is_renderable, lexer, single_part_template, type Displayable } from './shared.ts'
+import {
+	assert,
+	is_html,
+	is_iterable,
+	is_renderable,
+	lexer,
+	single_part_template,
+	unwrap_html,
+	type Displayable,
+} from './shared.ts'
 
 interface PartRenderer {
 	replace_start: number
@@ -153,7 +162,7 @@ function* render_child(value: unknown): Generator<string, void, void> {
 	if (is_iterable(value)) {
 		for (const item of value) yield* render_child(item)
 	} else if (is_html(value)) {
-		const { _statics: statics, _dynamics: dynamics } = value
+		const { _statics: statics, _dynamics: dynamics } = unwrap_html(value)
 		const template = compile_template(statics)
 
 		assert(
