@@ -23,28 +23,42 @@ const DYNAMIC_GLOBAL = /dyn-\$(\d+)\$/g
 const FORCE_ATTRIBUTES = /-|^class$|^for$/i
 const NEEDS_UPPERCASING = /\$./g
 
+function createPolicy<T extends { createHTML(input: string, ...args: unknown[]): string }>(_name: string, rules: T): T {
+	return rules
+}
+
+declare var trustedTypes: { createPolicy: typeof createPolicy }
+
+const policy = (typeof trustedTypes === 'undefined' ? createPolicy : trustedTypes.createPolicy.bind(trustedTypes))(
+	'dhtml',
+	{
+		createHTML: (_text, statics: TemplateStringsArray) => {
+			let i = 0
+			return [...lexer.lex(statics)]
+				.map(([char, state]) => {
+					if (char === '\0') {
+						if (state === lexer.DATA) return `<!--dyn-$${i++}$-->`
+						else return `dyn-$${i++}$`
+					}
+					if (state === lexer.ATTR_NAME && char.toLowerCase() !== char) {
+						return `$${char}`
+					}
+					return char
+				})
+				.join('')
+		},
+	},
+)
+
 const templates: WeakMap<TemplateStringsArray, CompiledTemplate> = new WeakMap()
 export function compile_template(statics: TemplateStringsArray): CompiledTemplate {
 	const cached = templates.get(statics)
 	if (cached) return cached
 
 	const template_element = document.createElement('template')
+	template_element.innerHTML = policy.createHTML('', statics)
+
 	let next_part = 0
-	template_element.innerHTML = [...lexer.lex(statics)]
-		.map(([char, state]) => {
-			if (char === '\0') {
-				if (state === lexer.DATA) return `<!--dyn-$${next_part++}$-->`
-				else return `dyn-$${next_part++}$`
-			}
-			if (state === lexer.ATTR_NAME && char.toLowerCase() !== char) {
-				return `$${char}`
-			}
-			return char
-		})
-		.join('')
-
-	next_part = 0
-
 	const compiled: CompiledTemplate = {
 		_content: template_element.content,
 		_parts: Array(statics.length - 1),
