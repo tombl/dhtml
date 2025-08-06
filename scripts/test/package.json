@@ -1,0 +1,20 @@
+{
+	"name": "@dhtml-scripts/test",
+	"type": "module",
+	"dependencies": {
+		"@hono/node-server": "^1.17.0",
+		"@types/istanbul-lib-coverage": "^2.0.6",
+		"@types/istanbul-lib-report": "^3.0.3",
+		"@types/istanbul-reports": "^3.0.4",
+		"amaro": "^1.1.0",
+		"ast-v8-to-istanbul": "^0.3.3",
+		"birpc": "^2.5.0",
+		"devalue": "^5.1.1",
+		"hono": "^4.8.5",
+		"istanbul-lib-coverage": "^3.2.2",
+		"istanbul-lib-report": "^3.0.1",
+		"istanbul-reports": "^3.1.7",
+		"mitata": "^1.0.34",
+		"puppeteer": "^24.14.0"
+	}
+}

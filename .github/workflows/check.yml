@@ -11,4 +11,4 @@ jobs:
           node-version: 24
       - run: npm install
       - run: npm run build
-      - run: npm run check --workspaces
+      - run: npm run check --workspaces --if-present
