@@ -31,23 +31,26 @@ export function assert(value: unknown, message?: string): asserts value {
 	}
 }
 
-export interface HTML {
-	[html_tag]: true
-	/* @internal */ _statics: TemplateStringsArray
-	/* @internal */ _dynamics: unknown[]
-}
+export let unwrap_html: (value: HTML) => { _statics: TemplateStringsArray; _dynamics: unknown[] }
 
-const html_tag: unique symbol = Symbol()
-export function html(statics: TemplateStringsArray, ...dynamics: unknown[]): HTML {
-	return {
-		[html_tag]: true,
-		_dynamics: dynamics,
-		_statics: statics,
+export class HTML {
+	#statics: TemplateStringsArray
+	#dynamics: unknown[]
+	constructor(statics: TemplateStringsArray, dynamics: unknown[]) {
+		this.#statics = statics
+		this.#dynamics = dynamics
+	}
+	static {
+		unwrap_html = value => ({ _statics: value.#statics, _dynamics: value.#dynamics })
 	}
 }
 
+export function html(statics: TemplateStringsArray, ...dynamics: unknown[]): HTML {
+	return new HTML(statics, dynamics)
+}
+
 export function is_html(value: unknown): value is HTML {
-	return typeof value === 'object' && value !== null && html_tag in value
+	return value instanceof HTML
 }
 
 export function single_part_template(part: Displayable): HTML {
