@@ -11,6 +11,7 @@ export async function create_node_runtime(): Promise<Runtime> {
 	const child = child_process.fork(fileURLToPath(import.meta.resolve('./runtime.ts')), {
 		env: { NODE_V8_COVERAGE: coverage_dir },
 		stdio: 'inherit',
+		execArgv: ['--expose-gc'],
 	})
 
 	const { port1, port2 } = new MessageChannel()
