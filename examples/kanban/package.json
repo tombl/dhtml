@@ -10,12 +10,16 @@
 	},
 	"devDependencies": {
 		"typescript": "~5.8.3",
-		"vite": "^6.3.5",
-		"vite-tsconfig-paths": "^5.1.4"
+		"vite": "^6.3.5"
 	},
 	"dependencies": {
 		"@tombl/router": "npm:@jsr/tombl__router@^0.1.2",
 		"dhtml": "file:../../dist",
 		"sqlocal": "^0.14.1"
+	},
+	"imports": {
+		"#app": "./src/app.ts",
+		"#db": "./src/db/index.ts",
+		"#util/*": "./src/util/*"
 	}
 }

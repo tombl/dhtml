@@ -1,4 +1,4 @@
-import type { ID } from '~/db'
+import type { ID } from '#db'
 
 export function createRecycler<T extends { id: ID }>(list: () => Promise<Array<{ id: ID }>>, construct: (id: ID) => T) {
 	return async (prev: T[] | null) => {

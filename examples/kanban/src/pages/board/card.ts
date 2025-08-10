@@ -1,7 +1,7 @@
+import type { App } from '#app'
+import * as db from '#db'
+import { type Query, createSubscribedQuery } from '#util/query.ts'
 import { html } from 'dhtml'
-import type { App } from '~/app'
-import * as db from '~/db'
-import { type Query, createSubscribedQuery } from '~/util/query'
 import { text } from './text'
 
 export class Card {
