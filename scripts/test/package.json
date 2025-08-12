@@ -15,6 +15,7 @@
 		"istanbul-lib-report": "^3.0.1",
 		"istanbul-reports": "^3.1.7",
 		"mitata": "^1.0.34",
+		"oxc-parser": "^0.82.0",
 		"puppeteer": "^24.14.0"
 	}
 }
