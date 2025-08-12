@@ -5,15 +5,6 @@ export interface Span {
 	readonly _end: Node
 }
 
-export function create_span(node: Node): Span {
-	assert(node.parentNode !== null)
-
-	return {
-		_start: node.parentNode.insertBefore(new Text(), node),
-		_end: node.parentNode.insertBefore(new Text(), node.nextSibling),
-	}
-}
-
 export function create_span_into(parent: Node): Span {
 	return { _start: parent.appendChild(new Text()), _end: parent.appendChild(new Text()) }
 }
