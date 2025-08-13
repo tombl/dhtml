@@ -36,17 +36,21 @@ const app = {
 				>
 					<div
 						${css`
-							color: #666;
+							color: #999;
 							font-size: 14px;
+							margin-bottom: 6px;
+							height: 18px; /* reserve space to avoid layout shift */
+							line-height: 18px;
+							overflow: hidden;
 						`}
 					>
-						Calculator
+						${this.value != null ? `${this.value} ${this.operator || ''}` : ''}
 					</div>
 					<div
 						${css`
 							font-size: 36px;
 							font-weight: 600;
-							margin-top: 6px;
+							margin-top: 0px;
 						`}
 					>
 						${this.display}
