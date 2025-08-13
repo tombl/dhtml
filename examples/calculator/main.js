@@ -77,9 +77,15 @@ const app = {
 }
 
 function button(label, onClick, opts = {}) {
+	const isOperator = ['+', '-', '×', '÷'].includes(label)
+	const active =
+		isOperator &&
+		app.operator &&
+		((label === '×' && app.operator === '*') || (label === '÷' && app.operator === '/') || label === app.operator)
+
 	const styles = css`
 		padding: 14px 12px;
-		background: ${opts.bg || '#e9eef8'};
+		background: ${active ? opts.bgActive || '#fb923c' : opts.bg || '#e9eef8'};
 		color: ${opts.color || '#111'};
 		border-radius: 8px;
 		font-size: 18px;
