@@ -179,18 +179,18 @@ const app = {
 						gap: 8px;
 					`}
 				>
-					${button('C', () => this.clear(), { bg: '#f3f4f6' }, this)}
-					${button('+/-', () => this.negate(), { bg: '#f3f4f6' }, this)}
-					${button('%', () => this.percent(), { bg: '#f3f4f6' }, this)}
-					${button('÷', () => this.op('/'), { bg: '#e2e8f0', color: '#1e293b' }, this)} ${digitButton('7', this)}
+					${button('C', () => this.clear(), { type: 'function' }, this)}
+					${button('+/-', () => this.negate(), { type: 'function' }, this)}
+					${button('%', () => this.percent(), { type: 'function' }, this)}
+					${button('÷', () => this.op('/'), { type: 'operator' }, this)} ${digitButton('7', this)}
 					${digitButton('8', this)} ${digitButton('9', this)}
-					${button('×', () => this.op('*'), { bg: '#e2e8f0', color: '#1e293b' }, this)} ${digitButton('4', this)}
+					${button('×', () => this.op('*'), { type: 'operator' }, this)} ${digitButton('4', this)}
 					${digitButton('5', this)} ${digitButton('6', this)}
-					${button('-', () => this.op('-'), { bg: '#e2e8f0', color: '#1e293b' }, this)} ${digitButton('1', this)}
+					${button('-', () => this.op('-'), { type: 'operator' }, this)} ${digitButton('1', this)}
 					${digitButton('2', this)} ${digitButton('3', this)}
-					${button('+', () => this.op('+'), { bg: '#e2e8f0', color: '#1e293b' }, this)}
+					${button('+', () => this.op('+'), { type: 'operator' }, this)}
 					${button('0', () => this.inputDigit('0'), { span: 2 }, this)} ${digitButton('.', this)}
-					${button('=', () => this.equals(), { bg: '#334155', color: '#fff' }, this)}
+					${button('=', () => this.equals(), { type: 'equals' }, this)}
 				</div>
 			</div>
 		`
@@ -202,29 +202,29 @@ function button(label, onClick, opts = {}, app) {
 	const operatorData = Object.values(operators).find(op => op.display === label)
 	const active = isOperator && app?.operator === operatorData?.canonical
 
-	const getButtonColor = bgKey => {
+	const getButtonColor = () => {
 		if (active) return 'var(--bg-button-operator-active)'
 
-		const colorMap = {
-			'#f3f4f6': 'var(--bg-button-function)',
-			'#e2e8f0': 'var(--bg-button-operator)',
-			'#334155': 'var(--bg-button-equals)',
+		const typeMap = {
+			function: 'var(--bg-button-function)',
+			operator: 'var(--bg-button-operator)',
+			equals: 'var(--bg-button-equals)',
 		}
-		return colorMap[bgKey] || 'var(--bg-button-default)'
+		return typeMap[opts.type] || 'var(--bg-button-default)'
 	}
 
-	const getTextColor = colorKey => {
-		const colorMap = {
-			'#1e293b': 'var(--text-button-operator)',
-			'#fff': 'var(--text-button-light)',
+	const getTextColor = () => {
+		const typeMap = {
+			operator: 'var(--text-button-operator)',
+			equals: 'var(--text-button-light)',
 		}
-		return colorMap[colorKey] || 'var(--text-button)'
+		return typeMap[opts.type] || 'var(--text-button)'
 	}
 
 	const styles = css`
 		padding: 14px 12px;
-		background: ${getButtonColor(opts.bg)};
-		color: ${getTextColor(opts.color)};
+		background: ${getButtonColor()};
+		color: ${getTextColor()};
 		border-radius: 8px;
 		font-size: 18px;
 		font-weight: 600;
