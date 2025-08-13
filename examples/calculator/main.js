@@ -3,10 +3,44 @@ import { createRoot, invalidate } from 'dhtml/client'
 import { css } from './css.js'
 
 css`
-	background-color: #f8f9fa;
+	/* Theme colors */
+	--bg-body: #f8f9fa;
+	--bg-container: #fff;
+	--bg-display: #f7f7f9;
+	--bg-buttons: #fff;
+	--bg-button-default: #f5f5f5;
+	--bg-button-function: #f3f4f6;
+	--bg-button-operator: #e2e8f0;
+	--bg-button-equals: #334155;
+	--bg-button-operator-active: #64748b;
+	--text-primary: #000;
+	--text-secondary: #999;
+	--text-button: #111;
+	--text-button-operator: #1e293b;
+	--text-button-light: #fff;
+	--border-color: #ddd;
+	--shadow: rgba(0, 0, 0, 0.08);
+
 	@media (prefers-color-scheme: dark) {
-		background-color: #0a0a0a;
+		--bg-body: #0a0a0a;
+		--bg-container: #0d0d0d;
+		--bg-display: #1f1f1f;
+		--bg-buttons: #0d0d0d;
+		--bg-button-default: #2d2d2d;
+		--bg-button-function: #404040;
+		--bg-button-operator: #475569;
+		--bg-button-equals: #64748b;
+		--bg-button-operator-active: #64748b;
+		--text-primary: #fff;
+		--text-secondary: #666;
+		--text-button: #fff;
+		--text-button-operator: #e2e8f0;
+		--text-button-light: #fff;
+		--border-color: #333;
+		--shadow: rgba(0, 0, 0, 0.3);
 	}
+
+	background-color: var(--bg-body);
 `(document.body)
 
 // Simple calculator app
@@ -28,40 +62,27 @@ const app = {
 						Arial;
 					max-width: 360px;
 					margin: 48px auto;
-					border: 1px solid #ddd;
+					border: 1px solid var(--border-color);
 					border-radius: 12px;
-					box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
+					box-shadow: 0 6px 24px var(--shadow);
 					overflow: hidden;
-
-					@media (prefers-color-scheme: dark) {
-						border-color: #333;
-						box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
-					}
 				`}
 			>
 				<div
 					${css`
-						background: #f7f7f9;
+						background: var(--bg-display);
 						padding: 20px;
 						text-align: right;
-
-						@media (prefers-color-scheme: dark) {
-							background: #1f1f1f;
-						}
 					`}
 				>
 					<div
 						${css`
-							color: #999;
+							color: var(--text-secondary);
 							font-size: 14px;
 							margin-bottom: 6px;
 							height: 18px; /* reserve space to avoid layout shift */
 							line-height: 18px;
 							overflow: hidden;
-
-							@media (prefers-color-scheme: dark) {
-								color: #666;
-							}
 						`}
 					>
 						${this.value != null ? `${this.value} ${this.operator || ''}` : ''}
@@ -71,11 +92,7 @@ const app = {
 							font-size: 36px;
 							font-weight: 600;
 							margin-top: 0px;
-							color: #000;
-
-							@media (prefers-color-scheme: dark) {
-								color: #fff;
-							}
+							color: var(--text-primary);
 						`}
 					>
 						${this.display}
@@ -84,14 +101,10 @@ const app = {
 				<div
 					${css`
 						padding: 12px;
-						background: #fff;
+						background: var(--bg-buttons);
 						display: grid;
 						grid-template-columns: repeat(4, 1fr);
 						gap: 8px;
-
-						@media (prefers-color-scheme: dark) {
-							background: #0d0d0d;
-						}
 					`}
 				>
 					${button('C', () => clear(), { bg: '#f3f4f6' })} ${button('+/-', () => negate(), { bg: '#f3f4f6' })}
@@ -116,10 +129,29 @@ function button(label, onClick, opts = {}) {
 		app.operator &&
 		((label === '×' && app.operator === '*') || (label === '÷' && app.operator === '/') || label === app.operator)
 
+	const getButtonColor = (bgKey, colorKey) => {
+		if (active) return 'var(--bg-button-operator-active)'
+
+		const colorMap = {
+			'#f3f4f6': 'var(--bg-button-function)',
+			'#e2e8f0': 'var(--bg-button-operator)',
+			'#334155': 'var(--bg-button-equals)',
+		}
+		return colorMap[bgKey] || 'var(--bg-button-default)'
+	}
+
+	const getTextColor = colorKey => {
+		const colorMap = {
+			'#1e293b': 'var(--text-button-operator)',
+			'#fff': 'var(--text-button-light)',
+		}
+		return colorMap[colorKey] || 'var(--text-button)'
+	}
+
 	const styles = css`
 		padding: 14px 12px;
-		background: ${active ? opts.bgActive || '#fb923c' : opts.bg || '#f5f5f5'};
-		color: ${opts.color || '#111'};
+		background: ${getButtonColor(opts.bg, opts.color)};
+		color: ${getTextColor(opts.color)};
 		border-radius: 8px;
 		font-size: 18px;
 		font-weight: 600;
@@ -130,19 +162,6 @@ function button(label, onClick, opts = {}) {
 		user-select: none;
 		&:active {
 			transform: translateY(1px);
-		}
-
-		@media (prefers-color-scheme: dark) {
-			background: ${active
-				? opts.bgActive || '#fb923c'
-				: opts.bg === '#f3f4f6'
-					? '#404040'
-					: opts.bg === '#e2e8f0'
-						? '#475569'
-						: opts.bg === '#334155'
-							? '#64748b'
-							: opts.bg || '#2d2d2d'};
-			color: ${opts.color === '#1e293b' ? '#e2e8f0' : opts.color || '#fff'};
 		}
 	`
 	const spanStyles = opts.span
