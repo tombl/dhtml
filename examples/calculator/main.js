@@ -99,13 +99,19 @@ function button(label, onClick, opts = {}) {
 		justify-content: center;
 		cursor: pointer;
 		user-select: none;
-		${opts.span ? `grid-column: span ${opts.span};` : ''}
 		&:active {
 			transform: translateY(1px);
 		}
 	`
+	const spanStyles = opts.span
+		? css`
+				grid-column: span ${opts.span};
+			`
+		: null
+
 	return html`<div
 		${styles}
+		${spanStyles}
 		onclick=${() => {
 			onClick()
 			invalidate(app)

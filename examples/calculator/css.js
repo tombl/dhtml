@@ -13,7 +13,7 @@ export function css(strings, ...dynamics) {
 	if (!class_name) {
 		class_names.set(strings, (class_name = `gen-${next_id++}`))
 		stylesheet.insertRule(
-			`.${class_name}{${strings.reduce((acc, value, index) => acc + `var(--dyn-${index - 1})` + value)}}`,
+			`.${class_name}{${strings.reduce((acc, value, index) => acc + `var(--${class_name}-${index - 1})` + value)}}`,
 		)
 	}
 
@@ -28,13 +28,13 @@ export function css(strings, ...dynamics) {
 
 		classList.add(class_name)
 		for (let i = 0; i < dynamics.length; i++) {
-			style.setProperty(`--dyn-${i}`, String(dynamics[i]))
+			style.setProperty(`--${class_name}-${i}`, String(dynamics[i]))
 		}
 
 		return () => {
 			classList.remove(class_name)
 			for (let i = 0; i < dynamics.length; i++) {
-				style.setProperty(`--dyn-${i}`, null)
+				style.setProperty(`--${class_name}-${i}`, null)
 			}
 		}
 	}
