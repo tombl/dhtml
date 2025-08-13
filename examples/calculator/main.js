@@ -228,6 +228,13 @@ function percent() {
 }
 
 function op(nextOp) {
+	// If clicking the same operator that's already active, deactivate it
+	if (app.operator === nextOp || (app.operator === '*' && nextOp === '×') || (app.operator === '/' && nextOp === '÷')) {
+		app.operator = null
+		app.waitingForOperand = false
+		return
+	}
+
 	const inputValue = parseFloat(app.display)
 	if (app.value == null) {
 		app.value = inputValue
