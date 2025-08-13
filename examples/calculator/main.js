@@ -57,6 +57,68 @@ const app = {
 	waitingForOperand: false,
 	operator: null,
 	value: null,
+	inputDigit(digit) {
+		if (this.waitingForOperand) {
+			this.display = digit === '.' ? '0.' : String(digit)
+			this.waitingForOperand = false
+		} else {
+			if (this.display === '0' && digit !== '.') this.display = String(digit)
+			else if (digit === '.' && this.display.includes('.')) return
+			else this.display = this.display + digit
+		}
+	},
+	inputDot() {
+		if (this.waitingForOperand) {
+			this.display = '0.'
+			this.waitingForOperand = false
+			return
+		}
+		if (!this.display.includes('.')) this.display = this.display + '.'
+	},
+	clear() {
+		this.display = '0'
+		this.value = null
+		this.operator = null
+		this.waitingForOperand = false
+	},
+	negate() {
+		if (this.display === '0') return
+		if (this.display.startsWith('-')) this.display = this.display.slice(1)
+		else this.display = '-' + this.display
+	},
+	percent() {
+		const num = parseFloat(this.display) || 0
+		this.display = String(num / 100)
+	},
+	op(nextOp) {
+		// If clicking the same operator that's already active, deactivate it
+		if (this.operator === nextOp) {
+			this.operator = null
+			this.waitingForOperand = false
+			return
+		}
+
+		const inputValue = parseFloat(this.display)
+		if (this.value == null) {
+			this.value = inputValue
+		} else if (this.operator) {
+			const result = performOperation(this.value, inputValue, this.operator)
+			this.value = result
+			this.display = String(result)
+		}
+		this.operator = nextOp
+		this.waitingForOperand = true
+	},
+	equals() {
+		const inputValue = parseFloat(this.display)
+		if (this.operator && this.value != null) {
+			const result = performOperation(this.value, inputValue, this.operator)
+			this.display = String(result)
+			this.value = null
+			this.operator = null
+			this.waitingForOperand = true
+		}
+	},
 	render() {
 		return html`
 			<div
@@ -117,27 +179,30 @@ const app = {
 						gap: 8px;
 					`}
 				>
-					${button('C', () => clear(), { bg: '#f3f4f6' })} ${button('+/-', () => negate(), { bg: '#f3f4f6' })}
-					${button('%', () => percent(), { bg: '#f3f4f6' })}
-					${button('÷', () => op('/'), { bg: '#e2e8f0', color: '#1e293b' })} ${digitButton('7')} ${digitButton('8')}
-					${digitButton('9')} ${button('×', () => op('*'), { bg: '#e2e8f0', color: '#1e293b' })} ${digitButton('4')}
-					${digitButton('5')} ${digitButton('6')} ${button('-', () => op('-'), { bg: '#e2e8f0', color: '#1e293b' })}
-					${digitButton('1')} ${digitButton('2')} ${digitButton('3')}
-					${button('+', () => op('+'), { bg: '#e2e8f0', color: '#1e293b' })}
-					${button('0', () => inputDigit('0'), { span: 2 })} ${digitButton('.')}
-					${button('=', () => equals(), { bg: '#334155', color: '#fff' })}
+					${button('C', () => this.clear(), { bg: '#f3f4f6' }, this)}
+					${button('+/-', () => this.negate(), { bg: '#f3f4f6' }, this)}
+					${button('%', () => this.percent(), { bg: '#f3f4f6' }, this)}
+					${button('÷', () => this.op('/'), { bg: '#e2e8f0', color: '#1e293b' }, this)} ${digitButton('7', this)}
+					${digitButton('8', this)} ${digitButton('9', this)}
+					${button('×', () => this.op('*'), { bg: '#e2e8f0', color: '#1e293b' }, this)} ${digitButton('4', this)}
+					${digitButton('5', this)} ${digitButton('6', this)}
+					${button('-', () => this.op('-'), { bg: '#e2e8f0', color: '#1e293b' }, this)} ${digitButton('1', this)}
+					${digitButton('2', this)} ${digitButton('3', this)}
+					${button('+', () => this.op('+'), { bg: '#e2e8f0', color: '#1e293b' }, this)}
+					${button('0', () => this.inputDigit('0'), { span: 2 }, this)} ${digitButton('.', this)}
+					${button('=', () => this.equals(), { bg: '#334155', color: '#fff' }, this)}
 				</div>
 			</div>
 		`
 	},
 }
 
-function button(label, onClick, opts = {}) {
+function button(label, onClick, opts = {}, app) {
 	const isOperator = Object.values(operators).some(op => op.display === label)
 	const operatorData = Object.values(operators).find(op => op.display === label)
-	const active = isOperator && app.operator === operatorData?.canonical
+	const active = isOperator && app?.operator === operatorData?.canonical
 
-	const getButtonColor = (bgKey, colorKey) => {
+	const getButtonColor = bgKey => {
 		if (active) return 'var(--bg-button-operator-active)'
 
 		const colorMap = {
@@ -158,7 +223,7 @@ function button(label, onClick, opts = {}) {
 
 	const styles = css`
 		padding: 14px 12px;
-		background: ${getButtonColor(opts.bg, opts.color)};
+		background: ${getButtonColor(opts.bg)};
 		color: ${getTextColor(opts.color)};
 		border-radius: 8px;
 		font-size: 18px;
@@ -190,80 +255,16 @@ function button(label, onClick, opts = {}) {
 	</div>`
 }
 
-function digitButton(d) {
-	return button(d, () => {
-		if (d === '.') inputDot()
-		else inputDigit(d)
-	})
-}
-
-function inputDigit(digit) {
-	if (app.waitingForOperand) {
-		app.display = digit === '.' ? '0.' : String(digit)
-		app.waitingForOperand = false
-	} else {
-		if (app.display === '0' && digit !== '.') app.display = String(digit)
-		else if (digit === '.' && app.display.includes('.')) return
-		else app.display = app.display + digit
-	}
-}
-
-function inputDot() {
-	if (app.waitingForOperand) {
-		app.display = '0.'
-		app.waitingForOperand = false
-		return
-	}
-	if (!app.display.includes('.')) app.display = app.display + '.'
-}
-
-function clear() {
-	app.display = '0'
-	app.value = null
-	app.operator = null
-	app.waitingForOperand = false
-}
-
-function negate() {
-	if (app.display === '0') return
-	if (app.display.startsWith('-')) app.display = app.display.slice(1)
-	else app.display = '-' + app.display
-}
-
-function percent() {
-	const num = parseFloat(app.display) || 0
-	app.display = String(num / 100)
-}
-
-function op(nextOp) {
-	// If clicking the same operator that's already active, deactivate it
-	if (app.operator === nextOp) {
-		app.operator = null
-		app.waitingForOperand = false
-		return
-	}
-
-	const inputValue = parseFloat(app.display)
-	if (app.value == null) {
-		app.value = inputValue
-	} else if (app.operator) {
-		const result = performOperation(app.value, inputValue, app.operator)
-		app.value = result
-		app.display = String(result)
-	}
-	app.operator = nextOp
-	app.waitingForOperand = true
-}
-
-function equals() {
-	const inputValue = parseFloat(app.display)
-	if (app.operator && app.value != null) {
-		const result = performOperation(app.value, inputValue, app.operator)
-		app.display = String(result)
-		app.value = null
-		app.operator = null
-		app.waitingForOperand = true
-	}
+function digitButton(d, app) {
+	return button(
+		d,
+		() => {
+			if (d === '.') app.inputDot()
+			else app.inputDigit(d)
+		},
+		{},
+		app,
+	)
 }
 
 function performOperation(a, b, op) {
