@@ -43,6 +43,14 @@ css`
 	background-color: var(--bg-body);
 `(document.body)
 
+// Operator mappings
+const operators = {
+	'+': { display: '+', canonical: '+' },
+	'-': { display: '-', canonical: '-' },
+	'*': { display: '×', canonical: '*' },
+	'/': { display: '÷', canonical: '/' },
+}
+
 // Simple calculator app
 const app = {
 	display: '0',
@@ -85,7 +93,9 @@ const app = {
 							overflow: hidden;
 						`}
 					>
-						${this.value != null ? `${this.value} ${this.operator || ''}` : ''}
+						${this.value != null
+							? `${this.value} ${this.operator ? operators[this.operator]?.display || this.operator : ''}`
+							: ''}
 					</div>
 					<div
 						${css`
@@ -123,11 +133,9 @@ const app = {
 }
 
 function button(label, onClick, opts = {}) {
-	const isOperator = ['+', '-', '×', '÷'].includes(label)
-	const active =
-		isOperator &&
-		app.operator &&
-		((label === '×' && app.operator === '*') || (label === '÷' && app.operator === '/') || label === app.operator)
+	const isOperator = Object.values(operators).some(op => op.display === label)
+	const operatorData = Object.values(operators).find(op => op.display === label)
+	const active = isOperator && app.operator === operatorData?.canonical
 
 	const getButtonColor = (bgKey, colorKey) => {
 		if (active) return 'var(--bg-button-operator-active)'
@@ -229,7 +237,7 @@ function percent() {
 
 function op(nextOp) {
 	// If clicking the same operator that's already active, deactivate it
-	if (app.operator === nextOp || (app.operator === '*' && nextOp === '×') || (app.operator === '/' && nextOp === '÷')) {
+	if (app.operator === nextOp) {
 		app.operator = null
 		app.waitingForOperand = false
 		return
