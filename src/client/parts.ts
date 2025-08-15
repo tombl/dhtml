@@ -292,10 +292,13 @@ export type Directive = (el: Element) => Cleanup
 
 export function create_directive_part(node: Node): Part {
 	let cleanup: Cleanup
+	let prev_fn: unknown
 	return fn => {
+		if (prev_fn === fn) return
 		assert(typeof fn === 'function' || fn == null)
 		cleanup?.()
 		cleanup = fn?.(node)
+		prev_fn = fn
 	}
 }
 
