@@ -1,6 +1,6 @@
 import { html } from 'dhtml'
 import { attr, on, type Directive } from 'dhtml/client'
-import { assert, assert_eq, test } from '../../../scripts/test/test.ts'
+import { assert, assert_deep_eq, assert_eq, test } from '../../../scripts/test/test.ts'
 import { setup } from './setup.ts'
 
 test('directive functions work correctly', () => {
@@ -215,4 +215,31 @@ test('on directive supports event listener options', () => {
 
 	button.click()
 	assert_eq(count, 3)
+})
+
+test('same directive function is not re-invoked or cleaned up', () => {
+	const { root } = setup()
+
+	const sequence: string[] = []
+	const stable = () => {
+		sequence.push('stable create')
+		return () => sequence.push('stable cleanup')
+	}
+	const unstable = () => () => {
+		sequence.push('unstable create')
+		return () => sequence.push('unstable cleanup')
+	}
+
+	const template = (d1: Directive | null, d2: Directive | null) => html`<div ${d1} ${d2}></div>`
+
+	root.render(template(stable, unstable()))
+	assert_deep_eq(sequence, ['stable create', 'unstable create'])
+	sequence.length = 0
+
+	root.render(template(stable, unstable()))
+	assert_deep_eq(sequence, ['unstable cleanup', 'unstable create'])
+	sequence.length = 0
+
+	root.render(template(null, null))
+	assert_deep_eq(sequence, ['stable cleanup', 'unstable cleanup'])
 })
