@@ -2,6 +2,7 @@ const class_names = new WeakMap()
 const adopted = new WeakSet()
 const stylesheet = new CSSStyleSheet()
 let next_id = 0
+const cache = new Map()
 
 /**
  * @param {TemplateStringsArray} strings
@@ -17,7 +18,12 @@ export function css(strings, ...dynamics) {
 		)
 	}
 
-	return element => {
+	const cache_key = `${class_name}\0${dynamics.map(v => String(v)).join('\0')}`
+	const cached = cache.get(cache_key)
+	if (cached) return cached
+
+	/** @type {import('dhtml/client').Directive} */
+	const directive = element => {
 		const root = /** @type {Document | ShadowRoot} */ (element.getRootNode())
 		if (!adopted.has(root)) {
 			root.adoptedStyleSheets.push(stylesheet)
@@ -38,4 +44,7 @@ export function css(strings, ...dynamics) {
 			}
 		}
 	}
+
+	cache.set(cache_key, directive)
+	return directive
 }
