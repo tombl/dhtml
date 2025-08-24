@@ -1,5 +1,5 @@
+import * as core from 'alien-signals'
 import { invalidate, onMount } from 'dhtml/client'
-import * as core from 'https://unpkg.com/alien-signals@2.0.5/esm/index.mjs'
 
 function upgrade(rx) {
 	rx.render = () => rx()
@@ -15,4 +15,4 @@ function upgrade(rx) {
 export const signal = init => upgrade(core.signal(init))
 export const computed = fn => upgrade(core.computed(fn))
 
-export * from 'https://unpkg.com/alien-signals@2.0.5/esm/index.mjs'
+export * from 'alien-signals'
