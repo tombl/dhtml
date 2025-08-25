@@ -13,6 +13,7 @@ const execFile = promisify(child_process.execFile)
 
 const args = parseArgs({
 	options: {
+		release: { type: 'boolean', default: false },
 		watch: { type: 'boolean', short: 'w', default: false },
 	},
 })
@@ -151,15 +152,17 @@ async function write_package_json() {
 		return exports
 	})(pkg.exports)
 
-	const now = new Date()
+	if (args.values.release) {
+		const now = new Date()
 
-	pkg.version = [
-		'0.0.0',
-		(await execFile('git', ['rev-parse', 'HEAD'])).stdout.slice(0, 8),
-		now.getFullYear().toString() +
-			(now.getMonth() + 1).toString().padStart(2, '0') +
-			now.getDate().toString().padStart(2, '0'),
-	].join('-')
+		pkg.version = [
+			'0.0.0',
+			(await execFile('git', ['rev-parse', 'HEAD'])).stdout.slice(0, 8),
+			now.getFullYear().toString() +
+				(now.getMonth() + 1).toString().padStart(2, '0') +
+				now.getDate().toString().padStart(2, '0'),
+		].join('-')
+	}
 
 	await writeFile('dist/package.json', JSON.stringify(pkg, null, 2))
 }
