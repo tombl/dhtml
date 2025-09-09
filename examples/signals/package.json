@@ -6,7 +6,7 @@
 		"check": "tsc"
 	},
 	"devDependencies": {
-		"typescript": "~5.8.3"
+		"typescript": "catalog:"
 	},
 	"dependencies": {
 		"alien-signals": "^2.0.7"
