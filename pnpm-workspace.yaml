@@ -7,3 +7,5 @@ onlyBuiltDependencies:
   - puppeteer
 catalog:
   typescript: ~5.8
+
+includeWorkspaceRoot: true
