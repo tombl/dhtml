@@ -13,7 +13,7 @@
 		"format": "prettier --write . --cache",
 		"check": "tsc",
 		"test": "node scripts/test/main.ts 'src/{client,server}/tests/*.test.ts'",
-		"test:prod": "npm run test -- --prod",
+		"test:prod": "pnpm run test -- --prod",
 		"bench": "node scripts/test/main.ts --prod --bench 'src/{client,server}/tests/bench.ts'"
 	},
 	"devDependencies": {
