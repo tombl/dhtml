@@ -19,7 +19,7 @@
 		"@types/node": "^22.15.30",
 		"prettier": "^3.5.3",
 		"prettier-plugin-organize-imports": "^4.1.0",
-		"typescript": "^5.8.3"
+		"typescript": "catalog:"
 	},
 	"prettier": {
 		"plugins": [

@@ -5,3 +5,5 @@ packages:
 onlyBuiltDependencies:
   - esbuild
   - puppeteer
+catalog:
+  typescript: ~5.8
