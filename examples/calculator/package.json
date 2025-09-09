@@ -6,7 +6,7 @@
 		"check": "tsc"
 	},
 	"devDependencies": {
-		"typescript": "~5.8.3"
+		"typescript": "catalog:"
 	},
 	"optionalDependencies": {
 		"dhtml": "file:../../dist"

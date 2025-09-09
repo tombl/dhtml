@@ -4,6 +4,12 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+catalogs:
+  default:
+    typescript:
+      specifier: ~5.8
+      version: 5.8.3
+
 importers:
 
   .:
@@ -16,10 +22,10 @@ importers:
         version: 3.6.2
       prettier-plugin-organize-imports:
         specifier: ^4.1.0
-        version: 4.2.0(prettier@3.6.2)(typescript@5.9.2)
+        version: 4.2.0(prettier@3.6.2)(typescript@5.8.3)
       typescript:
-        specifier: ^5.8.3
-        version: 5.9.2
+        specifier: 'catalog:'
+        version: 5.8.3
     optionalDependencies:
       dhtml:
         specifier: file:dist
@@ -28,7 +34,7 @@ importers:
   examples/calculator:
     devDependencies:
       typescript:
-        specifier: ~5.8.3
+        specifier: 'catalog:'
         version: 5.8.3
     optionalDependencies:
       dhtml:
@@ -45,7 +51,7 @@ importers:
         version: 0.14.2
     devDependencies:
       typescript:
-        specifier: ~5.8.3
+        specifier: 'catalog:'
         version: 5.8.3
       vite:
         specifier: ^6.3.5
@@ -62,7 +68,7 @@ importers:
         version: 2.0.7
     devDependencies:
       typescript:
-        specifier: ~5.8.3
+        specifier: 'catalog:'
         version: 5.8.3
     optionalDependencies:
       dhtml:
@@ -82,7 +88,7 @@ importers:
         version: 4.9.6
     devDependencies:
       typescript:
-        specifier: ~5.8.3
+        specifier: 'catalog:'
         version: 5.8.3
     optionalDependencies:
       dhtml:
@@ -92,7 +98,7 @@ importers:
   examples/todomvc:
     devDependencies:
       typescript:
-        specifier: ~5.8.3
+        specifier: 'catalog:'
         version: 5.8.3
     optionalDependencies:
       dhtml:
@@ -102,7 +108,7 @@ importers:
   examples/uibench:
     devDependencies:
       typescript:
-        specifier: ~5.8.3
+        specifier: 'catalog:'
         version: 5.8.3
     optionalDependencies:
       dhtml:
@@ -2110,10 +2116,10 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
-  prettier-plugin-organize-imports@4.2.0(prettier@3.6.2)(typescript@5.9.2):
+  prettier-plugin-organize-imports@4.2.0(prettier@3.6.2)(typescript@5.8.3):
     dependencies:
       prettier: 3.6.2
-      typescript: 5.9.2
+      typescript: 5.8.3
 
   prettier@3.6.2: {}
 
@@ -2338,7 +2344,8 @@ snapshots:
 
   typescript@5.8.3: {}
 
-  typescript@5.9.2: {}
+  typescript@5.9.2:
+    optional: true
 
   undici-types@6.21.0: {}
 
