@@ -9,15 +9,16 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: npm
-      - run: npm ci
-      - run: npm run build
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run build
       - name: Disable AppArmor for chromium
         run: echo 0 | sudo tee /proc/sys/kernel/apparmor_restrict_unprivileged_userns || true
-      - run: npm run test
+      - run: pnpm run test
       - if: always()
         uses: coverallsapp/github-action@v2
         with:

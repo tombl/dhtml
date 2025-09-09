@@ -6,10 +6,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: npm
-      - run: npm install
-      - run: npm run build
-      - run: npm run check --workspaces --if-present
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run build
+      - run: pnpm install --frozen-lockfile # link the built version to dependents
+      - run: pnpm run --recursive check

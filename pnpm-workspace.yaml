@@ -8,3 +8,5 @@ onlyBuiltDependencies:
 
 catalog:
   typescript: ~5.8
+
+includeWorkspaceRoot: true
