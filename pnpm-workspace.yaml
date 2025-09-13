@@ -10,3 +10,7 @@ catalog:
   typescript: ~5.8
 
 includeWorkspaceRoot: true
+
+publicHoistPattern:
+  - '@oxc-project/types' # we need rolldown's exact version but they don't re-export
+
