@@ -2,10 +2,11 @@ packages:
   - examples/*
   - scripts/*
 
+catalog:
+  typescript: ~5.9.2
+
+includeWorkspaceRoot: true
+
 onlyBuiltDependencies:
   - esbuild
   - puppeteer
-catalog:
-  typescript: ~5.8
-
-includeWorkspaceRoot: true
