@@ -6,10 +6,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v5
         with:
           node-version: 24
-          cache: npm
-      - run: npm install
-      - run: npm run build
-      - run: npm run check --workspaces --if-present
+          cache: pnpm
+      - run: pnpm install --lockfile-only
+      - run: pnpm run build
+      - run: pnpm run --recursive check
