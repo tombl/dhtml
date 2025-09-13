@@ -17,9 +17,9 @@
 		"bench": "node scripts/test/main.ts --prod --bench 'src/{client,server}/tests/bench.ts'"
 	},
 	"devDependencies": {
-		"@types/node": "^24.0.0",
-		"prettier": "^3.5.3",
-		"prettier-plugin-organize-imports": "^4.1.0",
+		"@types/node": "^25.1.0",
+		"prettier": "^3.8.1",
+		"prettier-plugin-organize-imports": "^4.3.0",
 		"typescript": "catalog:"
 	},
 	"prettier": {
