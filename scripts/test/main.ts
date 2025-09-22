@@ -1,11 +1,10 @@
-import { createBirpc } from 'birpc'
+import { newMessagePortRpcSession } from 'capnweb'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseArgs, styleText } from 'node:util'
 import { create_browser_runtime } from './browser-runtime.ts'
 import { handle_coverage, type Coverage } from './coverage.ts'
-import * as devalue from './devalue.ts'
 import { create_node_runtime } from './node-runtime.ts'
 import type { ClientFunctions, TestResult } from './runtime.ts'
 
@@ -45,7 +44,8 @@ for (const [runtime, files] of Object.entries(all_files)) {
 	const rt = runtime === 'node' ? await create_node_runtime() : await create_browser_runtime()
 	await using _ = rt // workaround for https://issues.chromium.org/issues/409478039
 
-	const client = createBirpc<ClientFunctions, ServerFunctions>(
+	using client = newMessagePortRpcSession<ClientFunctions>(
+		rt.port,
 		{
 			report_result(run) {
 				if (run.result === 'pass') {
@@ -58,15 +58,8 @@ for (const [runtime, files] of Object.entries(all_files)) {
 
 				results.push(run)
 			},
-		},
-		{
-			post: data => rt.port.postMessage(data),
-			on: fn => {
-				rt.port.onmessage = e => fn(e.data)
-			},
-			serialize: devalue.stringify,
-			deserialize: devalue.parse,
-		},
+		} satisfies ServerFunctions,
+		{ onSendError: e => e },
 	)
 
 	await client.define('__DEV__', !args.values.prod)

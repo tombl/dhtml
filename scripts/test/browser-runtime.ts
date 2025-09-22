@@ -27,7 +27,7 @@ export async function create_browser_runtime(): Promise<Runtime> {
 					'dhtml/client': '/dist/client.js',
 					'dhtml/server': '/dist/server.js',
 					birpc: pkg('birpc'),
-					devalue: pkg('devalue'),
+					capnweb: pkg('capnweb'),
 					mitata: pkg('mitata'),
 				},
 			})}</script>
@@ -86,7 +86,7 @@ export async function create_browser_runtime(): Promise<Runtime> {
 		}
 	})
 	const { port1, port2 } = new MessageChannel()
-	await page.exposeFunction('__postMessage', (data: any) => port1.postMessage(data))
+	await page.exposeFunction('__postMessage', (data: string) => port1.postMessage(data))
 
 	await page.coverage.startJSCoverage({ includeRawScriptCoverage: true })
 	await page.goto(`http://${addr}/@runner`)
