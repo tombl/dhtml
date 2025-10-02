@@ -32,6 +32,11 @@ test('basic children render correctly', () => {
 	)
 })
 
+test('undefined children render empty', () => {
+	assert_eq(renderToString(html`<div>${undefined}</div>`), '<?[><div><?[><?]></div><?]>')
+	assert_eq(renderToString(html`<div>${null}</div>`), '<?[><div><?[><?]></div><?]>')
+})
+
 if (__DEV__) {
 	test('invalid part placement raises error', () => {
 		try {
