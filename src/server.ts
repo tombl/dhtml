@@ -168,7 +168,7 @@ function* render_child(value: unknown): Generator<string, void, void> {
 			prev_end = replace_end
 		}
 		yield template.source.slice(prev_end)
-	} else if (value !== null) {
+	} else if (value != null) {
 		yield escape(value)
 	}
 
