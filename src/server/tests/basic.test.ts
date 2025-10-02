@@ -32,6 +32,11 @@ test('basic children render correctly', () => {
 	)
 })
 
+test('undefined children render empty', () => {
+	assert_eq(renderToString(html`<div>${undefined}</div>`), '<?[><div><?[><?]></div><?]>')
+	assert_eq(renderToString(html`<div>${null}</div>`), '<?[><div><?[><?]></div><?]>')
+})
+
 if (__DEV__) {
 	test('invalid part placement raises error', () => {
 		try {
@@ -73,6 +78,7 @@ test('unquoted attributes', () => {
 	assert_eq(renderToString(html`<a href=${'/url'}></a>`), '<?[><a href="/url"></a><?]>')
 	assert_eq(renderToString(html`<details hidden=${false}></details>`), '<?[><details ></details><?]>')
 	assert_eq(renderToString(html`<details hidden=${true}></details>`), '<?[><details hidden></details><?]>')
+	assert_eq(renderToString(html`<details hidden=${undefined}></details>`), '<?[><details ></details><?]>')
 })
 
 test('quoted attributes', () => {

@@ -126,7 +126,7 @@ function render_directive(value: unknown) {
 }
 
 function render_attribute(name: string, value: unknown) {
-	if (value === false || value === null || typeof value === 'function') {
+	if (value === false || value == null || typeof value === 'function') {
 		return ''
 	}
 	if (value === true) return name
@@ -168,7 +168,7 @@ function* render_child(value: unknown): Generator<string, void, void> {
 			prev_end = replace_end
 		}
 		yield template.source.slice(prev_end)
-	} else if (value !== null) {
+	} else if (value != null) {
 		yield escape(value)
 	}
 
