@@ -73,6 +73,7 @@ test('unquoted attributes', () => {
 	assert_eq(renderToString(html`<a href=${'/url'}></a>`), '<?[><a href="/url"></a><?]>')
 	assert_eq(renderToString(html`<details hidden=${false}></details>`), '<?[><details ></details><?]>')
 	assert_eq(renderToString(html`<details hidden=${true}></details>`), '<?[><details hidden></details><?]>')
+	assert_eq(renderToString(html`<details hidden=${undefined}></details>`), '<?[><details ></details><?]>')
 })
 
 test('quoted attributes', () => {
