@@ -126,7 +126,7 @@ function render_directive(value: unknown) {
 }
 
 function render_attribute(name: string, value: unknown) {
-	if (value === false || value === null || typeof value === 'function') {
+	if (value === false || value == null || typeof value === 'function') {
 		return ''
 	}
 	if (value === true) return name
