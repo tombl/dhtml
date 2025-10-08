@@ -164,7 +164,11 @@ function* render_child(value: unknown): Generator<string, void, void> {
 		let prev_end = 0
 		for (const { replace_start, replace_end, render } of template.parts) {
 			yield template.source.slice(prev_end, replace_start)
-			yield* render(dynamics)
+
+			const out = render(dynamics)
+			if (typeof out === 'string') yield out
+			else yield* out
+
 			prev_end = replace_end
 		}
 		yield template.source.slice(prev_end)
