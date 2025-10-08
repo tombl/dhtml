@@ -74,6 +74,11 @@ test('directives', () => {
 	assert_eq(calls, 0) // TODO: what should these look like on the server?
 })
 
+test('nullish directives are ignored', () => {
+	assert_eq(renderToString(html`<p ${undefined}></p>`), '<?[><p ></p><?]>')
+	assert_eq(renderToString(html`<div ${null}></div>`), '<?[><div ></div><?]>')
+})
+
 test('unquoted attributes', () => {
 	assert_eq(renderToString(html`<a href=${'/url'}></a>`), '<?[><a href="/url"></a><?]>')
 	assert_eq(renderToString(html`<details hidden=${false}></details>`), '<?[><details ></details><?]>')
