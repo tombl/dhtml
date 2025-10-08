@@ -2,6 +2,8 @@ import { serve } from '@hono/node-server'
 import { serveStatic } from '@hono/node-server/serve-static'
 import { transformSync } from 'amaro'
 import { Hono } from 'hono'
+import * as path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import * as puppeteer from 'puppeteer'
 import type { Runtime } from './main.ts'
 
@@ -13,8 +15,10 @@ export async function create_browser_runtime(): Promise<Runtime> {
 
 	const app = new Hono()
 
-	app.get('/@runner', c =>
-		c.html(`
+	app.get('/@runner', c => {
+		const pkg = (specifier: string) => '/' + path.relative('.', fileURLToPath(import.meta.resolve(specifier)))
+
+		return c.html(`
   		<!doctype html>
       <link rel="icon" href="data:" />
       <script type="importmap">${JSON.stringify({
@@ -22,14 +26,14 @@ export async function create_browser_runtime(): Promise<Runtime> {
 					dhtml: '/dist/index.js',
 					'dhtml/client': '/dist/client.js',
 					'dhtml/server': '/dist/server.js',
-					birpc: '/node_modules/birpc/dist/index.mjs',
-					devalue: '/node_modules/devalue/index.js',
-					mitata: '/node_modules/mitata/src/main.mjs',
+					birpc: pkg('birpc'),
+					devalue: pkg('devalue'),
+					mitata: pkg('mitata'),
 				},
 			})}</script>
       <script type="module" src="/scripts/test/runtime.ts"></script>
-    `),
-	)
+    `)
+	})
 
 	app.use(async (c, next) => {
 		await next()
