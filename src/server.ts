@@ -117,12 +117,12 @@ function compile_template(statics: TemplateStringsArray): CompiledTemplate {
 }
 
 function render_directive(value: unknown) {
-	if (value === null) return ''
+    // Treat null/undefined as no-op, matching client behavior.
+    if (value == null) return ''
 
-	assert(typeof value === 'function')
-	// console.log('directive returned:', value())
-
-	return ''
+    // In dev, ensure anything else is a function; on the server we don't execute it.
+    assert(typeof value === 'function')
+    return ''
 }
 
 function render_attribute(name: string, value: unknown) {
