@@ -22,19 +22,20 @@ export function insert_node(span: Span, node: Node): void {
 	span._end.parentNode!.insertBefore(node, span._end)
 }
 
-export function extract_contents(span: Span): DocumentFragment {
-	const fragment = document.createDocumentFragment()
+export function insert_span_before(span: Span, before: Node): void {
+	const parent = before.parentNode
+	assert(parent)
+	const after = span._end.nextSibling
 
-	let node = span._start.nextSibling
-	for (;;) {
-		assert(node)
-		if (node === span._end) break
+	if (after === before) return
+
+	let node = span._start
+	while (node !== after) {
 		const next = node.nextSibling
-		fragment.appendChild(node)
+		assert(next)
+		parent.insertBefore(node, before)
 		node = next
 	}
-
-	return fragment
 }
 
 export function delete_contents(span: Span): void {
