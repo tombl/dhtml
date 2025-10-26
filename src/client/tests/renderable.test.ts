@@ -527,3 +527,27 @@ test('invalidating a parent does not re-render a child', () => {
 	assert_eq(el.innerHTML, 'child')
 	assert_eq(renders, 1)
 })
+
+test('invalidating parent during child render triggers update', () => {
+	const { root, el } = setup()
+
+	const item = {
+		render() {
+			app.loading = true
+			invalidate(app)
+			return 'created'
+		},
+	}
+
+	const app = {
+		loading: false,
+
+		render() {
+			if (this.loading) return 'loading'
+			return item
+		},
+	}
+
+	root.render(app)
+	assert_eq(el.innerHTML, 'loading')
+})
