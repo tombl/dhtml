@@ -26,8 +26,7 @@ export function get_controller(renderable: Renderable): Controller {
 
 export function invalidate(renderable: Renderable): void {
 	const controller = controllers.get(renderable)
-	assert(controller, 'the renderable has not been rendered')
-	controller._invalidate.forEach(invalidate => invalidate())
+	controller?._invalidate.forEach(invalidate => invalidate())
 }
 
 export function onMount(renderable: Renderable, callback: () => Cleanup): void {
