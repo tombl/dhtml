@@ -94,6 +94,10 @@ export function create_child_part(
 				}
 			}
 
+			// .render() might call invalidate something, triggering a second nested update().
+			// in that case, we trust that the inner update did what we needed to do
+			if (renderable !== current_renderable) return
+
 			// if render returned another renderable, we want to track/cache both renderables individually.
 			// wrap it in a nested ChildPart so that each can be tracked without ChildPart having to handle multiple renderables.
 			if (is_renderable(value)) value = single_part_template(value)
