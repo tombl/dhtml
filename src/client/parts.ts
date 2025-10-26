@@ -53,6 +53,10 @@ export function create_child_part(
 					controller._unmount_callbacks.length = 0
 				}
 			}
+			if (!next) {
+				// ensure nested updates that drop this renderable tear down cached parts before stale writes
+				disconnect_root()
+			}
 		}
 		current_renderable = next
 	}
