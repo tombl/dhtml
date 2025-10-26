@@ -1,15 +1,19 @@
 import MagicString from 'magic-string'
 import assert from 'node:assert'
+import child_process from 'node:child_process'
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
-import { parseArgs, styleText } from 'node:util'
+import { parseArgs, promisify, styleText } from 'node:util'
 import { brotliCompressSync, gzipSync } from 'node:zlib'
 import * as rolldown from 'rolldown'
 import { dts } from 'rolldown-plugin-dts'
 import { minify_sync } from 'terser'
 import { walk } from 'zimmerframe'
 
+const execFile = promisify(child_process.execFile)
+
 const args = parseArgs({
 	options: {
+		release: { type: 'boolean', default: false },
 		watch: { type: 'boolean', short: 'w', default: false },
 	},
 })
@@ -147,6 +151,18 @@ async function write_package_json() {
 		}
 		return exports
 	})(pkg.exports)
+
+	if (args.values.release) {
+		const now = new Date()
+
+		pkg.version = [
+			'0.0.0',
+			(await execFile('git', ['rev-parse', 'HEAD'])).stdout.slice(0, 8),
+			now.getFullYear().toString() +
+				(now.getMonth() + 1).toString().padStart(2, '0') +
+				now.getDate().toString().padStart(2, '0'),
+		].join('-')
+	}
 
 	await writeFile('dist/package.json', JSON.stringify(pkg, null, 2))
 }
