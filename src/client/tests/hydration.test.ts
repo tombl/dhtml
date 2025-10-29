@@ -281,7 +281,7 @@ test('basic renderables hydrate correctly', () => {
 	assert_eq(el.innerHTML, '<!--?[--><h1>Component content</h1><!--?]-->')
 })
 
-test('renderables with state hydrate correctly', () => {
+test('renderables with state hydrate correctly', async () => {
 	const counter = {
 		count: 0,
 		render() {
@@ -295,7 +295,7 @@ test('renderables with state hydrate correctly', () => {
 
 	// Test state updates
 	counter.count = 5
-	invalidate(counter)
+	await invalidate(counter)
 	assert_eq(el.innerHTML, '<!--?[--><div>Count: <!--?[-->5<!--?]--></div><!--?]-->')
 })
 
@@ -506,7 +506,7 @@ test('renderable passthrough errors', () => {
 	assert(thrown)
 })
 
-test('hydration of deep nesting', () => {
+test('hydration of deep nesting', async () => {
 	const DEPTH = 10
 
 	const leaf = {
@@ -526,7 +526,7 @@ test('hydration of deep nesting', () => {
 	assert_eq(el.innerHTML, '<!--?[-->'.repeat(DEPTH + 1) + 'hello!' + '<!--?]-->'.repeat(DEPTH + 1))
 
 	leaf.text = 'goodbye'
-	invalidate(leaf)
+	await invalidate(leaf)
 
 	assert_eq(el.innerHTML, '<!--?[-->'.repeat(DEPTH + 1) + 'goodbye' + '<!--?]-->'.repeat(DEPTH + 1))
 })
