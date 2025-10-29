@@ -1,0 +1,11 @@
+{
+	"compilerOptions": {
+		"checkJs": true,
+		"noEmit": true,
+		"allowImportingTsExtensions": true,
+		"verbatimModuleSyntax": true,
+		"moduleResolution": "bundler",
+		"module": "preserve",
+		"target": "es2020"
+	}
+}
