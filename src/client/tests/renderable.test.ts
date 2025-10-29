@@ -1,9 +1,9 @@
 import { html, type Displayable } from 'dhtml'
 import { invalidate, onMount, onUnmount } from 'dhtml/client'
-import { assert_deep_eq, assert_eq, test } from '../../../scripts/test/test.ts'
+import { assert, assert_deep_eq, assert_eq, test } from '../../../scripts/test/test.ts'
 import { setup } from './setup.ts'
 
-test('renderables work correctly', () => {
+test('renderables work correctly', async () => {
 	const { root, el } = setup()
 
 	root.render(
@@ -29,9 +29,9 @@ test('renderables work correctly', () => {
 	assert_eq(el.innerHTML, 'Count: 0')
 
 	// but invalidating it shouldn't:
-	invalidate(app)
+	await invalidate(app)
 	assert_eq(el.innerHTML, 'Count: 1')
-	invalidate(app)
+	await invalidate(app)
 	assert_eq(el.innerHTML, 'Count: 2')
 	assert_eq(app.i, 3)
 })
@@ -59,7 +59,7 @@ test('renderables can throw instead of returning', () => {
 	assert_eq(el.innerHTML, 'this was thrown')
 })
 
-test('onMount calls in the right order', () => {
+test('onMount calls in the right order', async () => {
 	const { root, el } = setup()
 
 	const sequence: string[] = []
@@ -100,13 +100,13 @@ test('onMount calls in the right order', () => {
 	sequence.length = 0
 
 	outer.show = false
-	invalidate(outer)
+	await invalidate(outer)
 	assert_eq(el.innerHTML, '')
 	assert_deep_eq(sequence, ['outer render', 'inner cleanup'])
 	sequence.length = 0
 
 	outer.show = true
-	invalidate(outer)
+	await invalidate(outer)
 	assert_eq(el.innerHTML, 'inner')
 	// inner is mounted a second time because of the above cleanup
 	assert_deep_eq(sequence, ['outer render', 'inner mount', 'inner render'])
@@ -214,7 +214,7 @@ test('onMount is called immediately on a mounted renderable', () => {
 	assert_eq(calls, 1)
 })
 
-test('onUnmount deep works correctly', () => {
+test('onUnmount deep works correctly', async () => {
 	const { root, el } = setup()
 
 	const sequence: string[] = []
@@ -250,25 +250,25 @@ test('onUnmount deep works correctly', () => {
 	sequence.length = 0
 
 	outer.show = false
-	invalidate(outer)
+	await invalidate(outer)
 	assert_eq(el.innerHTML, '')
 	assert_deep_eq(sequence, ['outer render', 'inner abort'])
 	sequence.length = 0
 
 	outer.show = true
-	invalidate(outer)
+	await invalidate(outer)
 	assert_eq(el.innerHTML, 'inner')
 	assert_deep_eq(sequence, ['outer render', 'inner render'])
 	sequence.length = 0
 
 	outer.show = false
-	invalidate(outer)
+	await invalidate(outer)
 	assert_eq(el.innerHTML, '')
 	assert_deep_eq(sequence, ['outer render', 'inner abort'])
 	sequence.length = 0
 })
 
-test('onUnmount shallow works correctly', () => {
+test('onUnmount shallow works correctly', async () => {
 	const { root, el } = setup()
 
 	const sequence: string[] = []
@@ -307,19 +307,19 @@ test('onUnmount shallow works correctly', () => {
 	sequence.length = 0
 
 	outer.show = false
-	invalidate(outer)
+	await invalidate(outer)
 	assert_eq(el.innerHTML, '')
 	assert_deep_eq(sequence, ['outer render', 'inner abort'])
 	sequence.length = 0
 
 	outer.show = true
-	invalidate(outer)
+	await invalidate(outer)
 	assert_eq(el.innerHTML, 'inner')
 	assert_deep_eq(sequence, ['outer render', 'inner render'])
 	sequence.length = 0
 
 	outer.show = false
-	invalidate(outer)
+	await invalidate(outer)
 	assert_eq(el.innerHTML, '')
 	assert_deep_eq(sequence, ['outer render', 'inner abort'])
 	sequence.length = 0
@@ -374,7 +374,7 @@ test('onMount works for repeated mounts', () => {
 	}
 })
 
-test('renderables can be rendered in multiple places at once', () => {
+test('renderables can be rendered in multiple places at once', async () => {
 	const { root: root1, el: el1 } = setup()
 	const { root: root2, el: el2 } = setup()
 
@@ -404,7 +404,7 @@ test('renderables can be rendered in multiple places at once', () => {
 
 	// Update the renderable - both should update
 	app.value = 'updated'
-	invalidate(app)
+	await invalidate(app)
 	assert_eq(el1.innerHTML, 'updated')
 	assert_eq(el2.innerHTML, 'updated')
 
@@ -418,7 +418,7 @@ test('renderables can be rendered in multiple places at once', () => {
 	assert_eq(mounted, 0) // Now unmounted
 })
 
-test('renderables can be rendered in multiple places at once with a single root', () => {
+test('renderables can be rendered in multiple places at once with a single root', async () => {
 	const { root, el } = setup()
 
 	let mounted = 0
@@ -441,7 +441,7 @@ test('renderables can be rendered in multiple places at once with a single root'
 	assert_eq(el.innerHTML, '<span>shared</span><span>shared</span>')
 
 	thing.value = 'updated'
-	invalidate(thing)
+	await invalidate(thing)
 	assert_eq(mounted, 1)
 	assert_eq(el.innerHTML, '<span>updated</span><span>updated</span>')
 
@@ -449,7 +449,7 @@ test('renderables can be rendered in multiple places at once with a single root'
 	assert_eq(mounted, 0)
 })
 
-test('invalidating an unmounted renderable does nothing', () => {
+test('invalidating an unmounted renderable does nothing', async () => {
 	const { root, el } = setup()
 
 	const app1 = {
@@ -470,7 +470,7 @@ test('invalidating an unmounted renderable does nothing', () => {
 	root.render(app2)
 	assert_eq(el.textContent, 'app2')
 
-	invalidate(app1)
+	await invalidate(app1)
 	assert_eq(el.textContent, 'app2')
 })
 
@@ -502,7 +502,7 @@ test('onMount called on already mounted renderable executes immediately', () => 
 	assert_eq(unmounted, 1)
 })
 
-test('invalidating a parent does not re-render a child', () => {
+test('invalidating a parent does not re-render a child', async () => {
 	const { root, el } = setup()
 
 	let renders = 0
@@ -523,18 +523,19 @@ test('invalidating a parent does not re-render a child', () => {
 	assert_eq(el.innerHTML, 'child')
 	assert_eq(renders, 1)
 
-	invalidate(parent)
+	await invalidate(parent)
 	assert_eq(el.innerHTML, 'child')
 	assert_eq(renders, 1)
 })
 
-test('invalidating parent during child render triggers update', () => {
+test('invalidating parent during child render triggers update', async () => {
 	const { root, el } = setup()
 
+	let promise: Promise<void>
 	const item = {
 		render() {
 			app.loading = true
-			invalidate(app)
+			promise = invalidate(app)
 			return 'created'
 		},
 	}
@@ -549,10 +550,12 @@ test('invalidating parent during child render triggers update', () => {
 	}
 
 	root.render(app)
+	assert(promise!)
+	await promise
 	assert_eq(el.innerHTML, 'loading')
 })
 
-test('invalidating grandparent during child render triggers update', () => {
+test('invalidating grandparent during child render triggers update', async () => {
 	const { root, el } = setup()
 
 	const item = {
@@ -584,6 +587,6 @@ test('invalidating grandparent during child render triggers update', () => {
 	assert_eq(el.innerHTML, '')
 
 	middle.item = item
-	invalidate(middle)
+	await invalidate(middle)
 	assert_eq(el.innerHTML, 'loading')
 })
