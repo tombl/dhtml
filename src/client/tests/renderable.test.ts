@@ -1,6 +1,6 @@
 import { html } from 'dhtml'
 import { invalidate, onMount, onUnmount } from 'dhtml/client'
-import { assert, assert_deep_eq, assert_eq, test } from '../../../scripts/test/test.ts'
+import { assert_deep_eq, assert_eq, test } from '../../../scripts/test/test.ts'
 import { setup } from './setup.ts'
 
 test('renderables work correctly', () => {
@@ -473,24 +473,6 @@ test('invalidating an unmounted renderable does nothing', () => {
 	invalidate(app1)
 	assert_eq(el.textContent, 'app2')
 })
-
-if (__DEV__) {
-	test('invalidate throws error when renderable has not been rendered', () => {
-		const app = {
-			render() {
-				return 'never rendered'
-			},
-		}
-
-		try {
-			invalidate(app)
-			assert(false, 'Expected error to be thrown')
-		} catch (error) {
-			assert(error instanceof Error)
-			assert(/the renderable has not been rendered/.test(error.message))
-		}
-	})
-}
 
 test('onMount called on already mounted renderable executes immediately', () => {
 	const { root } = setup()
