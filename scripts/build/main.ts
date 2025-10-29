@@ -117,8 +117,10 @@ async function bundle_code() {
 			optimization: {
 				inlineConst: !is_dev,
 			},
-			define: {
-				__DEV__: JSON.stringify(is_dev),
+			transform: {
+				define: {
+					__DEV__: JSON.stringify(is_dev),
+				},
 			},
 		}
 	}
