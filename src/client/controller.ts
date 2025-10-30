@@ -26,12 +26,16 @@ export function get_controller(renderable: Renderable): Controller {
 	return controller
 }
 
-export function invalidate(renderable: Renderable): Promise<void> {
-	const controller = get_controller(renderable)
-	return (controller._invalidate_queued ??= Promise.resolve().then(() => {
-		controller._invalidate_queued = null
-		return controller._invalidate.forEach(invalidate => invalidate())
-	}))
+export async function invalidate(...renderables: Renderable[]): Promise<void> {
+	await Promise.all(
+		renderables.map(renderable => {
+			const controller = get_controller(renderable)
+			return (controller._invalidate_queued ??= Promise.resolve().then(() => {
+				controller._invalidate_queued = null
+				return controller._invalidate.forEach(invalidate => invalidate())
+			}))
+		}),
+	)
 }
 
 export function onMount(renderable: Renderable, callback: () => Cleanup): void {

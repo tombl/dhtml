@@ -46,10 +46,9 @@ class TodoItem {
 						checked=${this.completed}
 						onchange=${e => {
 							e.preventDefault()
-							this.completed = e.target.checked
 							transition(async () => {
-								await invalidate(this)
-								await invalidate(this.app)
+								this.completed = e.target.checked
+								await invalidate(this, this.app)
 							})
 						}}
 					/>
