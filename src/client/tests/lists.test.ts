@@ -165,7 +165,7 @@ test('full then empty then full list renders correctly', () => {
 	assert_eq(el.innerHTML, '2')
 })
 
-test('list can disappear when condition changes', () => {
+test('list can disappear when condition changes', async () => {
 	const { root, el } = setup()
 
 	const app = {
@@ -180,7 +180,7 @@ test('list can disappear when condition changes', () => {
 	assert_eq(el.innerHTML, '<div>1</div><div>2</div><div>3</div>')
 
 	app.show = false
-	invalidate(app)
+	await invalidate(app)
 	assert_eq(el.innerHTML, '')
 })
 
