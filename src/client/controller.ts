@@ -6,6 +6,7 @@ export interface Controller {
 	_mount_callbacks: (() => Cleanup)[]
 	_unmount_callbacks: Cleanup[]
 	_invalidate: Map<object, () => void>
+	_invalidate_queued: null | Promise<void>
 }
 
 export const controllers: WeakMap<Renderable, Controller> = new WeakMap()
@@ -19,14 +20,18 @@ export function get_controller(renderable: Renderable): Controller {
 				_mount_callbacks: [],
 				_unmount_callbacks: [],
 				_invalidate: new Map(),
+				_invalidate_queued: null,
 			}),
 		)
 	return controller
 }
 
-export function invalidate(renderable: Renderable): void {
-	const controller = controllers.get(renderable)
-	controller?._invalidate.forEach(invalidate => invalidate())
+export function invalidate(renderable: Renderable): Promise<void> {
+	const controller = get_controller(renderable)
+	return (controller._invalidate_queued ??= Promise.resolve().then(() => {
+		controller._invalidate_queued = null
+		return controller._invalidate.forEach(invalidate => invalidate())
+	}))
 }
 
 export function onMount(renderable: Renderable, callback: () => Cleanup): void {
