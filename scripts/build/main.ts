@@ -33,7 +33,7 @@ async function bundle_code() {
 			const ast = this.parse(code, { lang: moduleType })
 			const source = new MagicString(code, { filename: id })
 
-			walk<import('@oxc-project/types').Node, null>(ast, null, {
+			walk<import('../../node_modules/rolldown/node_modules/@oxc-project/types/types.d.ts').Node, null>(ast, null, {
 				CallExpression(node, { next }) {
 					if (node.callee.type === 'Identifier' && node.callee.name === 'assert') {
 						source.update(node.start, node.end, 'undefined')
