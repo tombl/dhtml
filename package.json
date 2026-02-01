@@ -13,19 +13,14 @@
 		"format": "prettier --write . --cache",
 		"check": "tsc",
 		"test": "node scripts/test/main.ts 'src/{client,server}/tests/*.test.ts'",
-		"test:prod": "npm run test -- --prod",
+		"test:prod": "pnpm run test -- --prod",
 		"bench": "node scripts/test/main.ts --prod --bench 'src/{client,server}/tests/bench.ts'"
 	},
-	"workspaces": [
-		".",
-		"examples/*",
-		"scripts/*"
-	],
 	"devDependencies": {
-		"@types/node": "^24.0.0",
-		"prettier": "^3.5.3",
-		"prettier-plugin-organize-imports": "^4.1.0",
-		"typescript": "^5.8.3"
+		"@types/node": "^25.1.0",
+		"prettier": "^3.8.1",
+		"prettier-plugin-organize-imports": "^4.3.0",
+		"typescript": "catalog:"
 	},
 	"prettier": {
 		"plugins": [
@@ -37,5 +32,9 @@
 		"singleQuote": true,
 		"trailingComma": "all",
 		"useTabs": true
+	},
+	"packageManager": "pnpm@10.28.2+sha512.41872f037ad22f7348e3b1debbaf7e867cfd448f2726d9cf74c08f19507c31d2c8e7a11525b983febc2df640b5438dee6023ebb1f84ed43cc2d654d2bc326264",
+	"optionalDependencies": {
+		"dhtml": "file:dist"
 	}
 }

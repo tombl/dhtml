@@ -9,13 +9,15 @@
 		"preview": "vite preview"
 	},
 	"devDependencies": {
-		"typescript": "~5.8.3",
-		"vite": "^6.3.5"
+		"typescript": "catalog:",
+		"vite": "^7.3.1"
 	},
 	"dependencies": {
-		"@tombl/router": "npm:@jsr/tombl__router@^0.1.2",
-		"dhtml": "file:../../dist",
-		"sqlocal": "^0.14.1"
+		"@tombl/router": "jsr:^0.2.0",
+		"sqlocal": "^0.16.0"
+	},
+	"optionalDependencies": {
+		"dhtml": "file:../../dist"
 	},
 	"imports": {
 		"#app": "./src/app.ts",
