@@ -14,7 +14,14 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
+      - uses: actions/cache@v4
+        id: puppeteer-cache
+        with:
+          path: ~/.cache/puppeteer
+          key: puppeteer-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - run: pnpm install --frozen-lockfile
+      - if: steps.puppeteer-cache.outputs.cache-hit != 'true'
+        run: pnpm --filter @dhtml-scripts/test exec puppeteer browsers install chrome
       - run: pnpm run build
       - name: Disable AppArmor for chromium
         run: echo 0 | sudo tee /proc/sys/kernel/apparmor_restrict_unprivileged_userns || true
