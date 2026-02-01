@@ -29,7 +29,7 @@ jobs:
       - run: pnpm run build # build the core library
       - run: pnpm install --frozen-lockfile # symlink the dist into the packages
       - run: pnpm run --recursive build
-      - run: rm -rf node_modules
+      - run: rm -r node_modules examples/*/node_modules scripts/*/node_modules
       - uses: actions/upload-pages-artifact@v4
         with:
           path: .
