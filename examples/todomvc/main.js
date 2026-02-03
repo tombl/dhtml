@@ -47,17 +47,17 @@ class TodoItem {
 						onchange=${e => {
 							e.preventDefault()
 							this.completed = e.target.checked
-							transition(() => {
-								invalidate(this)
-								invalidate(this.app)
+							transition(async () => {
+								await invalidate(this)
+								await invalidate(this.app)
 							})
 						}}
 					/>
 					<label
 						ondblclick=${() => {
-							transition(() => {
+							transition(async () => {
 								this.editing = true
-								invalidate(this)
+								await invalidate(this)
 							})
 						}}
 						>${this.title}</label
@@ -65,9 +65,9 @@ class TodoItem {
 					<button
 						class="destroy"
 						onclick=${() => {
-							transition(() => {
+							transition(async () => {
 								this.app.remove(this.id)
-								invalidate(this.app)
+								await invalidate(this.app)
 							})
 						}}
 					></button>
@@ -83,10 +83,10 @@ class TodoItem {
 									onblur=${e => {
 										const value = e.target.value.trim()
 										if (value) {
-											transition(() => {
+											transition(async () => {
 												this.title = value
 												this.editing = false
-												invalidate(this)
+												await invalidate(this)
 											})
 										}
 									}}
@@ -94,10 +94,10 @@ class TodoItem {
 										if (e.key === 'Enter') {
 											const value = e.target.value.trim()
 											if (value) {
-												transition(() => {
+												transition(async () => {
 													this.title = value
 													this.editing = false
-													invalidate(this)
+													await invalidate(this)
 												})
 											}
 										}
@@ -136,10 +136,10 @@ class App {
 						if (event.key === 'Enter') {
 							const value = event.target.value.trim()
 							if (value) {
-								transition(() => {
+								transition(async () => {
 									this.todos.push(new TodoItem(this, value))
 									event.target.value = ''
-									invalidate(this)
+									await invalidate(this)
 								})
 							}
 						}
@@ -156,9 +156,9 @@ class App {
 									type="checkbox"
 									checked=${activeCount === 0}
 									onchange=${e => {
-										transition(() => {
+										transition(async () => {
 											for (const todo of this.todos) todo.completed = e.target.checked
-											invalidate(this)
+											await invalidate(this)
 										})
 									}}
 								/>
@@ -187,9 +187,9 @@ class App {
 												href="#"
 												${classes(this.filter === filter && 'selected')}
 												onclick=${() => {
-													transition(() => {
+													transition(async () => {
 														this.filter = filter
-														invalidate(this)
+														await invalidate(this)
 													})
 												}}
 												>${filter}</a
@@ -201,9 +201,9 @@ class App {
 								? html`<button
 										class="clear-completed"
 										onclick=${() => {
-											transition(() => {
+											transition(async () => {
 												this.todos = this.todos.filter(todo => !todo.completed)
-												invalidate(this)
+												await invalidate(this)
 											})
 										}}
 									>
