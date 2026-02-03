@@ -1,6 +1,5 @@
-import { createBirpc } from 'birpc'
+import { newMessagePortRpcSession, RpcStub } from 'capnweb'
 import * as mitata from 'mitata'
-import * as devalue from './devalue.ts'
 import type { ServerFunctions } from './main.ts'
 
 export type TestResult = { name: string } & ({ result: 'pass'; duration: number } | { result: 'fail'; reason: unknown })
@@ -17,8 +16,8 @@ const client: ClientFunctions = {
 	define(name, value) {
 		globalThis[name] = value
 	},
-	import(path) {
-		return import(path)
+	async import(path) {
+		return new RpcStub((await import(path)) as object)
 	},
 	async run_tests(options) {
 		for (const test of tests) {
@@ -47,25 +46,19 @@ const client: ClientFunctions = {
 }
 
 declare global {
-	var __onmessage: (fn: (data: any) => void) => void
-	var __postMessage: (data: any) => void
+	var __onmessage: (fn: (data: string) => void) => void
+	var __postMessage: (data: string) => void
 }
 
-const server = createBirpc<ServerFunctions, ClientFunctions>(
-	client,
-	typeof process === 'undefined'
-		? {
-				post: window.__postMessage,
-				on: fn => (window.__onmessage = fn),
-				serialize: devalue.stringify,
-				deserialize: devalue.parse,
-			}
-		: {
-				post: data => process.send!(data),
-				on: fn => process.on('message', fn),
-				serialize: devalue.stringify,
-				deserialize: devalue.parse,
-			},
-)
+const { port1, port2 } = new MessageChannel()
+if (typeof process === 'undefined') {
+	window.__onmessage = data => port1.postMessage(data)
+	port1.onmessage = event => window.__postMessage(event.data)
+} else {
+	process.on('message', data => port1.postMessage(data))
+	port1.onmessage = event => process.send!(event.data)
+}
+
+const server = newMessagePortRpcSession<ServerFunctions>(port2, client, { onSendError: e => e })
 
 export const tests: Array<{ name: string; fn: () => void | Promise<void> }> = []
