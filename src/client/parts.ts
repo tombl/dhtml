@@ -296,8 +296,11 @@ export function create_directive_part(node: Node): Part {
 	return fn => {
 		if (prev_fn === fn) return
 		assert(typeof fn === 'function' || fn == null)
-		cleanup?.()
-		cleanup = fn?.(node)
+		try {
+			cleanup?.()
+		} finally {
+			cleanup = fn?.(node)
+		}
 		prev_fn = fn
 	}
 }
