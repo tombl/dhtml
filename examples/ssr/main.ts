@@ -1,9 +1,9 @@
 import { serve } from '@hono/node-server'
 import { serveStatic } from '@hono/node-server/serve-static'
-import { transformSync } from 'amaro'
 import { html } from 'dhtml'
 import { renderToString } from 'dhtml/server'
 import { Hono } from 'hono'
+import { stripTypeScriptTypes } from 'node:module'
 
 const app = new Hono()
 
@@ -11,7 +11,7 @@ app.use('/node_modules/*', serveStatic({ root: './' }))
 
 app.get('/app/:script{.+.ts}', async (c, next) => {
 	await next()
-	const { code } = transformSync(await c.res.text(), { mode: 'strip-only' })
+	const code = stripTypeScriptTypes(await c.res.text())
 	c.res = c.body(code)
 	c.res.headers.set('content-type', 'text/javascript')
 	c.res.headers.delete('content-length')

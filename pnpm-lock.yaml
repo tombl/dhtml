@@ -80,9 +80,6 @@ importers:
       '@hono/node-server':
         specifier: ^1.15.0
         version: 1.19.1(hono@4.9.6)
-      amaro:
-        specifier: ^1.1.0
-        version: 1.1.2
       hono:
         specifier: ^4.8.3
         version: 4.9.6
@@ -147,9 +144,6 @@ importers:
       '@types/istanbul-reports':
         specifier: ^3.0.4
         version: 3.0.4
-      amaro:
-        specifier: ^1.1.6
-        version: 1.1.6
       ast-v8-to-istanbul:
         specifier: ^0.3.11
         version: 0.3.11
@@ -816,14 +810,6 @@ packages:
 
   alien-signals@3.1.2:
     resolution: {integrity: sha512-d9dYqZTS90WLiU0I5c6DHj/HcKkF8ZyGN3G5x8wSbslulz70KOxaqCT0hQCo9KOyhVqzqGojvNdJXoTumZOtcw==}
-
-  amaro@1.1.2:
-    resolution: {integrity: sha512-oJzgW3TS6b9tPOLFVFReAuSrg3QzFWs2TkMf/3fLjp77TKOL4EZpRR6ia9dO4g3R41J65D3J5ngCpFvRqk4yFQ==}
-    engines: {node: '>=22'}
-
-  amaro@1.1.6:
-    resolution: {integrity: sha512-9vi6GC+Mx1sdYgMVMk90mfU8e8JOZXa8dVBmpkn1hjkGGmlQew6FYop4+RXZinsWFRWmL6cuBmJgQYxx3+jCpA==}
-    engines: {node: '>=22'}
 
   ansi-regex@5.0.1:
     resolution: {integrity: sha512-quJQXlTSUGL2LH9SUXo8VwsY4soanhgo6LNSm84E1LBcE8s3O0wpdiRzyR9z/ZZJMlMWv37qOOb9pdJlMUEKFQ==}
@@ -1870,10 +1856,6 @@ snapshots:
   agent-base@7.1.4: {}
 
   alien-signals@3.1.2: {}
-
-  amaro@1.1.2: {}
-
-  amaro@1.1.6: {}
 
   ansi-regex@5.0.1: {}
 
