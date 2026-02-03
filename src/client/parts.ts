@@ -18,7 +18,7 @@ import {
 	type CompiledTemplate,
 } from './compiler.ts'
 import { controllers, get_controller } from './controller.ts'
-import { create_span_after, delete_contents, extract_contents, insert_node, type Span } from './span.ts'
+import { create_span_after, delete_contents, insert_node, insert_span_before, type Span } from './span.ts'
 import type { Cleanup } from './util.ts'
 
 export type Part = (value: unknown) => void
@@ -109,59 +109,83 @@ export function create_child_part(
 		// given it can yield different values but have the same identity. (e.g. arrays)
 		if (is_iterable(value)) {
 			if (!entries) {
-				// we previously rendered a single value, so we need to clear it.
 				disconnect_root()
 				delete_contents(span)
 				entries = []
 			}
 
-			// create or update a root for every item.
-			let i = 0
-			let end = span._start
+			const items: Array<{ _key: Key; _item: Displayable }> = []
 			for (const item of value) {
 				const key = is_keyed(item) ? item._key : (item as Key)
-				if (entries.length <= i) {
-					const span = create_span_after(end)
-					entries[i] = { _span: span, _part: create_child_part(span), _key: key }
-				}
-
-				if (key !== undefined && entries[i]._key !== key) {
-					for (let j = i + 1; j < entries.length; j++) {
-						const entry1 = entries[i]
-						const entry2 = entries[j]
-
-						if (entry2._key === key) {
-							// swap the contents of the spans
-							const tmp_content = extract_contents(entry1._span)
-							insert_node(entry1._span, extract_contents(entry2._span))
-							insert_node(entry2._span, tmp_content)
-
-							// swap the spans back
-							const tmp_span = { ...entry1._span }
-							Object.assign(entry1._span, entry2._span)
-							Object.assign(entry2._span, tmp_span)
-
-							// swap the roots
-							entries[j] = entry1
-							entries[i] = entry2
-
-							break
-						}
-					}
-
-					entries[i]._key = key
-				}
-
-				entries[i]._part(item as Displayable)
-				end = entries[i]._span._end
-				i++
+				items.push({ _key: key, _item: item as Displayable })
 			}
 
-			// and now remove excess parts if the iterable has shrunk.
-			while (entries.length > i) {
-				const entry = entries.pop()
-				assert(entry)
+			const old_index_by_key = new Map<Key, number[]>()
+			for (let i = 0; i < entries.length; i++) {
+				const key = entries[i]._key
+				if (key !== undefined) {
+					const indices = old_index_by_key.get(key)
+					if (indices) indices.push(i)
+					else old_index_by_key.set(key, [i])
+				}
+			}
+
+			type Entry = { _span: Span; _part: Part; _key: Key }
+			const new_entries: Entry[] = new Array(items.length)
+			const source_index: number[] = new Array(items.length).fill(-1)
+
+			for (let i = 0; i < items.length; i++) {
+				const { _key: key } = items[i]
+				const arr = old_index_by_key.get(key)
+				if (key !== undefined && arr?.length) {
+					const j = arr.shift()!
+					new_entries[i] = entries[j]
+					source_index[i] = j
+				}
+			}
+
+			const positions: number[] = []
+			const predecessors: number[] = new Array(items.length).fill(-1)
+			for (let i = 0; i < items.length; i++) {
+				const v = source_index[i]
+				if (v === -1) continue // skip new items
+				let lo = 0
+				let hi = positions.length
+				while (lo < hi) {
+					const mid = (lo + hi) >> 1
+					if (source_index[positions[mid]] < v) lo = mid + 1
+					else hi = mid
+				}
+				if (lo > 0) predecessors[i] = positions[lo - 1]
+				if (lo === positions.length) positions.push(i)
+				else positions[lo] = i
+			}
+
+			const keep = new Set<Entry>(new_entries)
+			const to_remove = entries.filter(entry => !keep.has(entry))
+
+			for (let i = items.length - 1; i >= 0; i--) {
+				const anchor: Node = i + 1 < items.length ? new_entries[i + 1]._span._start : span._end
+				if (source_index[i] === -1) {
+					const s = create_span_after(anchor.previousSibling!)
+					new_entries[i] = { _span: s, _part: create_child_part(s), _key: items[i]._key }
+				} else {
+					insert_span_before(new_entries[i]._span, anchor)
+				}
+			}
+
+			entries = new_entries
+			for (let i = 0; i < new_entries.length; i++) {
+				const { _item: item, _key: key } = items[i]
+				const entry = new_entries[i]
+				entry._key = key
+				// only render new items
+				if (source_index[i] === -1) entry._part(item)
+			}
+
+			for (const entry of to_remove) {
 				entry._part(null)
+				delete_contents(entry._span)
 			}
 
 			old_value = undefined

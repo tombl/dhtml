@@ -354,3 +354,169 @@ test('can render the same item multiple times', () => {
 	root.render([item, item])
 	assert_eq(el.innerHTML, '<p>Item</p><p>Item</p>')
 })
+
+test('keyed list insertion at beginning preserves existing elements', () => {
+	const { root, el } = setup()
+
+	const items = [keyed(html`<p>Item B</p>`, 'b'), keyed(html`<p>Item C</p>`, 'c')]
+	root.render(items)
+	assert_eq(el.innerHTML, '<p>Item B</p><p>Item C</p>')
+
+	const [elemB, elemC] = el.children
+
+	// Insert at beginning
+	items.unshift(keyed(html`<p>Item A</p>`, 'a'))
+	root.render(items)
+	assert_eq(el.innerHTML, '<p>Item A</p><p>Item B</p><p>Item C</p>')
+
+	// Existing elements should be preserved
+	assert_eq(el.children[1], elemB)
+	assert_eq(el.children[2], elemC)
+})
+
+test('keyed list insertion at middle preserves existing elements', () => {
+	const { root, el } = setup()
+
+	const items = [keyed(html`<p>Item A</p>`, 'a'), keyed(html`<p>Item C</p>`, 'c')]
+	root.render(items)
+	assert_eq(el.innerHTML, '<p>Item A</p><p>Item C</p>')
+
+	const [elemA, elemC] = el.children
+
+	// Insert in middle
+	items.splice(1, 0, keyed(html`<p>Item B</p>`, 'b'))
+	root.render(items)
+	assert_eq(el.innerHTML, '<p>Item A</p><p>Item B</p><p>Item C</p>')
+
+	// Existing elements should be preserved
+	assert_eq(el.children[0], elemA)
+	assert_eq(el.children[2], elemC)
+})
+
+test('keyed list deletion preserves remaining elements', () => {
+	const { root, el } = setup()
+
+	const items = [keyed(html`<p>Item A</p>`, 'a'), keyed(html`<p>Item B</p>`, 'b'), keyed(html`<p>Item C</p>`, 'c')]
+	root.render(items)
+	assert_eq(el.innerHTML, '<p>Item A</p><p>Item B</p><p>Item C</p>')
+
+	const [elemA, , elemC] = el.children
+
+	// Delete middle item
+	items.splice(1, 1)
+	root.render(items)
+	assert_eq(el.innerHTML, '<p>Item A</p><p>Item C</p>')
+
+	// Remaining elements should be preserved
+	assert_eq(el.children[0], elemA)
+	assert_eq(el.children[1], elemC)
+})
+
+test('large keyed list reordering minimizes DOM moves', () => {
+	const { root, el } = setup()
+
+	// Create 20 items in order
+	const items = Array.from({ length: 20 }, (_, i) => keyed(html`<div>Item ${i}</div>`, i))
+
+	root.render(items)
+	const elements = [...el.children]
+
+	// Move only item 0 to the end (should be minimal moves due to LIS)
+	const first = items.shift()!
+	items.push(first)
+	root.render(items)
+
+	// Elements 1-19 should stay in place (part of LIS)
+	for (let i = 1; i < 20; i++) {
+		assert_eq(el.children[i - 1], elements[i])
+	}
+	// Item 0 should be at the end
+	assert_eq(el.children[19], elements[0])
+})
+
+test('reverse large keyed list preserves all elements', () => {
+	const { root, el } = setup()
+
+	// Create 10 items
+	const items = Array.from({ length: 10 }, (_, i) => keyed(html`<div>Item ${i}</div>`, i))
+
+	root.render(items)
+	const elements = [...el.children]
+
+	// Reverse the array
+	items.reverse()
+	root.render(items)
+
+	// All elements should be preserved, just reordered
+	for (let i = 0; i < 10; i++) {
+		assert_eq(el.children[i], elements[9 - i])
+	}
+})
+
+test('mixed keyed and unkeyed items work correctly', () => {
+	const { root, el } = setup()
+
+	// Mix keyed and unkeyed items
+	const items = [
+		keyed(html`<p>Keyed A</p>`, 'a'),
+		html`<p>Unkeyed 1</p>`,
+		keyed(html`<p>Keyed B</p>`, 'b'),
+		html`<p>Unkeyed 2</p>`,
+	]
+
+	root.render(items)
+	assert_eq(el.innerHTML, '<p>Keyed A</p><p>Unkeyed 1</p><p>Keyed B</p><p>Unkeyed 2</p>')
+
+	const keyedA = el.children[0]
+	const keyedB = el.children[2]
+
+	// Reorder: move keyed items but keep unkeyed in new positions
+	const newItems = [keyed(html`<p>Keyed B</p>`, 'b'), html`<p>New Unkeyed</p>`, keyed(html`<p>Keyed A</p>`, 'a')]
+
+	root.render(newItems)
+	assert_eq(el.innerHTML, '<p>Keyed B</p><p>New Unkeyed</p><p>Keyed A</p>')
+
+	// Keyed elements should be preserved
+	assert_eq(el.children[0], keyedB)
+	assert_eq(el.children[2], keyedA)
+})
+
+test('reversing a list keeps identity', () => {
+	const { root, el } = setup()
+
+	// All unkeyed items
+	const items = [html`<p>Item 1</p>`, html`<p>Item 2</p>`, html`<p>Item 3</p>`]
+
+	root.render(items)
+	assert_eq(el.innerHTML, '<p>Item 1</p><p>Item 2</p><p>Item 3</p>')
+
+	const [elem1, elem2, elem3] = el.children
+
+	// Reorder unkeyed items (should recreate elements)
+	items.reverse()
+	root.render(items)
+	assert_eq(el.innerHTML, '<p>Item 3</p><p>Item 2</p><p>Item 1</p>')
+
+	// Elements should be moved
+	assert(el.children[0] === elem3)
+	assert(el.children[1] === elem2)
+	assert(el.children[2] === elem1)
+})
+
+test('keyed list with duplicate keys handles gracefully', () => {
+	const { root, el } = setup()
+
+	// First occurrence of duplicate key should win
+	const items = [keyed(html`<p>First A</p>`, 'a'), keyed(html`<p>Second A</p>`, 'a'), keyed(html`<p>Item B</p>`, 'b')]
+
+	root.render(items)
+	const firstA = el.children[0]
+
+	// Reorder with duplicate keys
+	const newItems = [keyed(html`<p>Item B</p>`, 'b'), keyed(html`<p>First A</p>`, 'a'), keyed(html`<p>Third A</p>`, 'a')]
+
+	root.render(newItems)
+
+	// First keyed 'a' element should be preserved and moved
+	assert_eq(el.children[1], firstA)
+})
