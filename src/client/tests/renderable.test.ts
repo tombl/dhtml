@@ -1,4 +1,4 @@
-import { html } from 'dhtml'
+import { html, type Displayable } from 'dhtml'
 import { invalidate, onMount, onUnmount } from 'dhtml/client'
 import { assert_deep_eq, assert_eq, test } from '../../../scripts/test/test.ts'
 import { setup } from './setup.ts'
@@ -526,4 +526,64 @@ test('invalidating a parent does not re-render a child', () => {
 	invalidate(parent)
 	assert_eq(el.innerHTML, 'child')
 	assert_eq(renders, 1)
+})
+
+test('invalidating parent during child render triggers update', () => {
+	const { root, el } = setup()
+
+	const item = {
+		render() {
+			app.loading = true
+			invalidate(app)
+			return 'created'
+		},
+	}
+
+	const app = {
+		loading: false,
+
+		render() {
+			if (this.loading) return 'loading'
+			return item
+		},
+	}
+
+	root.render(app)
+	assert_eq(el.innerHTML, 'loading')
+})
+
+test('invalidating grandparent during child render triggers update', () => {
+	const { root, el } = setup()
+
+	const item = {
+		render() {
+			app.loading = true
+			invalidate(app)
+			return 'created'
+		},
+	}
+
+	const middle = {
+		item: null as Displayable,
+
+		render() {
+			return this.item
+		},
+	}
+
+	const app = {
+		loading: false,
+
+		render() {
+			if (this.loading) return 'loading'
+			return middle
+		},
+	}
+
+	root.render(app)
+	assert_eq(el.innerHTML, '')
+
+	middle.item = item
+	invalidate(middle)
+	assert_eq(el.innerHTML, 'loading')
 })
