@@ -3,7 +3,7 @@
 	"type": "module",
 	"dependencies": {
 		"magic-string": "^0.30.21",
-		"rolldown": "1.0.0-rc.2",
+		"rolldown": "1.0.0-rc.3",
 		"rolldown-plugin-dts": "^0.21.8",
 		"terser": "^5.46.0",
 		"zimmerframe": "^1.1.4"
