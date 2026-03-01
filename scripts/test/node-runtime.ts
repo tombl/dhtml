@@ -6,10 +6,15 @@ import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { Runtime } from './main.ts'
 
-export async function create_node_runtime(): Promise<Runtime> {
-	const coverage_dir = await fs.mkdtemp(path.join(os.tmpdir(), 'coverage-'))
+export interface NodeRuntimeOptions {
+	collect_coverage?: boolean
+}
+
+export async function create_node_runtime(options: NodeRuntimeOptions = {}): Promise<Runtime> {
+	const collect_coverage = options.collect_coverage ?? true
+	const coverage_dir = collect_coverage ? await fs.mkdtemp(path.join(os.tmpdir(), 'coverage-')) : null
 	const child = child_process.fork(fileURLToPath(import.meta.resolve('./runtime.ts')), {
-		env: { NODE_V8_COVERAGE: coverage_dir },
+		env: collect_coverage ? { ...process.env, NODE_V8_COVERAGE: coverage_dir! } : process.env,
 		stdio: 'inherit',
 	})
 
@@ -22,6 +27,7 @@ export async function create_node_runtime(): Promise<Runtime> {
 	return {
 		port: port2,
 		async coverage() {
+			if (!collect_coverage || !coverage_dir) return []
 			const [filename] = await fs.readdir(coverage_dir)
 			const { result } = JSON.parse(await fs.readFile(path.join(coverage_dir, filename), 'utf8'))
 			return result
@@ -29,7 +35,7 @@ export async function create_node_runtime(): Promise<Runtime> {
 		async [Symbol.asyncDispose]() {
 			port1.close()
 			child.kill()
-			await fs.rm(coverage_dir, { recursive: true })
+			if (coverage_dir) await fs.rm(coverage_dir, { recursive: true })
 		},
 	}
 }

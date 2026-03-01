@@ -33,11 +33,11 @@ class TableState {
 		this.items = this.items.filter((_, i) => (i + 1) % nth !== 0)
 	}
 
-	activate(nth: number) {
+	async activate(nth: number) {
 		for (let i = 0; i < this.items.length; i++) {
 			this.items[i].active = (i + 1) % nth === 0
-			invalidate(this.items[i])
 		}
+		await invalidate(...this.items)
 	}
 
 	render() {
@@ -97,13 +97,15 @@ class AnimState {
 		}
 	}
 
-	advance_each(nth: number) {
+	async advance_each(nth: number) {
+		const renderables: AnimBoxState[] = []
 		for (let i = 0; i < this.items.length; i++) {
 			if ((i + 1) % nth === 0) {
 				this.items[i].time++
-				invalidate(this.items[i])
+				renderables.push(this.items[i])
 			}
 		}
+		await invalidate(...renderables)
 	}
 
 	render() {
@@ -167,7 +169,8 @@ class TreeState {
 		this.root.children = []
 	}
 
-	reverse() {
+	async reverse() {
+		const renderables: TreeNodeState[] = []
 		const reverse_children = (node: TreeNodeState) => {
 			if (node.container && node.children) {
 				node.children.reverse()
@@ -176,14 +179,16 @@ class TreeState {
 						reverse_children(child)
 					}
 				}
-				invalidate(node)
+				renderables.push(node)
 			}
 		}
 
 		reverse_children(this.root)
+		await invalidate(...renderables)
 	}
 
-	insert_first(n: number) {
+	async insert_first(n: number) {
+		const renderables: TreeNodeState[] = []
 		function insert_at_containers(node: TreeNodeState, id_counter: { value: number }) {
 			if (node.container && node.children) {
 				const new_nodes: TreeNodeState[] = []
@@ -197,7 +202,7 @@ class TreeState {
 						insert_at_containers(child, id_counter)
 					}
 				}
-				invalidate(node)
+				renderables.push(node)
 			}
 		}
 
@@ -216,9 +221,11 @@ class TreeState {
 		const id_counter = { value: max_id + 1 }
 
 		insert_at_containers(this.root, id_counter)
+		await invalidate(...renderables)
 	}
 
-	insert_last(n: number) {
+	async insert_last(n: number) {
+		const renderables: TreeNodeState[] = []
 		function insert_at_containers(node: TreeNodeState, id_counter: { value: number }) {
 			if (node.container && node.children) {
 				const new_nodes: TreeNodeState[] = []
@@ -232,7 +239,7 @@ class TreeState {
 						insert_at_containers(child, id_counter)
 					}
 				}
-				invalidate(node)
+				renderables.push(node)
 			}
 		}
 
@@ -251,9 +258,11 @@ class TreeState {
 		const id_counter = { value: max_id + 1 }
 
 		insert_at_containers(this.root, id_counter)
+		await invalidate(...renderables)
 	}
 
-	remove_first(n: number) {
+	async remove_first(n: number) {
+		const renderables: TreeNodeState[] = []
 		const remove_from_containers = (node: TreeNodeState) => {
 			if (node.container && node.children) {
 				node.children.splice(0, Math.min(n, node.children.length))
@@ -264,14 +273,16 @@ class TreeState {
 					}
 				}
 
-				invalidate(node)
+				renderables.push(node)
 			}
 		}
 
 		remove_from_containers(this.root)
+		await invalidate(...renderables)
 	}
 
-	remove_last(n: number) {
+	async remove_last(n: number) {
+		const renderables: TreeNodeState[] = []
 		const remove_from_containers = (node: TreeNodeState) => {
 			if (node.container && node.children) {
 				const length = node.children.length
@@ -283,14 +294,16 @@ class TreeState {
 					}
 				}
 
-				invalidate(node)
+				renderables.push(node)
 			}
 		}
 
 		remove_from_containers(this.root)
+		await invalidate(...renderables)
 	}
 
-	move_from_end_to_start(n: number) {
+	async move_from_end_to_start(n: number) {
+		const renderables: TreeNodeState[] = []
 		const move_in_containers = (node: TreeNodeState) => {
 			if (node.container && node.children && node.children.length > n) {
 				const length = node.children.length
@@ -303,14 +316,16 @@ class TreeState {
 					}
 				}
 
-				invalidate(node)
+				renderables.push(node)
 			}
 		}
 
 		move_in_containers(this.root)
+		await invalidate(...renderables)
 	}
 
-	move_from_start_to_end(n: number) {
+	async move_from_start_to_end(n: number) {
+		const renderables: TreeNodeState[] = []
 		const move_in_containers = (node: TreeNodeState) => {
 			if (node.container && node.children && node.children.length > n) {
 				const moved = node.children.splice(0, n)
@@ -322,21 +337,23 @@ class TreeState {
 					}
 				}
 
-				invalidate(node)
+				renderables.push(node)
 			}
 		}
 
 		move_in_containers(this.root)
+		await invalidate(...renderables)
 	}
 
 	// Worst case scenarios
-	kivi_worst_case() {
-		this.remove_first(1)
-		this.remove_last(1)
-		this.reverse()
+	async kivi_worst_case() {
+		await this.remove_first(1)
+		await this.remove_last(1)
+		await this.reverse()
 	}
 
-	snabbdom_worst_case() {
+	async snabbdom_worst_case() {
+		const renderables: TreeNodeState[] = []
 		const transform = (node: TreeNodeState) => {
 			if (node.container && node.children && node.children.length > 2) {
 				const first = node.children.shift()
@@ -351,21 +368,22 @@ class TreeState {
 					}
 				}
 
-				invalidate(node)
+				renderables.push(node)
 			}
 		}
 
 		transform(this.root)
+		await invalidate(...renderables)
 	}
 
-	react_worst_case() {
-		this.remove_first(1)
-		this.remove_last(1)
-		this.move_from_end_to_start(1)
+	async react_worst_case() {
+		await this.remove_first(1)
+		await this.remove_last(1)
+		await this.move_from_end_to_start(1)
 	}
 
-	virtual_dom_worst_case() {
-		this.move_from_start_to_end(2)
+	async virtual_dom_worst_case() {
+		await this.move_from_start_to_end(2)
 	}
 
 	render() {
@@ -401,230 +419,197 @@ class TreeNodeState {
 // Benchmark Cases
 // ==============================
 
+function bench_setup(name: string, fn: (root: ReturnType<typeof setup>['root']) => void | Promise<void>): void {
+	bench(name, async () => {
+		const { root, el } = setup()
+		try {
+			await fn(root)
+		} finally {
+			root.render(null)
+			el.remove()
+		}
+	})
+}
+
 // Table Benchmark Cases
-bench('table/small/render', () => {
-	const { root } = setup()
+bench_setup('table/small/render', async root => {
 	const state = new TableState(15, 4)
 	root.render(state)
 })
 
-bench('table/small/removeAll', () => {
-	const { root } = setup()
+bench_setup('table/small/removeAll', async root => {
 	const state = new TableState(15, 4)
 	root.render(state)
 	state.remove_all()
-	invalidate(state)
+	await invalidate(state)
 })
 
-bench('table/small/sort', () => {
-	const { root } = setup()
+bench_setup('table/small/sort', async root => {
 	const state = new TableState(15, 4)
 	root.render(state)
 	state.sort_by_column(1)
-	invalidate(state)
+	await invalidate(state)
 })
 
-bench('table/small/filter', () => {
-	const { root } = setup()
+bench_setup('table/small/filter', async root => {
 	const state = new TableState(15, 4)
 	root.render(state)
 	state.filter(4)
-	invalidate(state)
+	await invalidate(state)
 })
 
-bench('table/small/activate', () => {
-	const { root } = setup()
+bench_setup('table/small/activate', async root => {
 	const state = new TableState(15, 4)
 	root.render(state)
-	state.activate(4)
-	invalidate(state)
+	await state.activate(4)
 })
 
-bench('table/large/render', () => {
-	const { root } = setup()
+bench_setup('table/large/render', async root => {
 	const state = new TableState(100, 4)
 	root.render(state)
 })
 
-bench('table/large/removeAll', () => {
-	const { root } = setup()
+bench_setup('table/large/removeAll', async root => {
 	const state = new TableState(100, 4)
 	root.render(state)
 	state.remove_all()
-	invalidate(state)
+	await invalidate(state)
 })
 
-bench('table/large/sort', () => {
-	const { root } = setup()
+bench_setup('table/large/sort', async root => {
 	const state = new TableState(100, 4)
 	root.render(state)
 	state.sort_by_column(1)
-	invalidate(state)
+	await invalidate(state)
 })
 
-bench('table/large/filter', () => {
-	const { root } = setup()
+bench_setup('table/large/filter', async root => {
 	const state = new TableState(100, 4)
 	root.render(state)
 	state.filter(16)
-	invalidate(state)
+	await invalidate(state)
 })
 
-bench('table/large/activate', () => {
-	const { root } = setup()
+bench_setup('table/large/activate', async root => {
 	const state = new TableState(100, 4)
 	root.render(state)
-	state.activate(16)
-	invalidate(state)
+	await state.activate(16)
 })
 
 // Animation Benchmark Cases
-bench('anim/small/advance', () => {
-	const { root } = setup()
+bench_setup('anim/small/advance', async root => {
 	const state = new AnimState(30)
 	root.render(state)
-	state.advance_each(4)
-	invalidate(state)
+	await state.advance_each(4)
 })
 
-bench('anim/large/advance', () => {
-	const { root } = setup()
+bench_setup('anim/large/advance', async root => {
 	const state = new AnimState(100)
 	root.render(state)
-	state.advance_each(16)
-	invalidate(state)
+	await state.advance_each(16)
 })
 
 // Tree Benchmark Cases - Small
-bench('tree/small/render', () => {
-	const { root } = setup()
+bench_setup('tree/small/render', async root => {
 	const state = new TreeState([5, 10])
 	root.render(state)
 })
 
-bench('tree/small/removeAll', () => {
-	const { root } = setup()
+bench_setup('tree/small/removeAll', async root => {
 	const state = new TreeState([5, 10])
 	root.render(state)
 	state.remove_all()
-	invalidate(state)
+	await invalidate(state)
 })
 
-bench('tree/small/reverse', () => {
-	const { root } = setup()
+bench_setup('tree/small/reverse', async root => {
 	const state = new TreeState([5, 10])
 	root.render(state)
-	state.reverse()
-	invalidate(state)
+	await state.reverse()
 })
 
-bench('tree/small/insertFirst', () => {
-	const { root } = setup()
+bench_setup('tree/small/insertFirst', async root => {
 	const state = new TreeState([5, 10])
 	root.render(state)
-	state.insert_first(2)
-	invalidate(state)
+	await state.insert_first(2)
 })
 
-bench('tree/small/insertLast', () => {
-	const { root } = setup()
+bench_setup('tree/small/insertLast', async root => {
 	const state = new TreeState([5, 10])
 	root.render(state)
-	state.insert_last(2)
-	invalidate(state)
+	await state.insert_last(2)
 })
 
-bench('tree/small/removeFirst', () => {
-	const { root } = setup()
+bench_setup('tree/small/removeFirst', async root => {
 	const state = new TreeState([5, 10])
 	root.render(state)
-	state.remove_first(2)
-	invalidate(state)
+	await state.remove_first(2)
 })
 
-bench('tree/small/removeLast', () => {
-	const { root } = setup()
+bench_setup('tree/small/removeLast', async root => {
 	const state = new TreeState([5, 10])
 	root.render(state)
-	state.remove_last(2)
-	invalidate(state)
+	await state.remove_last(2)
 })
 
-bench('tree/small/moveFromEndToStart', () => {
-	const { root } = setup()
+bench_setup('tree/small/moveFromEndToStart', async root => {
 	const state = new TreeState([5, 10])
 	root.render(state)
-	state.move_from_end_to_start(2)
-	invalidate(state)
+	await state.move_from_end_to_start(2)
 })
 
-bench('tree/small/moveFromStartToEnd', () => {
-	const { root } = setup()
+bench_setup('tree/small/moveFromStartToEnd', async root => {
 	const state = new TreeState([5, 10])
 	root.render(state)
-	state.move_from_start_to_end(2)
-	invalidate(state)
+	await state.move_from_start_to_end(2)
 })
 
-bench('tree/small/no_change', () => {
-	const { root } = setup()
+bench_setup('tree/small/no_change', async root => {
 	const state = new TreeState([5, 10])
 	root.render(state)
-	invalidate(state)
+	await invalidate(state)
 })
 
 // Tree Benchmark Cases - Large
-bench('tree/large/render', () => {
-	const { root } = setup()
+bench_setup('tree/large/render', async root => {
 	const state = new TreeState([50, 10])
 	root.render(state)
 })
 
-bench('tree/large/removeAll', () => {
-	const { root } = setup()
+bench_setup('tree/large/removeAll', async root => {
 	const state = new TreeState([50, 10])
 	root.render(state)
 	state.remove_all()
-	invalidate(state)
+	await invalidate(state)
 })
 
-bench('tree/large/reverse', () => {
-	const { root } = setup()
+bench_setup('tree/large/reverse', async root => {
 	const state = new TreeState([50, 10])
 	root.render(state)
-	state.reverse()
-	invalidate(state)
+	await state.reverse()
 })
 
 // Worst Case Scenarios
-bench('tree/worst_case/kivi', () => {
-	const { root } = setup()
+bench_setup('tree/worst_case/kivi', async root => {
 	const state = new TreeState([10, 10])
 	root.render(state)
-	state.kivi_worst_case()
-	invalidate(state)
+	await state.kivi_worst_case()
 })
 
-bench('tree/worst_case/snabbdom', () => {
-	const { root } = setup()
+bench_setup('tree/worst_case/snabbdom', async root => {
 	const state = new TreeState([10, 10])
 	root.render(state)
-	state.snabbdom_worst_case()
-	invalidate(state)
+	await state.snabbdom_worst_case()
 })
 
-bench('tree/worst_case/react', () => {
-	const { root } = setup()
+bench_setup('tree/worst_case/react', async root => {
 	const state = new TreeState([10, 10])
 	root.render(state)
-	state.react_worst_case()
-	invalidate(state)
+	await state.react_worst_case()
 })
 
-bench('tree/worst_case/virtual_dom', () => {
-	const { root } = setup()
+bench_setup('tree/worst_case/virtual_dom', async root => {
 	const state = new TreeState([10, 10])
 	root.render(state)
-	state.virtual_dom_worst_case()
-	invalidate(state)
+	await state.virtual_dom_worst_case()
 })

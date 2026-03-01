@@ -42,7 +42,11 @@ const results: TestResult[] = []
 const coverage: Coverage[] = []
 
 for (const [runtime, files] of Object.entries(all_files)) {
-	const rt = runtime === 'node' ? await create_node_runtime() : await create_browser_runtime()
+	const collect_coverage = !args.values.bench
+	const rt =
+		runtime === 'node'
+			? await create_node_runtime({ collect_coverage })
+			: await create_browser_runtime({ collect_coverage })
 	await using _ = rt // workaround for https://issues.chromium.org/issues/409478039
 
 	const client = createBirpc<ClientFunctions, ServerFunctions>(
@@ -78,10 +82,9 @@ for (const [runtime, files] of Object.entries(all_files)) {
 		await client.run_benchmarks({ filter })
 	} else {
 		await client.run_tests({ filter })
+		await client.stop_coverage()
+		coverage.push(...(await rt.coverage()))
 	}
-
-	await client.stop_coverage()
-	coverage.push(...(await rt.coverage()))
 }
 
 if (args.values.bench) {

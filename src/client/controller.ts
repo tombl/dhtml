@@ -9,6 +9,8 @@ export interface Controller {
 }
 
 export const controllers: WeakMap<Renderable, Controller> = new WeakMap()
+const invalidated_controllers: Set<Controller> = new Set()
+let invalidate_queued: null | Promise<void> = null
 
 export function get_controller(renderable: Renderable): Controller {
 	let controller = controllers.get(renderable)
@@ -24,9 +26,19 @@ export function get_controller(renderable: Renderable): Controller {
 	return controller
 }
 
-export function invalidate(renderable: Renderable): void {
-	const controller = controllers.get(renderable)
-	controller?._invalidate.forEach(invalidate => invalidate())
+export function invalidate(...renderables: Renderable[]): Promise<void> {
+	for (const renderable of renderables) invalidated_controllers.add(get_controller(renderable))
+
+	return (invalidate_queued ??= Promise.resolve()
+		.then(() => {
+			for (const controller of invalidated_controllers) {
+				invalidated_controllers.delete(controller)
+				controller._invalidate.forEach(invalidate => invalidate())
+			}
+		})
+		.finally(() => {
+			invalidate_queued = null
+		}))
 }
 
 export function onMount(renderable: Renderable, callback: () => Cleanup): void {
