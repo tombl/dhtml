@@ -19,8 +19,10 @@ interface RouterConfig<Context> {
 	routes: Record<string, PageHandler<string, Context>>
 	context: Context
 }
-interface RouterConfigP<Context, Routes extends { [Path in keyof Routes & string]: PageHandler<Path, Context> }>
-	extends RouterConfig<Context> {
+interface RouterConfigP<
+	Context,
+	Routes extends { [Path in keyof Routes & string]: PageHandler<Path, Context> },
+> extends RouterConfig<Context> {
 	routes: Routes
 }
 

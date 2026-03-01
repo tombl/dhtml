@@ -558,10 +558,11 @@ test('invalidating parent during child render triggers update', async () => {
 test('invalidating grandparent during child render triggers update', async () => {
 	const { root, el } = setup()
 
+	let promise: Promise<void>
 	const item = {
 		render() {
 			app.loading = true
-			invalidate(app)
+			promise = invalidate(app)
 			return 'created'
 		},
 	}
@@ -588,5 +589,33 @@ test('invalidating grandparent during child render triggers update', async () =>
 
 	middle.item = item
 	await invalidate(middle)
+	assert(promise!)
+	await promise
 	assert_eq(el.innerHTML, 'loading')
+})
+
+test('invalidate drains reinvalidation of the same renderable before resolve', async () => {
+	const { root, el } = setup()
+
+	let state = 0
+	let nested: Promise<void> | undefined
+	const app = {
+		render() {
+			if (state === 1) {
+				state = 2
+				nested = invalidate(app)
+			}
+			return '' + state
+		},
+	}
+
+	root.render(app)
+	assert_eq(el.innerHTML, '0')
+
+	state = 1
+	const promise = invalidate(app)
+	await promise
+	assert_eq(el.innerHTML, '2')
+	assert(nested!)
+	await nested
 })

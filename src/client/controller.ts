@@ -6,10 +6,11 @@ export interface Controller {
 	_mount_callbacks: (() => Cleanup)[]
 	_unmount_callbacks: Cleanup[]
 	_invalidate: Map<object, () => void>
-	_invalidate_queued: null | Promise<void>
 }
 
 export const controllers: WeakMap<Renderable, Controller> = new WeakMap()
+const invalidated_controllers: Set<Controller> = new Set()
+let invalidate_queued: null | Promise<void> = null
 
 export function get_controller(renderable: Renderable): Controller {
 	let controller = controllers.get(renderable)
@@ -20,22 +21,24 @@ export function get_controller(renderable: Renderable): Controller {
 				_mount_callbacks: [],
 				_unmount_callbacks: [],
 				_invalidate: new Map(),
-				_invalidate_queued: null,
 			}),
 		)
 	return controller
 }
 
-export async function invalidate(...renderables: Renderable[]): Promise<void> {
-	await Promise.all(
-		renderables.map(renderable => {
-			const controller = get_controller(renderable)
-			return (controller._invalidate_queued ??= Promise.resolve().then(() => {
-				controller._invalidate_queued = null
-				return controller._invalidate.forEach(invalidate => invalidate())
-			}))
-		}),
-	)
+export function invalidate(...renderables: Renderable[]): Promise<void> {
+	for (const renderable of renderables) invalidated_controllers.add(get_controller(renderable))
+
+	return (invalidate_queued ??= Promise.resolve()
+		.then(() => {
+			for (const controller of invalidated_controllers) {
+				invalidated_controllers.delete(controller)
+				controller._invalidate.forEach(invalidate => invalidate())
+			}
+		})
+		.finally(() => {
+			invalidate_queued = null
+		}))
 }
 
 export function onMount(renderable: Renderable, callback: () => Cleanup): void {
