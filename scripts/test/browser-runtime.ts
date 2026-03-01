@@ -7,7 +7,13 @@ import { fileURLToPath } from 'node:url'
 import * as puppeteer from 'puppeteer'
 import type { Runtime } from './main.ts'
 
-export async function create_browser_runtime(): Promise<Runtime> {
+export interface BrowserRuntimeOptions {
+	collect_coverage?: boolean
+}
+
+export async function create_browser_runtime(options: BrowserRuntimeOptions = {}): Promise<Runtime> {
+	const collect_coverage = options.collect_coverage ?? true
+
 	const browser = await puppeteer.launch({
 		// headless: false,
 		// devtools: true,
@@ -88,7 +94,7 @@ export async function create_browser_runtime(): Promise<Runtime> {
 	const { port1, port2 } = new MessageChannel()
 	await page.exposeFunction('__postMessage', (data: any) => port1.postMessage(data))
 
-	await page.coverage.startJSCoverage({ includeRawScriptCoverage: true })
+	if (collect_coverage) await page.coverage.startJSCoverage({ includeRawScriptCoverage: true })
 	await page.goto(`http://${addr}/@runner`)
 
 	const onmessage = await page.waitForFunction(() => window.__onmessage)
@@ -97,6 +103,7 @@ export async function create_browser_runtime(): Promise<Runtime> {
 	return {
 		port: port2,
 		async coverage() {
+			if (!collect_coverage) return []
 			const coverage = await page.coverage.stopJSCoverage()
 			return coverage.map(c => c.rawScriptCoverage!)
 		},
