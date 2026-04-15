@@ -19,10 +19,10 @@ importers:
         version: 25.3.5
       prettier:
         specifier: ^3.8.1
-        version: 3.8.1
+        version: 3.8.3
       prettier-plugin-organize-imports:
         specifier: ^4.3.0
-        version: 4.3.0(prettier@3.8.1)(typescript@5.9.3)
+        version: 4.3.0(prettier@3.8.3)(typescript@5.9.3)
       typescript:
         specifier: 'catalog:'
         version: 5.9.3
@@ -913,7 +913,7 @@ packages:
   basic-ftp@5.1.0:
     resolution: {integrity: sha512-RkaJzeJKDbaDWTIPiJwubyljaEPwpVWkm9Rt5h9Nd6h7tEXTJ3VB4qxdZBioV7JO5yLUaOKwz7vDOzlncUsegw==}
     engines: {node: '>=10.0.0'}
-    deprecated: Security vulnerability fixed in 5.2.0, please upgrade
+    deprecated: Security vulnerability fixed in 5.2.1, please upgrade
 
   birpc@4.0.0:
     resolution: {integrity: sha512-LShSxJP0KTmd101b6DRyGBj57LZxSDYWKitQNW/mi8GRMvZb078Uf9+pveax1DrVL89vm7mWe+TovdI/UDOuPw==}
@@ -1236,8 +1236,8 @@ packages:
       vue-tsc:
         optional: true
 
-  prettier@3.8.1:
-    resolution: {integrity: sha512-UOnG6LftzbdaHZcKoPFtOcCKztrQ57WkHDeRD9t/PTQtmT0NHSeWWepj6pS0z/N7+08BHFDQVUrfmfMRcZwbMg==}
+  prettier@3.8.3:
+    resolution: {integrity: sha512-7igPTM53cGHMW8xWuVTydi2KO233VFiTNyF5hLJqpilHfmn8C8gPf+PS7dUT64YcXFbiMGZxS9pCSxL/Dxm/Jw==}
     engines: {node: '>=14'}
     hasBin: true
 
@@ -2300,12 +2300,12 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
-  prettier-plugin-organize-imports@4.3.0(prettier@3.8.1)(typescript@5.9.3):
+  prettier-plugin-organize-imports@4.3.0(prettier@3.8.3)(typescript@5.9.3):
     dependencies:
-      prettier: 3.8.1
+      prettier: 3.8.3
       typescript: 5.9.3
 
-  prettier@3.8.1: {}
+  prettier@3.8.3: {}
 
   progress@2.0.3: {}
 
