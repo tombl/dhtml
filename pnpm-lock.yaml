@@ -7,8 +7,8 @@ settings:
 catalogs:
   default:
     typescript:
-      specifier: ~5.9.3
-      version: 5.9.3
+      specifier: ~6.0.0
+      version: 6.0.3
 
 importers:
 
@@ -22,10 +22,10 @@ importers:
         version: 3.8.3
       prettier-plugin-organize-imports:
         specifier: ^4.3.0
-        version: 4.3.0(prettier@3.8.3)(typescript@5.9.3)
+        version: 4.3.0(prettier@3.8.3)(typescript@6.0.3)
       typescript:
         specifier: 'catalog:'
-        version: 5.9.3
+        version: 6.0.3
     optionalDependencies:
       dhtml:
         specifier: file:dist
@@ -35,7 +35,7 @@ importers:
     devDependencies:
       typescript:
         specifier: 'catalog:'
-        version: 5.9.3
+        version: 6.0.3
     optionalDependencies:
       dhtml:
         specifier: file:../../dist
@@ -52,7 +52,7 @@ importers:
     devDependencies:
       typescript:
         specifier: 'catalog:'
-        version: 5.9.3
+        version: 6.0.3
       vite:
         specifier: ^7.3.1
         version: 7.3.1(@types/node@25.6.0)(terser@5.46.1)
@@ -69,7 +69,7 @@ importers:
     devDependencies:
       typescript:
         specifier: 'catalog:'
-        version: 5.9.3
+        version: 6.0.3
     optionalDependencies:
       dhtml:
         specifier: file:../../dist
@@ -89,7 +89,7 @@ importers:
     devDependencies:
       typescript:
         specifier: 'catalog:'
-        version: 5.9.3
+        version: 6.0.3
     optionalDependencies:
       dhtml:
         specifier: file:../../dist
@@ -99,7 +99,7 @@ importers:
     devDependencies:
       typescript:
         specifier: 'catalog:'
-        version: 5.9.3
+        version: 6.0.3
     optionalDependencies:
       dhtml:
         specifier: file:../../dist
@@ -109,7 +109,7 @@ importers:
     devDependencies:
       typescript:
         specifier: 'catalog:'
-        version: 5.9.3
+        version: 6.0.3
     optionalDependencies:
       dhtml:
         specifier: file:../../dist
@@ -125,7 +125,7 @@ importers:
         version: 1.0.0-rc.16
       rolldown-plugin-dts:
         specifier: ^0.23.0
-        version: 0.23.2(rolldown@1.0.0-rc.16)(typescript@5.9.3)
+        version: 0.23.2(rolldown@1.0.0-rc.16)(typescript@6.0.3)
       terser:
         specifier: ^5.46.0
         version: 5.46.1
@@ -179,7 +179,7 @@ importers:
         version: 0.111.0
       puppeteer:
         specifier: ^24.36.1
-        version: 24.36.1(typescript@5.9.3)
+        version: 24.36.1(typescript@6.0.3)
 
 packages:
 
@@ -1416,8 +1416,8 @@ packages:
   typed-query-selector@2.12.0:
     resolution: {integrity: sha512-SbklCd1F0EiZOyPiW192rrHZzZ5sBijB6xM+cpmrwDqObvdtunOHHIk9fCGsoK5JVIYXoyEp4iEdE3upFH3PAg==}
 
-  typescript@5.9.3:
-    resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
+  typescript@6.0.3:
+    resolution: {integrity: sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw==}
     engines: {node: '>=14.17'}
     hasBin: true
 
@@ -2050,14 +2050,14 @@ snapshots:
 
   commander@2.20.3: {}
 
-  cosmiconfig@9.0.0(typescript@5.9.3):
+  cosmiconfig@9.0.0(typescript@6.0.3):
     dependencies:
       env-paths: 2.2.1
       import-fresh: 3.3.1
       js-yaml: 4.1.1
       parse-json: 5.2.0
     optionalDependencies:
-      typescript: 5.9.3
+      typescript: 6.0.3
 
   data-uri-to-buffer@6.0.2: {}
 
@@ -2346,10 +2346,10 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
-  prettier-plugin-organize-imports@4.3.0(prettier@3.8.3)(typescript@5.9.3):
+  prettier-plugin-organize-imports@4.3.0(prettier@3.8.3)(typescript@6.0.3):
     dependencies:
       prettier: 3.8.3
-      typescript: 5.9.3
+      typescript: 6.0.3
 
   prettier@3.8.3: {}
 
@@ -2394,11 +2394,11 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  puppeteer@24.36.1(typescript@5.9.3):
+  puppeteer@24.36.1(typescript@6.0.3):
     dependencies:
       '@puppeteer/browsers': 2.11.2
       chromium-bidi: 13.0.1(devtools-protocol@0.0.1551306)
-      cosmiconfig: 9.0.0(typescript@5.9.3)
+      cosmiconfig: 9.0.0(typescript@6.0.3)
       devtools-protocol: 0.0.1551306
       puppeteer-core: 24.36.1
       typed-query-selector: 2.12.0
@@ -2417,7 +2417,7 @@ snapshots:
 
   resolve-pkg-maps@1.0.0: {}
 
-  rolldown-plugin-dts@0.23.2(rolldown@1.0.0-rc.16)(typescript@5.9.3):
+  rolldown-plugin-dts@0.23.2(rolldown@1.0.0-rc.16)(typescript@6.0.3):
     dependencies:
       '@babel/generator': 8.0.0-rc.3
       '@babel/helper-validator-identifier': 8.0.0-rc.3
@@ -2431,7 +2431,7 @@ snapshots:
       picomatch: 4.0.4
       rolldown: 1.0.0-rc.16
     optionalDependencies:
-      typescript: 5.9.3
+      typescript: 6.0.3
     transitivePeerDependencies:
       - oxc-resolver
 
@@ -2589,7 +2589,7 @@ snapshots:
 
   typed-query-selector@2.12.0: {}
 
-  typescript@5.9.3: {}
+  typescript@6.0.3: {}
 
   undici-types@7.19.2: {}
 
