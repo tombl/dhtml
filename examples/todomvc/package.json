@@ -5,10 +5,10 @@
 	"scripts": {
 		"check": "tsc"
 	},
+	"dependencies": {
+		"dhtml": "link:../../dist"
+	},
 	"devDependencies": {
 		"typescript": "catalog:"
-	},
-	"optionalDependencies": {
-		"dhtml": "file:../../dist"
 	}
 }
