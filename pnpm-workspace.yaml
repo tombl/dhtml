@@ -11,5 +11,9 @@ catalog:
 
 includeWorkspaceRoot: true
 
+allowBuilds:
+  esbuild: true
+  puppeteer: true
+
 publicHoistPattern:
   - '@oxc-project/types' # we need rolldown's exact version but they don't re-export

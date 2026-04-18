@@ -1,3 +1,184 @@
+---
+lockfileVersion: '9.0'
+
+importers:
+
+  .:
+    configDependencies: {}
+    packageManagerDependencies:
+      '@pnpm/exe':
+        specifier: 11.0.0-rc.2
+        version: 11.0.0-rc.2
+      pnpm:
+        specifier: 11.0.0-rc.2
+        version: 11.0.0-rc.2
+
+packages:
+
+  '@pnpm/exe@11.0.0-rc.2':
+    resolution: {integrity: sha512-EkL8nZApA0wUA7c5hDdbeuyNUkmkDRBn8evxx4O79SMlEX1D6XspEu9EkLmT+sqrHsAwKzHTHsNYwTSOuKavRg==}
+    hasBin: true
+
+  '@pnpm/linux-arm64@11.0.0-rc.2':
+    resolution: {integrity: sha512-aw7wUq6ffXAfP7r9ZKa7GQmCoh/2EJcdb5ghkc8cgz0O2RZCmIaHqMV2O049iSAtblANkOu5uhwAZW7DKMJa3A==}
+    cpu: [arm64]
+    os: [linux]
+
+  '@pnpm/linux-x64@11.0.0-rc.2':
+    resolution: {integrity: sha512-aCItGORv4lUjYldScyhd7uxgXQI3s1B1s99u5Eb42KRRC4Q8DAf7dboXbLGk7rQLjx8F9xIiaD7QX7YR8+MWEQ==}
+    cpu: [x64]
+    os: [linux]
+
+  '@pnpm/macos-arm64@11.0.0-rc.2':
+    resolution: {integrity: sha512-WsLK8St9Hpwp26qqdFVdLdDlJ3CLJVIkcFwP7G9b+HtkPZOx+Z9AGZ8iam1B7HSrf8XomZWlq0vntHDsc2uPTg==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@pnpm/macos-x64@11.0.0-rc.2':
+    resolution: {integrity: sha512-hiC0khjWqSu6l25rs52izVhPM+6IVbp89pLRyBMYTe5x2a9iydUsCloPl7E+SuNiZ5cNnG28qj3PDzc5upeH/Q==}
+    cpu: [x64]
+    os: [darwin]
+
+  '@pnpm/win-arm64@11.0.0-rc.2':
+    resolution: {integrity: sha512-+bo8RmPQyPCKq+h1GE/QHJ7Ybt/4bWZLUSgXJQS6UOB7ar56g2g4ii1X5+8htkkdXxS5Uoj2TVqRjKp6hkkAdA==}
+    cpu: [arm64]
+    os: [win32]
+
+  '@pnpm/win-x64@11.0.0-rc.2':
+    resolution: {integrity: sha512-srkbMALQgb4taTzKMlwqBZV+JHTh15jN4/FOVOGQ5XadjXdpJOievkvp/m87WankP8MX8th+mJhD9RX/rDOSOw==}
+    cpu: [x64]
+    os: [win32]
+
+  '@reflink/reflink-darwin-arm64@0.1.19':
+    resolution: {integrity: sha512-ruy44Lpepdk1FqDz38vExBY/PVUsjxZA+chd9wozjUH9JjuDT/HEaQYA6wYN9mf041l0yLVar6BCZuWABJvHSA==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@reflink/reflink-darwin-x64@0.1.19':
+    resolution: {integrity: sha512-By85MSWrMZa+c26TcnAy8SDk0sTUkYlNnwknSchkhHpGXOtjNDUOxJE9oByBnGbeuIE1PiQsxDG3Ud+IVV9yuA==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [darwin]
+
+  '@reflink/reflink-linux-arm64-gnu@0.1.19':
+    resolution: {integrity: sha512-7P+er8+rP9iNeN+bfmccM4hTAaLP6PQJPKWSA4iSk2bNvo6KU6RyPgYeHxXmzNKzPVRcypZQTpFgstHam6maVg==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [linux]
+    libc: [glibc]
+
+  '@reflink/reflink-linux-arm64-musl@0.1.19':
+    resolution: {integrity: sha512-37iO/Dp6m5DDaC2sf3zPtx/hl9FV3Xze4xoYidrxxS9bgP3S8ALroxRK6xBG/1TtfXKTvolvp+IjrUU6ujIGmA==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [linux]
+    libc: [musl]
+
+  '@reflink/reflink-linux-x64-gnu@0.1.19':
+    resolution: {integrity: sha512-jbI8jvuYCaA3MVUdu8vLoLAFqC+iNMpiSuLbxlAgg7x3K5bsS8nOpTRnkLF7vISJ+rVR8W+7ThXlXlUQ93ulkw==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
+
+  '@reflink/reflink-linux-x64-musl@0.1.19':
+    resolution: {integrity: sha512-e9FBWDe+lv7QKAwtKOt6A2W/fyy/aEEfr0g6j/hWzvQcrzHCsz07BNQYlNOjTfeytrtLU7k449H1PI95jA4OjQ==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [linux]
+    libc: [musl]
+
+  '@reflink/reflink-win32-arm64-msvc@0.1.19':
+    resolution: {integrity: sha512-09PxnVIQcd+UOn4WAW73WU6PXL7DwGS6wPlkMhMg2zlHHG65F3vHepOw06HFCq+N42qkaNAc8AKIabWvtk6cIQ==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [win32]
+
+  '@reflink/reflink-win32-x64-msvc@0.1.19':
+    resolution: {integrity: sha512-E//yT4ni2SyhwP8JRjVGWr3cbnhWDiPLgnQ66qqaanjjnMiu3O/2tjCPQXlcGc/DEYofpDc9fvhv6tALQsMV9w==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [win32]
+
+  '@reflink/reflink@0.1.19':
+    resolution: {integrity: sha512-DmCG8GzysnCZ15bres3N5AHCmwBwYgp0As6xjhQ47rAUTUXxJiK+lLUxaGsX3hd/30qUpVElh05PbGuxRPgJwA==}
+    engines: {node: '>= 10'}
+
+  pnpm@11.0.0-rc.2:
+    resolution: {integrity: sha512-JkEMwm1mi63d4ToKzyx1ytALgqR3vMHi/mKd1B1reP4/stm7Ujr/951qkfBr6bkKYDJUPzC19zkxI5yCCqXwAQ==}
+    engines: {node: '>=22.13'}
+    hasBin: true
+
+snapshots:
+
+  '@pnpm/exe@11.0.0-rc.2':
+    dependencies:
+      '@reflink/reflink': 0.1.19
+    optionalDependencies:
+      '@pnpm/linux-arm64': 11.0.0-rc.2
+      '@pnpm/linux-x64': 11.0.0-rc.2
+      '@pnpm/macos-arm64': 11.0.0-rc.2
+      '@pnpm/macos-x64': 11.0.0-rc.2
+      '@pnpm/win-arm64': 11.0.0-rc.2
+      '@pnpm/win-x64': 11.0.0-rc.2
+
+  '@pnpm/linux-arm64@11.0.0-rc.2':
+    optional: true
+
+  '@pnpm/linux-x64@11.0.0-rc.2':
+    optional: true
+
+  '@pnpm/macos-arm64@11.0.0-rc.2':
+    optional: true
+
+  '@pnpm/macos-x64@11.0.0-rc.2':
+    optional: true
+
+  '@pnpm/win-arm64@11.0.0-rc.2':
+    optional: true
+
+  '@pnpm/win-x64@11.0.0-rc.2':
+    optional: true
+
+  '@reflink/reflink-darwin-arm64@0.1.19':
+    optional: true
+
+  '@reflink/reflink-darwin-x64@0.1.19':
+    optional: true
+
+  '@reflink/reflink-linux-arm64-gnu@0.1.19':
+    optional: true
+
+  '@reflink/reflink-linux-arm64-musl@0.1.19':
+    optional: true
+
+  '@reflink/reflink-linux-x64-gnu@0.1.19':
+    optional: true
+
+  '@reflink/reflink-linux-x64-musl@0.1.19':
+    optional: true
+
+  '@reflink/reflink-win32-arm64-msvc@0.1.19':
+    optional: true
+
+  '@reflink/reflink-win32-x64-msvc@0.1.19':
+    optional: true
+
+  '@reflink/reflink@0.1.19':
+    optionalDependencies:
+      '@reflink/reflink-darwin-arm64': 0.1.19
+      '@reflink/reflink-darwin-x64': 0.1.19
+      '@reflink/reflink-linux-arm64-gnu': 0.1.19
+      '@reflink/reflink-linux-arm64-musl': 0.1.19
+      '@reflink/reflink-linux-x64-gnu': 0.1.19
+      '@reflink/reflink-linux-x64-musl': 0.1.19
+      '@reflink/reflink-win32-arm64-msvc': 0.1.19
+      '@reflink/reflink-win32-x64-msvc': 0.1.19
+
+  pnpm@11.0.0-rc.2: {}
+
+---
 lockfileVersion: '9.0'
 
 settings:
@@ -26,26 +207,25 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
-    optionalDependencies:
-      dhtml:
-        specifier: file:dist
-        version: file:dist
 
   examples/calculator:
+    dependencies:
+      dhtml:
+        specifier: link:../../dist
+        version: link:../../dist
     devDependencies:
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
-    optionalDependencies:
-      dhtml:
-        specifier: file:../../dist
-        version: file:dist
 
   examples/kanban:
     dependencies:
       '@tombl/router':
         specifier: jsr:^0.2.0
         version: '@jsr/tombl__router@0.2.0'
+      dhtml:
+        specifier: link:../../dist
+        version: link:../../dist
       sqlocal:
         specifier: ^0.16.0
         version: 0.16.0(vite@7.3.1(@types/node@25.6.0)(terser@5.46.1))
@@ -56,24 +236,19 @@ importers:
       vite:
         specifier: ^7.3.1
         version: 7.3.1(@types/node@25.6.0)(terser@5.46.1)
-    optionalDependencies:
-      dhtml:
-        specifier: file:../../dist
-        version: file:dist
 
   examples/signals:
     dependencies:
       alien-signals:
         specifier: ^3.1.2
         version: 3.1.2
+      dhtml:
+        specifier: link:../../dist
+        version: link:../../dist
     devDependencies:
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
-    optionalDependencies:
-      dhtml:
-        specifier: file:../../dist
-        version: file:dist
 
   examples/ssr:
     dependencies:
@@ -83,6 +258,9 @@ importers:
       amaro:
         specifier: ^1.1.0
         version: 1.1.2
+      dhtml:
+        specifier: link:../../dist
+        version: link:../../dist
       hono:
         specifier: ^4.8.3
         version: 4.9.6
@@ -90,30 +268,26 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
-    optionalDependencies:
-      dhtml:
-        specifier: file:../../dist
-        version: file:dist
 
   examples/todomvc:
+    dependencies:
+      dhtml:
+        specifier: link:../../dist
+        version: link:../../dist
     devDependencies:
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
-    optionalDependencies:
-      dhtml:
-        specifier: file:../../dist
-        version: file:dist
 
   examples/uibench:
+    dependencies:
+      dhtml:
+        specifier: link:../../dist
+        version: link:../../dist
     devDependencies:
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
-    optionalDependencies:
-      dhtml:
-        specifier: file:../../dist
-        version: file:dist
 
   scripts/build:
     dependencies:
@@ -996,9 +1170,6 @@ packages:
 
   devtools-protocol@0.0.1551306:
     resolution: {integrity: sha512-CFx8QdSim8iIv+2ZcEOclBKTQY6BI1IEDa7Tm9YkwAXzEWFndTEzpTo5jAUhSnq24IC7xaDw0wvGcm96+Y3PEg==}
-
-  dhtml@file:dist:
-    resolution: {directory: dist, type: directory}
 
   dts-resolver@2.1.3:
     resolution: {integrity: sha512-bihc7jPC90VrosXNzK0LTE2cuLP6jr0Ro8jk+kMugHReJVLIpHz/xadeq3MhuwyO4TD4OA3L1Q8pBBFRc08Tsw==}
@@ -2074,9 +2245,6 @@ snapshots:
   devalue@5.6.2: {}
 
   devtools-protocol@0.0.1551306: {}
-
-  dhtml@file:dist:
-    optional: true
 
   dts-resolver@2.1.3: {}
 

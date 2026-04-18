@@ -14,10 +14,8 @@
 	},
 	"dependencies": {
 		"@tombl/router": "jsr:^0.2.0",
+		"dhtml": "link:../../dist",
 		"sqlocal": "^0.16.0"
-	},
-	"optionalDependencies": {
-		"dhtml": "file:../../dist"
 	},
 	"imports": {
 		"#app": "./src/app.ts",
