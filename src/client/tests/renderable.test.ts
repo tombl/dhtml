@@ -40,7 +40,6 @@ test('renderables handle undefined correctly', () => {
 	const { root, el } = setup()
 
 	root.render({
-		// @ts-expect-error
 		render() {},
 	})
 

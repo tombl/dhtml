@@ -7,10 +7,9 @@ onlyBuiltDependencies:
   - puppeteer
 
 catalog:
-  typescript: ~5.9.3
+  typescript: ~6.0.0
 
 includeWorkspaceRoot: true
 
 publicHoistPattern:
   - '@oxc-project/types' # we need rolldown's exact version but they don't re-export
-
