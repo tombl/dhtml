@@ -228,14 +228,14 @@ importers:
         version: link:../../dist
       sqlocal:
         specifier: ^0.16.0
-        version: 0.16.0(vite@7.3.1(@types/node@25.6.0)(terser@5.46.1))
+        version: 0.16.0(vite@7.3.1(@types/node@25.6.0)(terser@5.51.2))
     devDependencies:
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
       vite:
         specifier: ^7.3.1
-        version: 7.3.1(@types/node@25.6.0)(terser@5.46.1)
+        version: 7.3.1(@types/node@25.6.0)(terser@5.51.2)
 
   examples/signals:
     dependencies:
@@ -302,7 +302,7 @@ importers:
         version: 0.23.2(rolldown@1.0.0-rc.17)(typescript@6.0.3)
       terser:
         specifier: ^5.46.0
-        version: 5.46.1
+        version: 5.51.2
       zimmerframe:
         specifier: ^1.1.4
         version: 1.1.4
@@ -582,11 +582,14 @@ packages:
   '@jridgewell/sourcemap-codec@1.5.5':
     resolution: {integrity: sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==}
 
+  '@jridgewell/sourcemap-codec@1.6.0':
+    resolution: {integrity: sha512-T7jf+5zgsZHwNJ4lvQ7/aezbyk0nNX+zJVWpmHA7VYsEx7a7qr5Rg5IbtJFqkgze5Y2sruq1RUY8Q837Od7iFw==}
+
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
   '@jsr/tombl__router@0.2.0':
-    resolution: {integrity: sha512-zRmjLLgTBufCOBfEuz4CAUn72QfoXOCAXyJmxWvAPJyRvdUovdbFeHpGy59lg0irRFbr/j93SQ91w5t+mNFJyw==, tarball: https://npm.jsr.io/~/11/@jsr/tombl__router/0.2.0.tgz}
+    resolution: {integrity: sha512-zRmjLLgTBufCOBfEuz4CAUn72QfoXOCAXyJmxWvAPJyRvdUovdbFeHpGy59lg0irRFbr/j93SQ91w5t+mNFJyw==}
 
   '@napi-rs/wasm-runtime@1.1.1':
     resolution: {integrity: sha512-p64ah1M1ld8xjWv3qbvFwHiFVWrq1yFvV4f7w+mzaqiR4IlSgkqhcRdHwsGgomwzBH51sRY4NEowLxnaBjcW/A==}
@@ -1004,12 +1007,13 @@ packages:
 
   '@ungap/structured-clone@1.3.0':
     resolution: {integrity: sha512-WmoN8qaIAo7WTYWbAZuG8PYEhn5fkz7dZrqTBZ7dtt//lL2Gwms1IcnQ5yHqjDfX8Ft5j4YzDM23f87zBfDe9g==}
+    deprecated: Potential CWE-502 - Update to 1.3.1 or higher
 
   '@ungap/with-resolvers@0.1.0':
     resolution: {integrity: sha512-g7f0IkJdPW2xhY7H4iE72DAsIyfuwEFc6JWc2tYFwKDMWWAF699vGjrM348cwQuOXgHpe1gWFe+Eiyjx/ewvvw==}
 
-  acorn@8.16.0:
-    resolution: {integrity: sha512-UVJyE9MttOsBQIDKw1skb9nAwQuR5wuGD3+82K6JgJlm/Y+KI92oNsMNGZCYdDsVtRHSak0pcV5Dno5+4jh9sw==}
+  acorn@8.18.0:
+    resolution: {integrity: sha512-lGq+9yr1/GuAWaVYIHRjvvySG5/4VfKIvC8EWxStPdcDh/Ka7FG3twP6v4d5BkravUilhIAsG4Qj83t02LWUPQ==}
     engines: {node: '>=0.4.0'}
     hasBin: true
 
@@ -1566,8 +1570,8 @@ packages:
   tar-stream@3.1.7:
     resolution: {integrity: sha512-qJj60CXt7IU1Ffyc3NJMjh6EkuCFej46zUqJ4J7pqYlThyd9bO0XBTmcOIhSzZJVWfsLks0+nle/j538YAW9RQ==}
 
-  terser@5.46.1:
-    resolution: {integrity: sha512-vzCjQO/rgUuK9sf8VJZvjqiqiHFaZLnOiimmUuOKODxWL8mm/xua7viT7aqX7dgPY60otQjUotzFMmCB4VdmqQ==}
+  terser@5.51.2:
+    resolution: {integrity: sha512-bWnjSNscmuI+GJze6ZupnHP8G/cTcsJF+bXCeQknk2SHQsgbNJnLrqiH9jZ2W4STPVXH2mDKKRX3iwPhc9Cn/Q==}
     engines: {node: '>=10'}
     hasBin: true
 
@@ -1822,7 +1826,7 @@ snapshots:
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:
-      '@jridgewell/sourcemap-codec': 1.5.5
+      '@jridgewell/sourcemap-codec': 1.6.0
       '@jridgewell/trace-mapping': 0.3.31
 
   '@jridgewell/resolve-uri@3.1.2': {}
@@ -1833,6 +1837,8 @@ snapshots:
       '@jridgewell/trace-mapping': 0.3.31
 
   '@jridgewell/sourcemap-codec@1.5.5': {}
+
+  '@jridgewell/sourcemap-codec@1.6.0': {}
 
   '@jridgewell/trace-mapping@0.3.31':
     dependencies:
@@ -2098,7 +2104,7 @@ snapshots:
 
   '@ungap/with-resolvers@0.1.0': {}
 
-  acorn@8.16.0: {}
+  acorn@8.18.0: {}
 
   agent-base@7.1.4: {}
 
@@ -2673,12 +2679,12 @@ snapshots:
 
   source-map@0.6.1: {}
 
-  sqlocal@0.16.0(vite@7.3.1(@types/node@25.6.0)(terser@5.46.1)):
+  sqlocal@0.16.0(vite@7.3.1(@types/node@25.6.0)(terser@5.51.2)):
     dependencies:
       '@sqlite.org/sqlite-wasm': 3.50.4-build1
       coincident: 1.2.3
     optionalDependencies:
-      vite: 7.3.1(@types/node@25.6.0)(terser@5.46.1)
+      vite: 7.3.1(@types/node@25.6.0)(terser@5.51.2)
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -2727,10 +2733,10 @@ snapshots:
       - bare-abort-controller
       - react-native-b4a
 
-  terser@5.46.1:
+  terser@5.51.2:
     dependencies:
       '@jridgewell/source-map': 0.3.11
-      acorn: 8.16.0
+      acorn: 8.18.0
       commander: 2.20.3
       source-map-support: 0.5.21
 
@@ -2753,7 +2759,7 @@ snapshots:
 
   undici-types@7.19.2: {}
 
-  vite@7.3.1(@types/node@25.6.0)(terser@5.46.1):
+  vite@7.3.1(@types/node@25.6.0)(terser@5.51.2):
     dependencies:
       esbuild: 0.27.2
       fdir: 6.5.0(picomatch@4.0.3)
@@ -2764,7 +2770,7 @@ snapshots:
     optionalDependencies:
       '@types/node': 25.6.0
       fsevents: 2.3.3
-      terser: 5.46.1
+      terser: 5.51.2
 
   webdriver-bidi-protocol@0.4.0: {}
 
