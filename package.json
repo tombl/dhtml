@@ -33,5 +33,5 @@
 		"trailingComma": "all",
 		"useTabs": true
 	},
-	"packageManager": "pnpm@11.0.4+sha512.0a397165007a014ed52919a61e5f46c48b9bca88404c303ecaecc63f62def563898d3c6b8a5d5ea5811eb398cfe03ab05da1a5ce963f126d5ead4c02f93b83c3"
+	"packageManager": "pnpm@11.28.5+sha512.484563d30b4c2ad27cb48aa94ff2b302dbcebc8ff6bf28816c2589886e146ce7f76f354f3bc1a438e6f5e9768c302aa0a6f7add8232903cd4cf81426cbc14d9e"
 }
